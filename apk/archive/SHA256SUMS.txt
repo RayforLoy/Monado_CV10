@@ -1,4 +1,5 @@
 b697c76fc273e9716269918a0680ed4e68a6da28fbadcff30e72ff8742d7fc6b  Monado-CV10-arm64.apk
+4faa15e81c7585158deb8adf4928050be4404c9eacff6a785cdc26c87bec029c  Monado-CV10-before-view-rotation-arm64.apk
 2a1476d90e7e317dc32105b3851ec2285334205d25c45c49c48cb7e5647ef63b  Monado-CV10-framevote90-arm64.apk
 49cf9fa8020132b0503186a15c78ba45d0bde0471bd4c7beaefff3898d65df2c  Monado-CV10-primary-mailbox-arm64.apk
 ee7a8f1d7e4124a381d32a4cef13aac36c19e5b8f3a98961b81c104b392da41c  Monado-CV10-primary-mailbox-named-arm64.apk
