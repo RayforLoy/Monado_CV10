@@ -1,0 +1,897 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6a1a0d9..a2c6ed9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -521,9 +521,9 @@ list(
+ # Can be overridden from outside/command line
+ if(ANDROID AND NOT XRT_ANDROID_PACKAGE)
+ 	if(XRT_FEATURE_SERVICE)
+-		set(XRT_ANDROID_PACKAGE "org.freedesktop.monado.openxr_runtime.out_of_process")
++		set(XRT_ANDROID_PACKAGE "org.cv10.monado.out_of_process")
+ 	else()
+-		set(XRT_ANDROID_PACKAGE "org.freedesktop.monado.openxr_runtime.in_process")
++		set(XRT_ANDROID_PACKAGE "org.cv10.monado.in_process")
+ 	endif()
+ endif()
+ 
+diff --git a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+index 45498e7..de1c51d 100644
+--- a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
++++ b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+@@ -10,8 +10,10 @@
+ package org.freedesktop.monado.auxiliary;
+ 
+ import android.app.Activity;
++import android.app.Presentation;
+ import android.content.Context;
+ import android.hardware.display.DisplayManager;
++import android.os.Build;
+ import android.os.Handler;
+ import android.os.Looper;
+ import android.os.SystemClock;
+@@ -20,6 +22,7 @@ import android.util.Log;
+ import android.view.Display;
+ import android.view.SurfaceHolder;
+ import android.view.SurfaceView;
++import android.view.Window;
+ import android.view.WindowManager;
+ import androidx.annotation.GuardedBy;
+ import androidx.annotation.Keep;
+@@ -43,6 +46,8 @@ public class MonadoView extends SurfaceView
+     @GuardedBy("currentSurfaceHolderSync") @Nullable private SurfaceHolder currentSurfaceHolder = null;
+ 
+     private SystemUiController systemUiController = null;
++    // Only accessed on the UI thread. Android dismisses presentations on display removal.
++    private Presentation presentation;
+ 
+     public MonadoView(Context context) {
+         super(context);
+@@ -70,6 +75,8 @@ public class MonadoView extends SurfaceView
+      */
+     @NonNull @Keep
+     public static MonadoView attachToActivity(@NonNull final Activity activity) {
++        Display cv10 = findCv10(activity);
++        if (cv10 != null) return attachCv10(activity, cv10, 0);
+         final MonadoView view = new MonadoView(activity);
+         WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
+         lp.flags =
+@@ -93,11 +100,80 @@ public class MonadoView extends SurfaceView
+             long nativePointer,
+             WindowManager.LayoutParams lp)
+             throws IllegalArgumentException {
++        Display cv10 = findCv10(displayContext);
++        if (cv10 != null) return attachCv10(displayContext, cv10, nativePointer);
+         final MonadoView view = new MonadoView(displayContext, nativePointer);
+         attachToWindow(displayContext, view, lp);
+         return view;
+     }
+ 
++    @Nullable
++    private static Display findCv10(Context context) {
++        DisplayManager manager = context.getSystemService(DisplayManager.class);
++        for (Display display : manager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
++            if (display.isValid() && "HUAWEIAV03".equalsIgnoreCase(display.getName().trim())) return display;
++        }
++        return null;
++    }
++
++    private static MonadoView attachCv10(Context owner, Display display, long pointer) {
++        Context target = owner.createDisplayContext(display);
++        boolean applicationWindow = owner instanceof Activity;
++        if (!applicationWindow && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
++            target = target.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
++        }
++        final MonadoView view = pointer == 0 ? new MonadoView(target) : new MonadoView(target, pointer);
++        Display.Mode preferred = null;
++        for (Display.Mode mode : display.getSupportedModes()) {
++            if (mode.getPhysicalWidth() == 3200 && mode.getPhysicalHeight() == 1600
++                    && (preferred == null || mode.getRefreshRate() > preferred.getRefreshRate())) {
++                preferred = mode;
++            }
++        }
++        final int modeId = preferred == null ? 0 : preferred.getModeId();
++        if (modeId != 0) view.getHolder().setFixedSize(3200, 1600);
++        Log.i(TAG, "CV10 target id=" + display.getDisplayId() + " name=" + display.getName()
++                + " active=" + display.getMode() + " preferred=" + preferred
++                + " path=" + (applicationWindow ? "presentation" : "overlay"));
++        new Handler(Looper.getMainLooper()).post(() -> {
++            try {
++                if (!display.isValid()) return;
++                int flags = WindowManager.LayoutParams.FLAG_FULLSCREEN
++                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
++                        | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
++                        | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
++                if (applicationWindow) {
++                    Presentation dialog = new Presentation(owner, display);
++                    Window window = dialog.getWindow();
++                    window.addFlags(flags);
++                    WindowManager.LayoutParams lp = window.getAttributes();
++                    lp.width = WindowManager.LayoutParams.MATCH_PARENT;
++                    lp.height = WindowManager.LayoutParams.MATCH_PARENT;
++                    lp.preferredDisplayModeId = modeId;
++                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) lp.setFitInsetsTypes(0);
++                    window.setAttributes(lp);
++                    dialog.setContentView(view);
++                    dialog.show();
++                    view.presentation = dialog;
++                } else {
++                    WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
++                            WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
++                            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, flags,
++                            android.graphics.PixelFormat.OPAQUE);
++                    lp.preferredDisplayModeId = modeId;
++                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) lp.setFitInsetsTypes(0);
++                    lp.setTitle("Monado CV10");
++                    view.getContext().getSystemService(WindowManager.class).addView(view, lp);
++                }
++                new SystemUiController(view).hide();
++            } catch (WindowManager.InvalidDisplayException | WindowManager.BadTokenException
++                    | SecurityException error) {
++                Log.e(TAG, "CV10 window unavailable on display " + display.getDisplayId(), error);
++            }
++        });
++        return view;
++    }
++
+     private static void attachToWindow(
+             @NonNull final Context context,
+             @NonNull MonadoView view,
+@@ -129,7 +205,12 @@ public class MonadoView extends SurfaceView
+                     WindowManager wm =
+                             (WindowManager)
+                                     view.getContext().getSystemService(Context.WINDOW_SERVICE);
+-                    wm.removeView(view);
++                    if (view.presentation != null) {
++                        view.presentation.dismiss();
++                        view.presentation = null;
++                    } else if (view.isAttachedToWindow()) {
++                        wm.removeView(view);
++                    }
+                 });
+     }
+ 
+@@ -137,7 +218,13 @@ public class MonadoView extends SurfaceView
+     public static DisplayMetrics getDisplayMetrics(@NonNull Context context) {
+         DisplayMetrics displayMetrics = new DisplayMetrics();
+         WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+-        wm.getDefaultDisplay().getRealMetrics(displayMetrics);
++        Display external = findCv10(context);
++        Display display = external == null ? wm.getDefaultDisplay() : external;
++        display.getRealMetrics(displayMetrics);
++        if (external != null) {
++            displayMetrics.widthPixels = display.getMode().getPhysicalWidth();
++            displayMetrics.heightPixels = display.getMode().getPhysicalHeight();
++        }
+ 
+         // getRealMetrics returns the metrics dependent on screen rotation, but we expect them
+         // to be landscape; ensure that the returned metrics represent the landscape orientation.
+@@ -153,7 +240,8 @@ public class MonadoView extends SurfaceView
+     @Keep
+     public static float getDisplayRefreshRate(@NonNull Context context) {
+         WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+-        return wm.getDefaultDisplay().getRefreshRate();
++        Display external = findCv10(context);
++        return (external == null ? wm.getDefaultDisplay() : external).getRefreshRate();
+     }
+ 
+     /**
+@@ -208,9 +296,13 @@ public class MonadoView extends SurfaceView
+     public static float[] getSupportedRefreshRates(@NonNull Context context) {
+         WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+         TreeSet<Float> rateSet = new TreeSet<>();
+-        Display.Mode[] modes = wm.getDefaultDisplay().getSupportedModes();
++        Display external = findCv10(context);
++        Display.Mode[] modes = (external == null ? wm.getDefaultDisplay() : external).getSupportedModes();
+         for (Display.Mode mode : modes) {
+-            rateSet.add(mode.getRefreshRate());
++            if (external == null || (mode.getPhysicalWidth() == external.getMode().getPhysicalWidth()
++                    && mode.getPhysicalHeight() == external.getMode().getPhysicalHeight())) {
++                rateSet.add(mode.getRefreshRate());
++            }
+         }
+         float[] rates = new float[rateSet.size()];
+         int i = 0;
+diff --git a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/SystemUiController.kt b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/SystemUiController.kt
+index d258455..e78d714 100644
+--- a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/SystemUiController.kt
++++ b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/SystemUiController.kt
+@@ -75,8 +75,8 @@ class SystemUiController(view: View) {
+     private class WindowInsetsControllerImpl(view: View) : Impl(view) {
+         override fun hide() {
+             runOnUiThread {
+-                val controller = view.windowInsetsController
+-                controller!!.hide(
++                val controller = view.windowInsetsController ?: return@runOnUiThread
++                controller.hide(
+                     WindowInsets.Type.displayCutout() or
+                         WindowInsets.Type.statusBars() or
+                         WindowInsets.Type.navigationBars()
+diff --git a/src/xrt/drivers/CMakeLists.txt b/src/xrt/drivers/CMakeLists.txt
+index 5ab60b0..93fc67d 100644
+--- a/src/xrt/drivers/CMakeLists.txt
++++ b/src/xrt/drivers/CMakeLists.txt
+@@ -509,7 +509,7 @@ endif()
+ if(XRT_BUILD_DRIVER_ANDROID)
+ 	add_library(
+ 		drv_android STATIC android/android_prober.c android/android_prober.h
+-				   android/android_sensors.c android/android_sensors.h
++				   android/cv10_device.c android/cv10_device.h
+ 		)
+ 	target_link_libraries(
+ 		drv_android
+diff --git a/src/xrt/drivers/android/android_prober.c b/src/xrt/drivers/android/android_prober.c
+index 7b647b6..5522e6b 100644
+--- a/src/xrt/drivers/android/android_prober.c
++++ b/src/xrt/drivers/android/android_prober.c
+@@ -18,7 +18,7 @@
+ #include "util/u_logging.h"
+ 
+ #include "android_prober.h"
+-#include "android_sensors.h"
++#include "cv10_device.h"
+ 
+ 
+ 
+@@ -69,9 +69,9 @@ android_prober_autoprobe(struct xrt_auto_prober *xap,
+                          struct xrt_prober *xp,
+                          struct xrt_device **out_xdevs)
+ {
+-	struct android_device *dd = android_device_create();
+-	out_xdevs[0] = &dd->base;
+-	return 1;
++	if (no_hmds) return 0;
++	out_xdevs[0] = cv10_device_create();
++	return out_xdevs[0] != NULL ? 1 : 0;
+ }
+ 
+ 
+diff --git a/src/xrt/drivers/android/cv10_device.c b/src/xrt/drivers/android/cv10_device.c
+new file mode 100644
+index 0000000..ea5354b
+--- /dev/null
++++ b/src/xrt/drivers/android/cv10_device.c
+@@ -0,0 +1,200 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++#include <stdbool.h>
++#include "cv10_device.h"
++#include "android/android_globals.h"
++#include "math/m_api.h"
++#include "math/m_imu_3dof.h"
++#include "math/m_relation_history.h"
++#include "os/os_threading.h"
++#include "os/os_time.h"
++#include "util/u_device.h"
++#include "util/u_distortion_mesh.h"
++#include "util/u_logging.h"
++#include <jni.h>
++#include <stdio.h>
++#include <math.h>
++
++struct cv10_device
++{
++	struct xrt_device base;
++	struct os_thread_helper worker;
++	struct m_relation_history *history;
++	struct m_imu_3dof fusion;
++};
++
++static bool
++jni_error(JNIEnv *env)
++{
++	if (!(*env)->ExceptionCheck(env)) return false;
++	(*env)->ExceptionDescribe(env);
++	(*env)->ExceptionClear(env);
++	return true;
++}
++
++static jclass
++reader_class(JNIEnv *env, jobject context)
++{
++	jclass ctx_class = (*env)->GetObjectClass(env, context);
++	if (!ctx_class) return NULL;
++	jmethodID get_loader = (*env)->GetMethodID(env, ctx_class, "getClassLoader", "()Ljava/lang/ClassLoader;");
++	if (!get_loader) return NULL;
++	jobject loader = (*env)->CallObjectMethod(env, context, get_loader);
++	if (jni_error(env) || !loader) return NULL;
++	jclass loader_class = (*env)->GetObjectClass(env, loader);
++	if (!loader_class) return NULL;
++	jmethodID load = (*env)->GetMethodID(env, loader_class, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
++	if (!load) return NULL;
++	jstring name = (*env)->NewStringUTF(env, "org.freedesktop.monado.openxr_runtime.Cv10UsbReader");
++	if (!name) return NULL;
++	return (jclass)(*env)->CallObjectMethod(env, loader, load, name);
++}
++
++static void *
++cv10_worker(void *ptr)
++{
++	struct cv10_device *d = ptr;
++	JavaVM *vm = (JavaVM *)android_globals_get_vm();
++	jobject context = android_globals_get_context();
++	JNIEnv *env = NULL;
++	if (!vm || !context || (*vm)->AttachCurrentThread(vm, &env, NULL) != JNI_OK) {
++		U_LOG_E("CV10 JNI context unavailable");
++		return NULL;
++	}
++	jclass cls = reader_class(env, context);
++	if (jni_error(env) || !cls) goto done;
++	jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Landroid/content/Context;)V");
++	if (!ctor) goto done;
++	jmethodID read = (*env)->GetMethodID(env, cls, "read", "([F)J");
++	if (!read) goto done;
++	jmethodID close = (*env)->GetMethodID(env, cls, "close", "()V");
++	if (!close) goto done;
++	jfloatArray output = (*env)->NewFloatArray(env, 6);
++	if (!output) goto done;
++	jobject reader = (*env)->NewObject(env, cls, ctor, context);
++	if (jni_error(env) || !reader) goto done;
++
++	int64_t previous = 0, offset = 0, last_mapped = 0, last_log = 0;
++	unsigned long long sample_count = 0;
++	float peak_rad_s = 0;
++	while (os_thread_helper_is_running(&d->worker)) {
++		int64_t sample_ns = (*env)->CallLongMethod(env, reader, read, output);
++		if (jni_error(env)) break;
++		if (sample_ns == 0) continue;
++		if (sample_ns < 0 || (previous && (sample_ns <= previous || sample_ns - previous > 50000000))) {
++			m_relation_history_clear(d->history);
++			m_imu_3dof_reset(&d->fusion);
++			previous = 0;
++			last_mapped = 0;
++			peak_rad_s = 0;
++			last_log = 0;
++			if (sample_ns < 0) continue;
++		}
++		float values[6];
++		(*env)->GetFloatArrayRegion(env, output, 0, 6, values);
++		if (jni_error(env)) break;
++		const int64_t arrival = os_monotonic_get_ns();
++		const int64_t observed_offset = arrival - sample_ns;
++		// A USB arrival bounds sample time from above. Follow the low-latency
++		// envelope, allowing gradual clock drift without integrating USB jitter.
++		if (!previous || observed_offset < offset) offset = observed_offset;
++		else {
++			int64_t drift = (sample_ns - previous) / 1000;
++			offset += observed_offset - offset < drift ? observed_offset - offset : drift;
++		}
++		int64_t mapped = sample_ns + offset;
++		if (mapped <= last_mapped) mapped = last_mapped + 1;
++		const struct xrt_vec3 accel = {values[0], values[1], values[2]};
++		const struct xrt_vec3 gyro = {values[3], values[4], values[5]};
++		m_imu_3dof_update(&d->fusion, sample_ns, &accel, &gyro);
++		struct xrt_space_relation rel = XRT_SPACE_RELATION_ZERO;
++		rel.pose.orientation = d->fusion.rot;
++		math_quat_rotate_vec3(&rel.pose.orientation, &gyro, &rel.angular_velocity);
++		rel.relation_flags = XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
++		                     XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT;
++		m_relation_history_push(d->history, &rel, mapped);
++		if (!previous) U_LOG_I("CV10 3DoF tracking initialized from USB, first mapped sample %lld ns", (long long)mapped);
++		sample_count++;
++		float speed = sqrtf(gyro.x*gyro.x + gyro.y*gyro.y + gyro.z*gyro.z);
++		if (speed > peak_rad_s) peak_rad_s = speed;
++		if (arrival - last_log >= 2000000000) {
++			U_LOG_I("CV10 USB pose samples=%llu q_xyzw=(%.4f,%.4f,%.4f,%.4f) "
++			        "gyro_rad_s=(%.3f,%.3f,%.3f) peak_rad_s=%.3f",
++			        sample_count, rel.pose.orientation.x, rel.pose.orientation.y, rel.pose.orientation.z,
++			        rel.pose.orientation.w, gyro.x, gyro.y, gyro.z, peak_rad_s);
++			last_log = arrival;
++			peak_rad_s = 0;
++		}
++		previous = sample_ns;
++		last_mapped = mapped;
++	}
++	(*env)->CallVoidMethod(env, reader, close);
++done:
++	jni_error(env);
++	(*vm)->DetachCurrentThread(vm);
++	return NULL;
++}
++
++static xrt_result_t
++cv10_pose(struct xrt_device *xdev, enum xrt_input_name name, int64_t at_ns, struct xrt_space_relation *out)
++{
++	struct cv10_device *d = (struct cv10_device *)xdev;
++	*out = (struct xrt_space_relation)XRT_SPACE_RELATION_ZERO;
++	out->pose.orientation.w = 1;
++	if (name != XRT_INPUT_GENERIC_HEAD_POSE) return XRT_ERROR_INPUT_UNSUPPORTED;
++	int64_t latest = 0;
++	struct xrt_space_relation last;
++	if (!m_relation_history_get_latest(d->history, &latest, &last) || os_monotonic_get_ns() - latest > 250000000)
++		return XRT_SUCCESS;
++	// Cap prediction even if a client requests a distant future pose.
++	int64_t query = at_ns > latest + 50000000 ? latest + 50000000 : at_ns;
++	m_relation_history_get(d->history, query, out);
++	return XRT_SUCCESS;
++}
++
++static void
++cv10_destroy(struct xrt_device *xdev)
++{
++	struct cv10_device *d = (struct cv10_device *)xdev;
++	os_thread_helper_destroy(&d->worker);
++	m_relation_history_destroy(&d->history);
++	m_imu_3dof_close(&d->fusion);
++	u_device_free(xdev);
++}
++
++struct xrt_device *
++cv10_device_create(void)
++{
++	struct cv10_device *d = U_DEVICE_ALLOCATE(struct cv10_device, U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE, 1, 0);
++	if (!d) return NULL;
++	struct xrt_device *xdev = &d->base;
++	xdev->name = XRT_DEVICE_GENERIC_HMD;
++	xdev->device_type = XRT_DEVICE_TYPE_HMD;
++	snprintf(xdev->str, sizeof(xdev->str), "Huawei VR Glass CV10 (USB IMU)");
++	snprintf(xdev->serial, sizeof(xdev->serial), "Huawei-CV10-USB");
++	u_device_populate_function_pointers(xdev, cv10_pose, cv10_destroy);
++	xdev->get_view_poses = u_device_get_view_poses;
++	xdev->get_visibility_mask = u_device_get_visibility_mask;
++	xdev->inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
++	xdev->supported.orientation_tracking = true;
++	xdev->supported.position_tracking = false;
++	xdev->hmd->view_count = 2;
++	// A symmetric test projection without lens calibration. FOV is provisional.
++	struct u_device_simple_info optics = {
++	    .display = {3200, 1600, 0.128f, 0.064f},
++	    .lens_horizontal_separation_meters = 0.064f, .lens_vertical_position_meters = 0.032f,
++	    .fov = {1.3962634f, 1.3962634f},
++	};
++	if (!u_device_setup_split_side_by_side(xdev, &optics)) { u_device_free(xdev); return NULL; }
++	xdev->hmd->views[0].rot = u_device_rotation_left;
++	xdev->hmd->views[1].rot = u_device_rotation_right;
++	xdev->hmd->screens[0].nominal_frame_interval_ns = 11111111;
++	u_distortion_mesh_set_none(xdev);
++	if (os_thread_helper_init(&d->worker) != 0) { u_device_free(xdev); return NULL; }
++	m_imu_3dof_init(&d->fusion, M_IMU_3DOF_USE_GRAVITY_DUR_20MS);
++	m_relation_history_create(&d->history);
++	if (!d->history || os_thread_helper_start(&d->worker, cv10_worker, d) != 0) {
++		cv10_destroy(xdev);
++		return NULL;
++	}
++	return xdev;
++}
+diff --git a/src/xrt/drivers/android/cv10_device.h b/src/xrt/drivers/android/cv10_device.h
+new file mode 100644
+index 0000000..f9b40e2
+--- /dev/null
++++ b/src/xrt/drivers/android/cv10_device.h
+@@ -0,0 +1,5 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++#pragma once
++struct xrt_device;
++struct xrt_device *
++cv10_device_create(void);
+diff --git a/src/xrt/ipc/android/src/main/java/org/freedesktop/monado/ipc/Client.java b/src/xrt/ipc/android/src/main/java/org/freedesktop/monado/ipc/Client.java
+index 584cedb..04fe5b7 100644
+--- a/src/xrt/ipc/android/src/main/java/org/freedesktop/monado/ipc/Client.java
++++ b/src/xrt/ipc/android/src/main/java/org/freedesktop/monado/ipc/Client.java
+@@ -87,7 +87,18 @@ public class Client implements ServiceConnection {
+         this.nativeCounterpart.markAsUsedByNativeCode();
+     }
+ 
++    // The client owns the presentation when the service cannot draw its own window.
++    private MonadoView appView;
++    private boolean closed;
++
+     private void shutdown() {
++        synchronized (this) {
++            closed = true;
++            if (appView != null) {
++                MonadoView.removeFromWindow(appView);
++                appView = null;
++            }
++        }
+         monado = null;
+         if (context != null) {
+             context.unbindService(this);
+@@ -277,7 +288,12 @@ public class Client implements ServiceConnection {
+     }
+ 
+     @Nullable private Surface attachViewAndGetSurface(Activity activity) {
+-        MonadoView monadoView = MonadoView.attachToActivity(activity);
++        MonadoView monadoView;
++        synchronized (this) {
++            if (closed) return null;
++            monadoView = MonadoView.attachToActivity(activity);
++            appView = monadoView;
++        }
+         SurfaceHolder holder = monadoView.waitGetSurfaceHolder(2000);
+         Surface surface = null;
+         if (holder != null) {
+diff --git a/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/AboutActivity.java b/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/AboutActivity.java
+index cc90694..d7f4ff6 100644
+--- a/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/AboutActivity.java
++++ b/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/AboutActivity.java
+@@ -29,6 +29,7 @@ import org.freedesktop.monado.auxiliary.UiProvider;
+ 
+ @AndroidEntryPoint
+ public class AboutActivity extends AppCompatActivity {
++    private static final int CV10_USB_ACCESS = 0x43563130;
+ 
+     @Inject NoticeFragmentProvider noticeFragmentProvider;
+ 
+@@ -104,6 +105,7 @@ public class AboutActivity extends AppCompatActivity {
+ 
+     @Override
+     public boolean onCreateOptionsMenu(Menu menu) {
++        menu.add(Menu.NONE, CV10_USB_ACCESS, Menu.NONE, "CV10 USB access");
+         aboutMenuProvider.ifPresent(
+                 menuProvider -> menuProvider.onCreateOptionsMenu(getMenuInflater(), menu));
+         return super.onCreateOptionsMenu(menu);
+@@ -111,6 +113,10 @@ public class AboutActivity extends AppCompatActivity {
+ 
+     @Override
+     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
++        if (item.getItemId() == CV10_USB_ACCESS) {
++            Cv10UsbAccess.requestFromSettings(this);
++            return true;
++        }
+         Optional<AboutMenuProvider> aboutMenu = aboutMenuProvider;
+         if (aboutMenu.isPresent()) {
+             if (aboutMenu.get().onOptionsItemSelected(this, item)) {
+diff --git a/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/Cv10UsbAccess.java b/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/Cv10UsbAccess.java
+new file mode 100644
+index 0000000..f72e751
+--- /dev/null
++++ b/src/xrt/targets/android_common/src/main/java/org/freedesktop/monado/android_common/Cv10UsbAccess.java
+@@ -0,0 +1,37 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++package org.freedesktop.monado.android_common;
++
++import android.app.PendingIntent;
++import android.content.Context;
++import android.content.Intent;
++import android.hardware.usb.UsbDevice;
++import android.hardware.usb.UsbManager;
++import android.widget.Toast;
++
++public final class Cv10UsbAccess {
++    private Cv10UsbAccess() {}
++
++    public static UsbDevice find(UsbManager manager) {
++        if (manager == null) return null;
++        for (UsbDevice d : manager.getDeviceList().values()) {
++            if (d.getVendorId() == 0x12d1 && d.getProductId() == 0x107e) return d;
++        }
++        return null;
++    }
++
++    public static void request(Context context, UsbManager manager, UsbDevice glass) {
++        Intent grant = new Intent(context.getPackageName() + ".CV10_USB").setPackage(context.getPackageName());
++        manager.requestPermission(glass, PendingIntent.getBroadcast(context, 0, grant, PendingIntent.FLAG_IMMUTABLE));
++    }
++
++    static void requestFromSettings(Context context) {
++        UsbManager manager = context.getSystemService(UsbManager.class);
++        UsbDevice glass = find(manager);
++        if (glass == null || manager.hasPermission(glass)) {
++            String status = glass == null ? "CV10 USB device not connected" : "CV10 USB access granted";
++            Toast.makeText(context, status, Toast.LENGTH_SHORT).show();
++        } else {
++            request(context, manager, glass);
++        }
++    }
++}
+diff --git a/src/xrt/targets/openxr_android/build.gradle b/src/xrt/targets/openxr_android/build.gradle
+index 97df566..aa4470e 100644
+--- a/src/xrt/targets/openxr_android/build.gradle
++++ b/src/xrt/targets/openxr_android/build.gradle
+@@ -178,11 +178,11 @@ android {
+     ndkVersion "${ndk_version}"
+ 
+     defaultConfig {
+-        applicationId 'org.freedesktop.monado.openxr_runtime'
++        applicationId 'org.cv10.monado'
+         minSdkVersion project.sharedMinSdk
+         targetSdkVersion project.sharedTargetSdk
+ 
+-        versionCode = getVersionCode()
++        versionCode = getVersionCode() ?: 1
+         versionName = getVersionString()
+ 
+         println versionName
+@@ -258,7 +258,7 @@ android {
+             inProcessBaseConfig(it, "Monado In Process (Debugging)")
+         }
+         outOfProcess {
+-            outOfProcessBaseConfig(it, "Monado XR")
++            outOfProcessBaseConfig(it, "Monado CV10")
+         }
+     }
+     hilt {
+diff --git a/src/xrt/targets/openxr_android/src/main/AndroidManifest.xml b/src/xrt/targets/openxr_android/src/main/AndroidManifest.xml
+index 59d97ed..36bd132 100644
+--- a/src/xrt/targets/openxr_android/src/main/AndroidManifest.xml
++++ b/src/xrt/targets/openxr_android/src/main/AndroidManifest.xml
+@@ -7,6 +7,8 @@
+         SPDX-License-Identifier: BSL-1.0
+     -->
+ 
++    <uses-feature android:name="android.hardware.usb.host" android:required="true" />
++
+     <!-- We may try to use OpenGL|ES 3.0 -->
+     <uses-feature
+         android:glEsVersion="0x00030002"
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
+new file mode 100644
+index 0000000..f2ddef2
+--- /dev/null
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
+@@ -0,0 +1,113 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++package org.freedesktop.monado.openxr_runtime;
++
++import android.hardware.usb.UsbConstants;
++import android.hardware.usb.UsbDevice;
++import android.hardware.usb.UsbDeviceConnection;
++import android.hardware.usb.UsbEndpoint;
++import android.hardware.usb.UsbInterface;
++import android.hardware.usb.UsbManager;
++import android.os.SystemClock;
++import android.util.Log;
++import java.io.ByteArrayOutputStream;
++import java.io.IOException;
++import java.nio.charset.StandardCharsets;
++
++/** Wakes the headset panels through their runtime PCUI port without blocking IMU acquisition. */
++final class Cv10PanelWake {
++    private static final String TAG = "MonadoCV10";
++    private int requestedId = -1;
++
++    synchronized void request(UsbManager usb, UsbDevice glass) {
++        if (glass.getVendorId() != 0x12d1 || glass.getProductId() != 0x107e
++                || requestedId == glass.getDeviceId() || !usb.hasPermission(glass)) return;
++        requestedId = glass.getDeviceId();
++        new Thread(() -> {
++            for (int attempt = 0; attempt < 2; attempt++) {
++                try {
++                    UsbDevice attached = usb.getDeviceList().get(glass.getDeviceName());
++                    if (attached == null || attached.getDeviceId() != glass.getDeviceId()
++                            || !usb.hasPermission(attached)) return;
++                    wake(usb, attached);
++                    return;
++                } catch (IOException error) {
++                    Log.w(TAG, "CV10 PCUI attempt " + (attempt + 1) + ": " + error.getMessage());
++                    if (attempt == 0) SystemClock.sleep(600);
++                } catch (RuntimeException error) {
++                    Log.w(TAG, "CV10 PCUI unavailable", error);
++                    return;
++                }
++            }
++        }, "CV10-PCUI").start();
++    }
++
++    private static void wake(UsbManager usb, UsbDevice glass) throws IOException {
++        for (int i = 0; i < glass.getInterfaceCount(); i++) {
++            UsbInterface iface = glass.getInterface(i);
++            if (iface.getId() != 0 || iface.getAlternateSetting() != 0 || iface.getInterfaceClass() != 0xff
++                    || iface.getInterfaceSubclass() != 0x13 || iface.getInterfaceProtocol() != 0x12) continue;
++            UsbEndpoint in = null, out = null;
++            for (int j = 0; j < iface.getEndpointCount(); j++) {
++                UsbEndpoint ep = iface.getEndpoint(j);
++                if (ep.getType() != UsbConstants.USB_ENDPOINT_XFER_BULK) continue;
++                if (ep.getAddress() == 0x81) in = ep;
++                if (ep.getAddress() == 0x01) out = ep;
++            }
++            if (in == null || out == null) break;
++            UsbDeviceConnection port = usb.openDevice(glass);
++            if (port == null) throw new IOException("open failed");
++            try {
++                if (!port.claimInterface(iface, false)) throw new IOException("interface busy");
++                try {
++                    String model = query(port, in, out, "AT^DEVMODEL?");
++                    boolean cv10 = hasLine(model, "^DEVMODEL:CV10");
++                    if (!cv10) {
++                        String version = query(port, in, out, "AT^SWVER");
++                        for (String line : version.split("[\r\n]+")) {
++                            if (line.trim().matches("MAINVER:CV10AC[0-9.]+")) cv10 = true;
++                        }
++                    }
++                    if (!cv10) {
++                        Log.w(TAG, "PCUI identity did not confirm CV10");
++                        return;
++                    }
++                    String reply = query(port, in, out, "AT^SWITCHSCREEN=1");
++                    if (!hasLine(reply, "OK")) throw new IOException("panel command rejected");
++                    Log.i(TAG, "CV10 PCUI AT^SWITCHSCREEN=1 OK");
++                    return;
++                } finally {
++                    port.releaseInterface(iface);
++                }
++            } finally {
++                port.close();
++            }
++        }
++        Log.w(TAG, "CV10 PCUI runtime interface or endpoints missing");
++    }
++
++    private static boolean hasLine(String reply, String expected) {
++        for (String line : reply.split("[\r\n]+")) {
++            if (expected.equals(line.trim())) return true;
++        }
++        return false;
++    }
++
++    private static String query(UsbDeviceConnection port, UsbEndpoint in, UsbEndpoint out, String command)
++            throws IOException {
++        byte[] request = (command + "\r\n").getBytes(StandardCharsets.US_ASCII);
++        if (port.bulkTransfer(out, request, request.length, 1000) != request.length) {
++            throw new IOException(command + " send incomplete");
++        }
++        long end = SystemClock.elapsedRealtime() + 2000;
++        ByteArrayOutputStream collected = new ByteArrayOutputStream();
++        byte[] packet = new byte[in.getMaxPacketSize()];
++        while (SystemClock.elapsedRealtime() < end && collected.size() < 4096) {
++            int n = port.bulkTransfer(in, packet, packet.length, 200);
++            if (n <= 0) continue;
++            collected.write(packet, 0, n);
++            String reply = collected.toString("US-ASCII");
++            if (hasLine(reply, "OK") || hasLine(reply, "ERROR")) return reply;
++        }
++        throw new IOException(command + " reply timeout");
++    }
++}
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
+new file mode 100644
+index 0000000..c7cb1d7
+--- /dev/null
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
+@@ -0,0 +1,133 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++package org.freedesktop.monado.openxr_runtime;
++
++import org.freedesktop.monado.android_common.Cv10UsbAccess;
++import android.content.Context;
++import android.hardware.usb.*;
++import android.os.SystemClock;
++import android.util.Log;
++import java.nio.ByteBuffer;
++import java.nio.ByteOrder;
++import java.util.concurrent.TimeoutException;
++
++/** Synchronous, single-worker USB source. All methods are called by the same native thread. */
++public final class Cv10UsbReader {
++    private static final String TAG = "MonadoCV10";
++    private final Context context;
++    private final UsbManager manager;
++    private final Cv10PanelWake panel = new Cv10PanelWake();
++    private UsbDeviceConnection port;
++    private UsbInterface iface;
++    private UsbRequest request;
++    private ByteBuffer packet;
++    private boolean queued, enabled;
++    private int askedId = -1;
++    private long nextOpen, deadline, frames;
++
++    public Cv10UsbReader(Context ctx) {
++        context = ctx.getApplicationContext();
++        manager = context.getSystemService(UsbManager.class);
++    }
++
++    private int setSensor(int id) {
++        byte[] b = {(byte) id, 2, 0, 0, 0};
++        return port.controlTransfer(0x21, 9, 0x300|id, iface.getId(), b, b.length, 500);
++    }
++
++    private boolean open() {
++        UsbDevice glass = Cv10UsbAccess.find(manager);
++        if (glass==null) { askedId=-1; return false; }
++        if (!manager.hasPermission(glass)) {
++            if (askedId!=glass.getDeviceId()) {
++                askedId=glass.getDeviceId();
++                Cv10UsbAccess.request(context, manager, glass);
++                Log.i(TAG, "Requested CV10 USB permission");
++            }
++            return false;
++        }
++        panel.request(manager, glass);
++        for (int i=0; i<glass.getInterfaceCount(); i++) {
++            UsbInterface hid=glass.getInterface(i);
++            if (hid.getId()!=3 || hid.getAlternateSetting()!=0 || hid.getInterfaceClass()!=3 ||
++                hid.getInterfaceSubclass()!=0 || hid.getInterfaceProtocol()!=0) continue;
++            for (int j=0; j<hid.getEndpointCount(); j++) {
++                UsbEndpoint ep=hid.getEndpoint(j);
++                if (ep.getType()!=UsbConstants.USB_ENDPOINT_XFER_INT || ep.getAddress()!=0x84 ||
++                    ep.getMaxPacketSize()<60) continue;
++                port=manager.openDevice(glass);
++                if (port==null) return false;
++                if (!port.claimInterface(hid,false) && !port.claimInterface(hid,true)) { close(); return false; }
++                iface=hid;
++                request=new UsbRequest();
++                if (!request.initialize(port,ep)) { close(); return false; }
++                packet=ByteBuffer.allocateDirect(ep.getMaxPacketSize()).order(ByteOrder.LITTLE_ENDIAN);
++                enabled=setSensor(5)==5;
++                if (!enabled) { close(); return false; }
++                frames=0;
++                deadline=SystemClock.elapsedRealtime()+5000;
++                Log.i(TAG,"CV10 IMU enabled, interrupt IN 0x84");
++                return true;
++            }
++        }
++        return false;
++    }
++
++    /** Device nanoseconds, zero for no sample, minus one for a disconnected stream. */
++    public long read(float[] imu) {
++        try {
++            if (!enabled) {
++                if (manager==null || SystemClock.elapsedRealtime()<nextOpen) {
++                    SystemClock.sleep(100);
++                    return 0;
++                }
++                nextOpen=SystemClock.elapsedRealtime()+500;
++                if (!open()) return 0;
++            }
++            if (!queued) {
++                packet.clear();
++                queued=request.queue(packet);
++                if (!queued) { close(); return -1; }
++            }
++            try {
++                if (port.requestWait(200)!=request) { close(); return -1; }
++            } catch (TimeoutException waiting) {
++                if (SystemClock.elapsedRealtime()>=deadline) { close(); return -1; }
++                return 0;
++            }
++            queued=false;
++            if (packet.position()!=60 || packet.get(0)!=1 || packet.getInt(12)!=0 || packet.getInt(28)!=1) {
++                if (SystemClock.elapsedRealtime()>=deadline) { close(); return -1; }
++                return 0;
++            }
++            long ns=((long)packet.getInt(4)<<32) | (packet.getInt(8)&0xffffffffL);
++            for (int i=0;i<3;i++) {
++                imu[i]=packet.getFloat(16+4*i)*9.8f;
++                imu[i+3]=(float)Math.toRadians(packet.getFloat(32+4*i));
++                if (!Float.isFinite(imu[i]) || !Float.isFinite(imu[i+3])) return 0;
++            }
++            deadline=SystemClock.elapsedRealtime()+2500;
++            if (frames++==0 || frames%5000==0) Log.i(TAG,"CV10 valid IMU samples="+frames+" deviceNs="+ns);
++            return ns;
++        } catch (RuntimeException failure) {
++            Log.w(TAG,"CV10 read failed",failure); close(); return -1;
++        }
++    }
++
++    public void close() {
++        try {
++            if (request!=null && queued) {
++                request.cancel();
++                try { port.requestWait(200); } catch (TimeoutException ignored) {}
++            }
++        } catch (RuntimeException ignored) {}
++        queued=false;
++        if (request!=null) { request.close(); request=null; }
++        if (port!=null) {
++            try { if (enabled) Log.i(TAG,"CV10 IMU disable bytes="+setSensor(6)); }
++            finally {
++                try { if (iface!=null) port.releaseInterface(iface); }
++                finally { port.close(); port=null; iface=null; enabled=false; }
++            }
++        }
++    }
++}
+diff --git a/src/xrt/targets/openxr_android/src/main/res/values/strings.xml b/src/xrt/targets/openxr_android/src/main/res/values/strings.xml
+index 9bee4ac..6e068a9 100644
+--- a/src/xrt/targets/openxr_android/src/main/res/values/strings.xml
++++ b/src/xrt/targets/openxr_android/src/main/res/values/strings.xml
+@@ -5,5 +5,5 @@
+   -->
+ 
+ <resources>
+-    <string name="service_name">Monado OpenXR</string>
++    <string name="service_name">Monado CV10 OpenXR</string>
+ </resources>
+diff --git a/tests/android/conftest.py b/tests/android/conftest.py
+index 53ec531..6bbfffc 100644
+--- a/tests/android/conftest.py
++++ b/tests/android/conftest.py
+@@ -26,7 +26,7 @@ helloxr_vulkan_activity = f"{helloxr_vulkan_pkg}/{_NATIVE_ACTIVITY}"
+ helloxr_gles_pkg = "org.khronos.openxr.hello_xr.opengles"
+ helloxr_gles_activity = f"{helloxr_gles_pkg}/{_NATIVE_ACTIVITY}"
+ 
+-RUNTIME = "org.freedesktop.monado.openxr_runtime.out_of_process"
++RUNTIME = "org.cv10.monado.out_of_process"
+ 
+ _PKGS_TO_STOP = [
+     helloxr_gles_pkg,

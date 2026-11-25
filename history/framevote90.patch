@@ -1,0 +1,35 @@
+diff --git a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+--- a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
++++ b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+@@ -20,6 +20,7 @@
+ import android.util.DisplayMetrics;
+ import android.util.Log;
+ import android.view.Display;
++import android.view.Surface;
+ import android.view.SurfaceHolder;
+ import android.view.SurfaceView;
+ import android.view.Window;
+@@ -368,6 +369,23 @@
+ 
+     @Override
+     public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
++        Display display = getDisplay();
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && display != null
++                && display.getDisplayId() != Display.DEFAULT_DISPLAY
++                && "HUAWEIAV03".equalsIgnoreCase(display.getName().trim())) {
++            Surface surface = surfaceHolder.getSurface();
++            try {
++                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
++                    surface.setFrameRate(90.0f, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
++                            Surface.CHANGE_FRAME_RATE_ALWAYS);
++                } else {
++                    surface.setFrameRate(90.0f, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
++                }
++                Log.i(TAG, "CV10 Surface.setFrameRate requested 90 Hz, display=" + display.getDisplayId());
++            } catch (IllegalArgumentException | IllegalStateException e) {
++                Log.w(TAG, "CV10 Surface.setFrameRate unavailable", e);
++            }
++        }
+         synchronized (currentSurfaceHolderSync) {
+             currentSurfaceHolder = surfaceHolder;
+             currentSurfaceHolderSync.notifyAll();

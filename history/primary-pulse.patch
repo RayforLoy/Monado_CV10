@@ -1,0 +1,90 @@
+diff --git a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+--- a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
++++ b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+@@ -12,6 +12,7 @@
+ import android.app.Activity;
+ import android.app.Presentation;
+ import android.content.Context;
++import android.graphics.Canvas;
+ import android.hardware.display.DisplayManager;
+ import android.os.Build;
+ import android.os.Handler;
+@@ -24,6 +25,7 @@
+ import android.view.SurfaceHolder;
+ import android.view.SurfaceView;
+ import android.view.View;
++import android.view.ViewGroup;
+ import android.view.Window;
+ import android.view.WindowManager;
+ import androidx.annotation.GuardedBy;
+@@ -122,10 +124,46 @@
+     // Accessed only on the UI thread. Overlapping sessions share the original window values.
+     private static final WeakHashMap<Window, PrimaryVote> primaryVotes = new WeakHashMap<>();
+ 
++    private static final class PrimaryPulse extends View {
++        private boolean live = true;
++        private boolean alternate;
++
++        PrimaryPulse(Context context) {
++            super(context);
++            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
++            setFocusable(false);
++            setClickable(false);
++        }
++
++        private boolean canDraw() {
++            return live && isAttachedToWindow() && isShown() && getWindowVisibility() == VISIBLE;
++        }
++
++        @Override
++        public void onVisibilityAggregated(boolean visible) {
++            super.onVisibilityAggregated(visible);
++            if (visible && canDraw()) postInvalidateOnAnimation();
++        }
++
++        @Override
++        protected void onDraw(Canvas canvas) {
++            if (!canDraw()) return;
++            canvas.drawColor(alternate ? 0xff181818 : 0xff101010);
++            alternate = !alternate;
++            postInvalidateOnAnimation();
++        }
++
++        void stop() {
++            live = false;
++            if (getParent() instanceof ViewGroup) ((ViewGroup) getParent()).removeView(this);
++        }
++    }
++
+     private static final class PrimaryVote {
+         final int oldModeId, requestedModeId;
+         final float oldRate, requestedRate, oldViewRate;
+         int sessions = 1;
++        final PrimaryPulse pulse;
+ 
+         PrimaryVote(Window window, View content, Display.Mode best) {
+             WindowManager.LayoutParams lp = window.getAttributes();
+@@ -140,11 +178,23 @@
+             if (Build.VERSION.SDK_INT >= 35) {
+                 content.setRequestedFrameRate(View.REQUESTED_FRAME_RATE_CATEGORY_HIGH);
+             }
++            if (content instanceof ViewGroup) {
++                pulse = new PrimaryPulse(content.getContext());
++                ((ViewGroup) content).addView(pulse, 1, 1);
++                pulse.postInvalidateOnAnimation();
++                Log.i(TAG, "CV10 primary 1px pulse attached");
++            } else {
++                pulse = null;
++            }
+             Log.i(TAG, "CV10 primary window requested mode=" + requestedModeId + " Hz=" + requestedRate
+                     + " previousMode=" + oldModeId + " previousHz=" + oldRate);
+         }
+ 
+         void restore(Window window, View content) {
++            if (pulse != null) {
++                pulse.stop();
++                Log.i(TAG, "CV10 primary 1px pulse removed");
++            }
+             WindowManager.LayoutParams lp = window.getAttributes();
+             if (lp.preferredDisplayModeId == requestedModeId) lp.preferredDisplayModeId = oldModeId;
+             if (lp.preferredRefreshRate == requestedRate) lp.preferredRefreshRate = oldRate;

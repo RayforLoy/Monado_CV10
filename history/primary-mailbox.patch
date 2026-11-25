@@ -1,0 +1,182 @@
+diff --git a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+--- a/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
++++ b/src/xrt/auxiliary/android/src/main/java/org/freedesktop/monado/auxiliary/MonadoView.java
+@@ -23,6 +23,7 @@
+ import android.view.Surface;
+ import android.view.SurfaceHolder;
+ import android.view.SurfaceView;
++import android.view.View;
+ import android.view.Window;
+ import android.view.WindowManager;
+ import androidx.annotation.GuardedBy;
+@@ -30,6 +31,7 @@
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+ import java.util.TreeSet;
++import java.util.WeakHashMap;
+ 
+ @Keep
+ public class MonadoView extends SurfaceView
+@@ -115,6 +117,75 @@
+             if (display.isValid() && "HUAWEIAV03".equalsIgnoreCase(display.getName().trim())) return display;
+         }
+         return null;
++    }
++
++    // Accessed only on the UI thread. Overlapping sessions share the original window values.
++    private static final WeakHashMap<Window, PrimaryVote> primaryVotes = new WeakHashMap<>();
++
++    private static final class PrimaryVote {
++        final int oldModeId, requestedModeId;
++        final float oldRate, requestedRate, oldViewRate;
++        int sessions = 1;
++
++        PrimaryVote(Window window, View content, Display.Mode best) {
++            WindowManager.LayoutParams lp = window.getAttributes();
++            oldModeId = lp.preferredDisplayModeId;
++            oldRate = lp.preferredRefreshRate;
++            requestedModeId = best.getModeId();
++            requestedRate = best.getRefreshRate();
++            oldViewRate = Build.VERSION.SDK_INT >= 35 ? content.getRequestedFrameRate() : 0;
++            lp.preferredDisplayModeId = requestedModeId;
++            lp.preferredRefreshRate = requestedRate;
++            window.setAttributes(lp);
++            if (Build.VERSION.SDK_INT >= 35) {
++                content.setRequestedFrameRate(View.REQUESTED_FRAME_RATE_CATEGORY_HIGH);
++            }
++            Log.i(TAG, "CV10 primary window requested mode=" + requestedModeId + " Hz=" + requestedRate
++                    + " previousMode=" + oldModeId + " previousHz=" + oldRate);
++        }
++
++        void restore(Window window, View content) {
++            WindowManager.LayoutParams lp = window.getAttributes();
++            if (lp.preferredDisplayModeId == requestedModeId) lp.preferredDisplayModeId = oldModeId;
++            if (lp.preferredRefreshRate == requestedRate) lp.preferredRefreshRate = oldRate;
++            window.setAttributes(lp);
++            if (Build.VERSION.SDK_INT >= 35
++                    && content.getRequestedFrameRate() == View.REQUESTED_FRAME_RATE_CATEGORY_HIGH) {
++                content.setRequestedFrameRate(oldViewRate);
++            }
++            Log.i(TAG, "CV10 primary window released mode=" + lp.preferredDisplayModeId
++                    + " Hz=" + lp.preferredRefreshRate);
++        }
++    }
++
++    private static void requestCv10PrimaryRate(Activity owner, Presentation presentation) {
++        Window window = owner.getWindow();
++        View content = window.findViewById(android.R.id.content);
++        if (content == null) return;
++        Display primary = content.getDisplay();
++        if (primary == null || primary.getDisplayId() != Display.DEFAULT_DISPLAY) return;
++        PrimaryVote current = primaryVotes.get(window);
++        if (current == null) {
++            Display.Mode active = primary.getMode();
++            Display.Mode best = active;
++            for (Display.Mode mode : primary.getSupportedModes()) {
++                if (mode.getPhysicalWidth() == active.getPhysicalWidth()
++                        && mode.getPhysicalHeight() == active.getPhysicalHeight()
++                        && mode.getRefreshRate() > best.getRefreshRate()) {
++                    best = mode;
++                }
++            }
++            primaryVotes.put(window, new PrimaryVote(window, content, best));
++        } else {
++            current.sessions++;
++        }
++        presentation.setOnDismissListener(dialog -> {
++            PrimaryVote vote = primaryVotes.get(window);
++            if (vote != null && --vote.sessions == 0) {
++                primaryVotes.remove(window);
++                vote.restore(window, content);
++            }
++        });
+     }
+ 
+     private static MonadoView attachCv10(Context owner, Display display, long pointer) {
+@@ -156,6 +227,7 @@
+                     dialog.setContentView(view);
+                     dialog.show();
+                     view.presentation = dialog;
++                    requestCv10PrimaryRate((Activity) owner, dialog);
+                 } else {
+                     WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+@@ -376,10 +448,10 @@
+             Surface surface = surfaceHolder.getSurface();
+             try {
+                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+-                    surface.setFrameRate(90.0f, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
++                    surface.setFrameRate(90.0f, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT,
+                             Surface.CHANGE_FRAME_RATE_ALWAYS);
+                 } else {
+-                    surface.setFrameRate(90.0f, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
++                    surface.setFrameRate(90.0f, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT);
+                 }
+                 Log.i(TAG, "CV10 Surface.setFrameRate requested 90 Hz, display=" + display.getDisplayId());
+             } catch (IllegalArgumentException | IllegalStateException e) {
+diff --git a/src/xrt/compositor/main/comp_settings.c b/src/xrt/compositor/main/comp_settings.c
+--- a/src/xrt/compositor/main/comp_settings.c
++++ b/src/xrt/compositor/main/comp_settings.c
+@@ -31,7 +31,7 @@
+ DEBUG_GET_ONCE_NUM_OPTION(force_gpu_index, "XRT_COMPOSITOR_FORCE_GPU_INDEX", -1)
+ DEBUG_GET_ONCE_NUM_OPTION(force_client_gpu_index, "XRT_COMPOSITOR_FORCE_CLIENT_GPU_INDEX", -1)
+ DEBUG_GET_ONCE_NUM_OPTION(desired_mode, "XRT_COMPOSITOR_DESIRED_MODE", -1)
+-DEBUG_GET_ONCE_OPTION(present_mode, "XRT_COMPOSITOR_PRESENT_MODE", "fifo")
++DEBUG_GET_ONCE_OPTION(present_mode, "XRT_COMPOSITOR_PRESENT_MODE", NULL)
+ DEBUG_GET_ONCE_NUM_OPTION(scale_percentage, "XRT_COMPOSITOR_SCALE_PERCENTAGE", 140)
+ DEBUG_GET_ONCE_BOOL_OPTION(xcb_fullscreen, "XRT_COMPOSITOR_XCB_FULLSCREEN", false)
+ DEBUG_GET_ONCE_NUM_OPTION(xcb_display, "XRT_COMPOSITOR_XCB_DISPLAY", -1)
+@@ -55,12 +55,14 @@
+ }
+ 
+ static VkPresentModeKHR
+-get_desired_present_mode(void)
++get_desired_present_mode(bool is_cv10)
+ {
+ 	const char *present_mode_str = debug_get_option_present_mode();
+ 
+-	if (present_mode_str == NULL || present_mode_str[0] == '\0' || strcmp(present_mode_str, "fifo") == 0 ||
+-	    strcmp(present_mode_str, "FIFO") == 0) {
++	if (present_mode_str == NULL || present_mode_str[0] == '\0') {
++		return is_cv10 ? VK_PRESENT_MODE_MAILBOX_KHR : VK_PRESENT_MODE_FIFO_KHR;
++	}
++	if (strcmp(present_mode_str, "fifo") == 0 || strcmp(present_mode_str, "FIFO") == 0) {
+ 		return VK_PRESENT_MODE_FIFO_KHR;
+ 	} else if (strcmp(present_mode_str, "fifo_relaxed") == 0 || strcmp(present_mode_str, "FIFO_RELAXED") == 0) {
+ 		return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+@@ -163,7 +165,8 @@
+ 
+ 	s->display = debug_get_num_option_xcb_display();
+ 	s->color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+-	s->present_mode = get_desired_present_mode();
++	s->is_cv10 = strcmp(xdev->serial, "Huawei-CV10-USB") == 0;
++	s->present_mode = get_desired_present_mode(s->is_cv10);
+ 	s->fullscreen = debug_get_bool_option_xcb_fullscreen();
+ 	s->preferred.width = xdev->hmd->screens[0].w_pixels;
+ 	s->preferred.height = xdev->hmd->screens[0].h_pixels;
+diff --git a/src/xrt/compositor/main/comp_settings.h b/src/xrt/compositor/main/comp_settings.h
+--- a/src/xrt/compositor/main/comp_settings.h
++++ b/src/xrt/compositor/main/comp_settings.h
+@@ -55,6 +55,7 @@
+ 
+ 	VkColorSpaceKHR color_space;
+ 	VkPresentModeKHR present_mode;
++	bool is_cv10;
+ 
+ 	//! Preferred window type to use, not actual used.
+ 	const char *target_identifier;
+diff --git a/src/xrt/compositor/main/comp_target_swapchain.c b/src/xrt/compositor/main/comp_target_swapchain.c
+--- a/src/xrt/compositor/main/comp_target_swapchain.c
++++ b/src/xrt/compositor/main/comp_target_swapchain.c
+@@ -788,6 +788,11 @@
+ 	    &info,                              //
+ 	    create_info->image_usage,           //
+ 	    cts->present_mode);                 //
++	if (!bret && ct->c->settings.is_cv10 && cts->present_mode != VK_PRESENT_MODE_FIFO_KHR) {
++		COMP_WARN(ct->c, "CV10 present mode unsupported; falling back to FIFO");
++		cts->present_mode = VK_PRESENT_MODE_FIFO_KHR;
++		bret = check_surface_present_mode(cts, &info, create_info->image_usage, cts->present_mode);
++	}
+ 	if (!bret) {
+ 		goto error_print_and_free;
+ 	}

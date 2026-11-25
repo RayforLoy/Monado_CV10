@@ -1,0 +1,13 @@
+diff --git a/src/xrt/targets/android_common/src/main/AndroidManifest.xml b/src/xrt/targets/android_common/src/main/AndroidManifest.xml
+--- a/src/xrt/targets/android_common/src/main/AndroidManifest.xml
++++ b/src/xrt/targets/android_common/src/main/AndroidManifest.xml
+@@ -47,8 +47,7 @@
+         android:theme="@style/AppTheme">
+         <!-- Main "about" activity -->
+         <activity android:name=".AboutActivity"
+-            android:exported="true"
+-            android:label="Monado">
++            android:exported="true">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.LAUNCHER" />
