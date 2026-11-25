@@ -179,6 +179,9 @@ android {
 
     defaultConfig {
         applicationId 'org.cv10.monado'
+        if (project.hasProperty('cv10Abi')) {
+            ndk { abiFilters project.property('cv10Abi').toString() }
+        }
         minSdkVersion project.sharedMinSdk
         targetSdkVersion project.sharedTargetSdk
 

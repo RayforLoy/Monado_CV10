@@ -117,3 +117,7 @@ result/
 
 # Kotlin
 .kotlin
+
+# Generated release assets are distributed on GitHub Releases.
+/apk/v*/**
+!/apk/v*/SHA256SUMS.txt
