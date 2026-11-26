@@ -53,7 +53,7 @@ Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 32
 
 Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
 
-外显诊断在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由已授权的 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡在 CV10 两个眼区显示各自的标记，右镜拍到正立的 `RIGHT EYE`。在原版启动器使用 **深度（3D 左右并排）** 后，实测菜单左右眼各 1920×1080，右镜拍到完整菜单。点选 `hello_xr` 后出现提示缺少 Shizuku 授权的双目占位窗口。
+外显诊断在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由已授权的 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡在 CV10 两个眼区显示各自的标记，右镜拍到正立的 `RIGHT EYE`。在原版空间启动器切换到 **3D** 后，实测菜单左右眼各 1920×1080，右镜拍到完整菜单。点选 `hello_xr` 后出现提示缺少 Shizuku 授权的双目占位窗口。
 
 从 Monado 2D 启动器取消 **仅显示 XR 应用**，可打开原版 Pocket XR 的手机触控板。手机端一键启动外显需要预览包自己的 Shizuku 授权，创建和投射应用面板还需要原版 Pocket XR 的 Shizuku 授权。原版手机端能发现诊断虚拟屏，Android 拒绝它在该屏自行打开平面桌面 Activity，原版随后回退到基础画面。独立电脑屏幕模式已用原版 Pocket XR 把实况左右并排视频投到 CV10，右镜实拍通过。Monado 已验证用 CV10 姿态固定整个双目画面。原版空间里的应用面板、原版直接接收 IMU 和左镜实拍仍待验收。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md) · [电脑屏幕 3D 实测](history/fold7-pocket-pc-sbs.md) · [固定双目画面的实测](history/fold7-pocket-world-anchor.md)
 
@@ -64,7 +64,7 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenXR 应用仍从系统 Broker 选择运行时。日常直接启动 CV10 OpenXR 应用时，按前文的流程选择 **Monado CV10** 或 **Monado CV10 Preview**。
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
-- **打开 Pocket XR 空间** 并收到画面后，使用 **打开手机控制** 切到原版 Pocket XR，同时保持眼镜会话。可在手机端 **空间窗口** 打开启动器，再在启动器中使用 **深度（3D 左右并排）** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
+- **打开 Pocket XR 空间** 并收到画面后，使用 **打开手机控制** 切到原版 Pocket XR，同时保持眼镜会话。可在手机端 **空间窗口** 打开启动器，再在启动器中使用 **3D** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
 - **电脑屏幕 3D（左右并排）** 使用原版 Pocket XR 的独立电脑屏幕。结束正在运行的空间预览，再选 **在手机上设置电脑屏幕** 配对 Sunshine 或 Apollo。配对后返回 Monado，选择 **电脑屏幕 3D（左右并排）**。电脑播放铺满 16:9 桌面的左右并排内容时，左半送入左眼，右半送入右眼。当前实测主机为 Sunshine，接收 1920×1080 的 Half SBS 视频。这一路径使用独立的头锁定平面。[实测和已知范围](history/fold7-pocket-pc-sbs.md)
 - **使用 CV10 头部追踪固定 Pocket XR 画面** 让 Monado 将原版空间的双目画面固定在最初朝向，转头时画面留在原位。选择 **将画面移到当前朝向** 可重新置中。固定模式无需 VPN 授权，请在 Pocket XR 中关闭自身的头部追踪，以免画面被两次校正。[Fold7 原版测试卡实拍](history/fold7-pocket-world-anchor.md)
 - **通过 Android 本机 VPN 接入头部追踪（实验）** 可在打开空间前选用。勾选后由 Android 询问 VPN 授权。打开空间时，预览只为原版 Pocket XR 宣告本机 `169.254.2.1/32`，将 CV10 的 HID 样本和控制心跳送到该地址的两个 TCP 端口。预览退出时关闭连接。
@@ -72,7 +72,7 @@ Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenX
 
 Fold7 已验证预览内的显示服务能创建和释放受信任虚拟屏。原版空间在该屏输出双目测试卡和应用占位窗口。默认电脑屏幕配对 Sunshine 后在该屏收到了 1920×1080 的 HEVC Half SBS 视频。[服务与默认电脑屏幕实测](history/fold7-pocket-shell-service.md)
 
-临时在 Broker 选用原版 **Pocket XR** 做诊断时，原版运行时接管 `hello_xr`，内置 Monado CV10 同时将它的游戏图层送到 CV10。外显录屏的左右眼区域和右镜实拍都有蓝色方块。测试通过 ADB 启动样例，三星 Freecess 在首个游戏缓冲区出现后约 0.4 秒冻结 Pocket XR。持续运行、正常退出和从原版空间菜单点选应用仍待验证。[双运行时实测](history/fold7-pocket-dual-runtime.md)
+临时在 Broker 选用原版 **Pocket XR** 做诊断时，原版运行时接管 `hello_xr`，内置 Monado CV10 同时将它的游戏图层送到 CV10。外显录屏的左右眼区域和右镜实拍都有蓝色方块。三星 Freecess 在首个游戏缓冲区出现后约 0.4 秒冻结 Pocket XR。保持原版触控板和眼镜就绪服务运行，或把样例放在手机主屏的弹出视图，均复现冻结。通过独立诊断屏启动的样例在按返回后退出会话，随后在加载器卸载原版运行时后崩溃。持续运行、正常退出和从原版空间菜单点选应用仍待验证。[双运行时实测](history/fold7-pocket-dual-runtime.md)
 
 Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。整合预览 `6e536a4` 复测了内置 3D 菜单和原版测试卡。Android 在该设备上拒绝普通应用把原版空间入口启动到诊断虚拟屏。Fold7 的真实 CV10 IMU 通过回环诊断连续两次把约 1000 Hz 的样本送入电脑端原版 Pocket XR 解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后手机端原版连接、实物头动方向和 Shizuku 一键开流仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [实时 IMU 对照](history/fold7-pocket-xr-imu.md#fold7-实时-tcp-对照)
 

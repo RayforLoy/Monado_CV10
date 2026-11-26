@@ -27,3 +27,14 @@ Broker 选中 **Pocket XR**。外层预览的 Loader 从自身缓存读取 `cv10
 换回同一提交的生产预览，暂时在 Broker 选择 **Monado CV10 Preview**，回归内置启动入口。2D 直开和 3D 菜单点选都让原版 `hello_xr` 进入 `FOCUSED`；两次按返回均进入 `STOPPING` 并完成 `xrDestroyInstance`，没有新的崩溃记录。内置 3D 菜单由系统 Broker 找到预览运行时。[启动器回归日志](evidence/fold7-pocket-dual-runtime-launchers.log)
 
 测试后保留生产预览，恢复原版 Pocket XR 的 **受限制** 和稳定 **Monado CV10** Broker。系统最低刷新率为原值 `null`，诊断虚拟屏均已清理。未增授 Shizuku、VPN 或不限电池权限。[原版受限与优化模式对照](fold7-pocket-shell-service.md#原版-pocket-xr-运行时对照)
+
+## 眼镜就绪和手机前台对照
+
+2026-11-27 04:49 至 04:51（香港时间），沿用同一设备、原版 APK 和电池 **优化**，预览诊断 APK 的 SHA-256 为 `25e0f134f17f7127b780e25a2e2474a4acfaa2ec9766cb360c290ddada3d8a1c`。仍由 ADB 放置诊断画面和原版样例，通过现有 **打开手机控制** 入口打开原版的 `TrackpadActivity`。手机保持触控板，Monado 和原版 Pocket XR 各自有前台服务，原版日志确认眼镜就绪服务已启动。[原版眼镜就绪服务](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/kotlin/com/hayeco/flipspaces/GlassesReadyService.kt)
+
+| 样例的手机端窗口 | 游戏层运行 | 返回和释放 |
+| --- | --- | --- |
+| 独立诊断虚拟屏 136 | 右镜有蓝块。首个游戏缓冲区出现后 455 毫秒，Freecess 冻结 Pocket XR。 | 按返回后，系统解冻 Pocket XR，样例进入 `STOPPING`。右镜回到 Pocket XR 的应用占位窗口。加载器完成 `xrDestroyInstance` 并卸载原版运行时，7 毫秒后样例线程 `SIGSEGV`。[右镜序列，每秒两帧](evidence/fold7-pocket-stock-foreground-right.jpg) |
+| 默认屏的弹出视图 | 原版触控板仍在手机上，首个游戏缓冲区出现后 460 毫秒，Freecess 冻结 Pocket XR。三次读取同一 SurfaceView 的帧编号依次为 23、29、29。 | 按返回后未取得正常退出轨迹。原版服务在 `ServiceANR` 解冻后交还游戏层。 |
+
+`readelf -d` 显示原版 1.6.28 的 `libopenxr_monado.so` 未设 `NODELETE`，CV10 预览包含 `4fe230f` 的 `NODELETE` 修复。卸载后的崩溃时序与此前 CV10 的卸载问题一致。本轮原版崩溃缺少可用的符号化回溯，尚不能确认同一根因。两种窗口放置均无法消除 Freecess。结束后重新恢复稳定 Broker、原电池设置和生产预览，保留原有权限与接线。[前台与退出对照日志](evidence/fold7-pocket-stock-foreground.log)

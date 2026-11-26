@@ -1,0 +1,36 @@
+# Fold7, 2026-11-27 HKT. Broker selected Pocket XR, battery mode Optimized for the experiment.
+# Android activity placement: separate public display 136
+11-27 04:49:26.837 10246 10246 I FlipSpaces/Mode: glasses ready service in the foreground; display events reach the plug-in watcher
+11-27 04:49:26.844 10246 10246 I FlipSpaces/Mode: glasses ready service in the foreground; display events reach the plug-in watcher
+11-27 04:49:29.602  9936  9936 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 04:49:31.943 10505 10526 V hello_xr: [04:49:31.943][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2818791873923
+11-27 04:49:32.113  2129  4678 I SurfaceFlinger: [867468 SurfaceView[Pocket XR game]@0(BLAST)#1063694] setTransactionState with the first frame. bufferData(ID: 44006234914881, frameNumber: 1)
+11-27 04:49:32.568  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [10246] reason: Bg-buff
+11-27 04:49:36.821  2961  7394 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [10246] reason: CancelPolicy
+11-27 04:49:36.969 10505 10526 V hello_xr: [04:49:36.969][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598486720 time=2823817534390
+11-27 04:49:37.482 10246 10246 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 04:49:37.485 10505 10526 F libc    : Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x758c552a48 in tid 10526 (Thread-7), pid 10505 (llo_xr.opengles)
+topResumedActivity=ActivityRecord{201965994 u0 com.hayeco.flipspaces/.TrackpadActivity t32859}
+mFocusedApp=ActivityRecord{201965994 u0 com.hayeco.flipspaces/.TrackpadActivity t32859}
+# Android activity placement: phone display 0, freeform
+11-27 04:50:52.440 12355 12355 I FlipSpaces/Mode: glasses ready service in the foreground; display events reach the plug-in watcher
+11-27 04:50:52.447 12355 12355 I FlipSpaces/Mode: glasses ready service in the foreground; display events reach the plug-in watcher
+11-27 04:50:55.432 12070 12070 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 04:50:57.719 13018 13056 V hello_xr: [04:50:57.719][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2818666701257
+11-27 04:50:57.878  2129  2895 I SurfaceFlinger: [a58d567 SurfaceView[Pocket XR game]@0(BLAST)#1064246] setTransactionState with the first frame. bufferData(ID: 53064320942145, frameNumber: 1)
+11-27 04:50:58.338  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [12355] reason: Bg-buff
+11-27 04:51:38.270  2961  8662 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [12355] reason: ServiceANR
+11-27 04:51:38.299 12355 12355 I PocketXrOpenXr: the glasses are back with the Space: the game left
+topResumedActivity=ActivityRecord{173659589 u0 com.hayeco.flipspaces/.TrackpadActivity t32880}
+topResumedActivity=ActivityRecord{173659589 u0 com.hayeco.flipspaces/.TrackpadActivity t32880}
+# Game surface frame counters for the freeform trial, sampled about 1.25 seconds apart plus the dump overhead
+sample 0 visible reason= buffer=53064320942147 frame=23 contentDirty
+sample 1 visible reason= buffer=53064320942145 frame=29
+sample 2 visible reason= buffer=53064320942145 frame=29
+# Client loader exit trace, first trial
+11-27 04:49:37.478 10505 10526 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+11-27 04:49:37.478 10505 10526 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 04:49:37.485 10505 10526 F libc    : Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x758c552a48 in tid 10526 (Thread-7), pid 10505 (llo_xr.opengles)
+# readelf -d, lib/arm64-v8a/libopenxr_monado.so from each APK
+stock 0x000000006ffffffb (FLAGS_1)            Flags: NOW
+cv10 0x000000006ffffffb (FLAGS_1)            Flags: NOW NODELETE
