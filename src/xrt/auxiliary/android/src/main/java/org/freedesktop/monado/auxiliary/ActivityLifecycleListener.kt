@@ -14,6 +14,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.annotation.Keep
 
+/** An internal activity presenting on CV10 while its phone controller has focus. */
+interface Cv10ExternalPresentation {
+    val keepSessionWhilePaused: Boolean
+}
+
 /** Monitor activity lifecycle of application. */
 @Keep
 class ActivityLifecycleListener(private val nativePtr: Long) :
@@ -46,6 +51,7 @@ class ActivityLifecycleListener(private val nativePtr: Long) :
 
     override fun onActivityPaused(activity: Activity) {
         Log.i(TAG, "$activity onActivityPaused")
+        if ((activity as? Cv10ExternalPresentation)?.keepSessionWhilePaused == true) return
         nativeOnActivityPaused(nativePtr, activity)
     }
 

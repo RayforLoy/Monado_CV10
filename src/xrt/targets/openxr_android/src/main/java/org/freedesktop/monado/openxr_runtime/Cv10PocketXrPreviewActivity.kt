@@ -3,7 +3,10 @@
 package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Bundle
@@ -14,12 +17,15 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
+import org.freedesktop.monado.auxiliary.Cv10ExternalPresentation
 import rikka.shizuku.Shizuku
 
-class Cv10PocketXrPreviewActivity : Activity() {
+class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var status: TextView
     private lateinit var open: Button
     private lateinit var test: Button
+    private lateinit var controls: Button
     private lateinit var stop: Button
     private lateinit var headLink: CheckBox
     private var transport: Cv10PocketXrTransport? = null
@@ -28,6 +34,15 @@ class Cv10PocketXrPreviewActivity : Activity() {
     private var stopping = false
     private var pendingVpn = false
     private var headLinkStarted = false
+    private var controlsAvailable = false
+    override var keepSessionWhilePaused = false
+        private set
+
+    private val stopReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (renderer != null) stopPreview(getString(R.string.cv10_pocket_preview_intro))
+        }
+    }
 
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { request, result ->
         if (request == REQUEST_DISPLAY_PERMISSION) {
@@ -68,6 +83,10 @@ class Cv10PocketXrPreviewActivity : Activity() {
             setText(R.string.cv10_pocket_preview_test)
             setOnClickListener { startPreview(true) }
         }
+        controls = Button(this).apply {
+            setText(R.string.cv10_pocket_preview_controls)
+            setOnClickListener { openPhoneControls() }
+        }
         stop = Button(this).apply {
             setText(R.string.cv10_pocket_preview_stop)
             setOnClickListener { stopPreview(getString(R.string.cv10_pocket_preview_intro)) }
@@ -80,22 +99,57 @@ class Cv10PocketXrPreviewActivity : Activity() {
         panel.addView(headLink)
         panel.addView(open)
         panel.addView(test)
+        panel.addView(controls)
         panel.addView(stop)
         setContentView(panel)
         Shizuku.addRequestPermissionResultListener(permissionListener)
+        val stopFilter = IntentFilter(Intent.ACTION_SCREEN_OFF).apply {
+            addAction(Cv10PocketControlsService.STOP_ACTION)
+        }
+        ContextCompat.registerReceiver(this, stopReceiver, stopFilter, ContextCompat.RECEIVER_NOT_EXPORTED)
         updateButtons()
     }
 
+    override fun onResume() {
+        super.onResume()
+        leavePhoneControls()
+    }
+
     override fun onStop() {
-        if (::status.isInitialized && renderer != null) {
+        if (renderer != null && !keepSessionWhilePaused) {
             stopPreview(getString(R.string.cv10_pocket_preview_intro))
         }
         super.onStop()
     }
 
     override fun onDestroy() {
-        if (::status.isInitialized) Shizuku.removeRequestPermissionResultListener(permissionListener)
+        if (::status.isInitialized) {
+            if (renderer != null) stopPreview(getString(R.string.cv10_pocket_preview_intro))
+            Shizuku.removeRequestPermissionResultListener(permissionListener)
+            unregisterReceiver(stopReceiver)
+        }
         super.onDestroy()
+    }
+
+    private fun openPhoneControls() {
+        if (!controlsAvailable || keepSessionWhilePaused) return
+        try {
+            val launch = checkNotNull(packageManager.getLaunchIntentForPackage(Cv10PocketHeadLinkService.POCKET_PACKAGE))
+            startForegroundService(Cv10PocketControlsService.intent(this))
+            keepSessionWhilePaused = true
+            startActivity(launch)
+            Log.i(TAG, "Opened Pocket XR phone controls with the external session active")
+        } catch (error: RuntimeException) {
+            leavePhoneControls()
+            Log.w(TAG, "Could not open Pocket XR phone controls", error)
+            status.setText(R.string.cv10_pocket_controls_launch_failed)
+        }
+    }
+
+    private fun leavePhoneControls() {
+        if (!keepSessionWhilePaused) return
+        keepSessionWhilePaused = false
+        stopService(Cv10PocketControlsService.intent(this))
     }
 
     private fun requestHeadLink() {
@@ -163,6 +217,8 @@ class Cv10PocketXrPreviewActivity : Activity() {
             if (hasFrame && transport === nextTransport) {
                 status.text = getString(R.string.cv10_pocket_preview_receiving, id)
                 Log.i(TAG, "First virtual display frame available on display $id")
+                controlsAvailable = !showTestCard
+                updateButtons()
             }
         }
         val nextRenderer = Cv10PocketXrRenderer(
@@ -212,6 +268,8 @@ class Cv10PocketXrPreviewActivity : Activity() {
         val previousRenderer = renderer
         transport = null
         renderer = null
+        controlsAvailable = false
+        leavePhoneControls()
         if (headLinkStarted) {
             stopService(Cv10PocketHeadLinkService.intent(this))
             headLinkStarted = false
@@ -235,6 +293,7 @@ class Cv10PocketXrPreviewActivity : Activity() {
         headLink.isEnabled = available
         open.isEnabled = available
         test.isEnabled = available
+        controls.isEnabled = controlsAvailable
         stop.isEnabled = renderer != null
     }
 

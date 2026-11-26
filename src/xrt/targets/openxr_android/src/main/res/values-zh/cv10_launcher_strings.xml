@@ -12,6 +12,9 @@
     <string name="cv10_pocket_preview_open">打开 Pocket XR 空间</string>
     <string name="cv10_pocket_preview_test">显示左右眼测试卡</string>
     <string name="cv10_pocket_preview_stop">停止预览</string>
+    <string name="cv10_pocket_preview_controls">打开手机控制</string>
+    <string name="cv10_pocket_controls_notification">在手机上使用 Pocket XR 时，CV10 会继续显示预览。</string>
+    <string name="cv10_pocket_controls_launch_failed">无法在手机上打开 Pocket XR。</string>
     <string name="cv10_pocket_preview_needs_shizuku">需要先启动 Shizuku 才能为 Pocket XR 创建虚拟显示屏。</string>
     <string name="cv10_pocket_preview_shizuku_denied">请在 Shizuku 中允许 Monado CV10 Preview 创建虚拟显示屏。</string>
     <string name="cv10_pocket_preview_starting">正在启动 OpenXR 会话和虚拟显示屏…</string>
