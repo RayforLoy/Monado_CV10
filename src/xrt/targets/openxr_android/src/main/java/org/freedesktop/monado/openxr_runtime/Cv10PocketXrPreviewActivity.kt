@@ -419,9 +419,13 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         stop.isEnabled = renderer != null
     }
 
-    private companion object {
-        const val TAG = "Cv10PocketXrPreview"
-        const val REQUEST_DISPLAY_PERMISSION = 18_011
-        const val REQUEST_HEAD_LINK = 18_012
+    companion object {
+        internal fun resumeIntent(context: Context): Intent =
+            Intent(context, Cv10PocketXrPreviewActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+
+        private const val TAG = "Cv10PocketXrPreview"
+        private const val REQUEST_DISPLAY_PERMISSION = 18_011
+        private const val REQUEST_HEAD_LINK = 18_012
     }
 }

@@ -20,8 +20,7 @@ class Cv10PocketControlsService : Service() {
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, title, NotificationManager.IMPORTANCE_LOW),
         )
-        val resume = Intent(this, Cv10PocketXrPreviewActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        val resume = Cv10PocketXrPreviewActivity.resumeIntent(this)
         val stop = Intent(STOP_ACTION).setPackage(packageName)
         val notification = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_dialog_info)

@@ -46,7 +46,7 @@ class AboutMenuWithCardboard @Inject constructor(private val scanner: ScannerPro
             return true
         }
         if (item.itemId == R.id.cv10_pocket_preview) {
-            context.startActivity(Intent(context, Cv10PocketXrPreviewActivity::class.java))
+            context.startActivity(Cv10PocketXrPreviewActivity.resumeIntent(context))
             return true
         }
         if (item.itemId == R.id.qrscan) {
