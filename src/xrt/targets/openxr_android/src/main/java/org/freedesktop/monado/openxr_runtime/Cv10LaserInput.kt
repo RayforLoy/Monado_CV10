@@ -44,7 +44,7 @@ internal class Cv10LaserInput(
     private var aimX = 0f
     private var aimY = 0f
 
-    private enum class Zone { POINTER, LEFT, RIGHT, RECENTER, SYSTEM_BOTTOM }
+    private enum class Zone { POINTER, LEFT, RIGHT, RECENTER, SYSTEM }
 
     private var finger = MotionEvent.INVALID_POINTER_ID
     private var zone = Zone.POINTER
@@ -105,7 +105,7 @@ internal class Cv10LaserInput(
         val vertical = up[0] * x + up[1] * y + up[2] * z
         val depth = forward[0] * x + forward[1] * y + forward[2] * z
         val targetX = (atan2(horizontal, depth) / 0.52f).coerceIn(-1f, 1f)
-        val targetY = (-atan2(vertical, hypot(horizontal, depth)) / 0.40f).coerceIn(-1f, 1f)
+        val targetY = (atan2(vertical, hypot(horizontal, depth)) / 0.40f).coerceIn(-1f, 1f)
         updateAim(aimX + (targetX - aimX) * 0.35f, aimY + (targetY - aimY) * 0.35f)
     }
 
@@ -141,7 +141,7 @@ internal class Cv10LaserInput(
                 downX = event.x
                 downY = event.y
                 zone = zoneFor(downX, downY)
-                if (zone != Zone.SYSTEM_BOTTOM) {
+                if (zone != Zone.SYSTEM) {
                     finger = event.getPointerId(0)
                     aimByTouch(downX, downY)
                 }
@@ -181,8 +181,15 @@ internal class Cv10LaserInput(
     }
 
     private fun zoneFor(x: Float, y: Float): Zone {
-        // The Home gesture is mandatory. Start the app's gesture above it, leaving an extra gap.
+        // Start the app gestures inside the Android Back and Home gesture areas.
         val windowInsets = view.rootWindowInsets
+        @Suppress("DEPRECATION")
+        val sideInsets = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                windowInsets?.getInsets(WindowInsets.Type.systemGestures())
+            Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> windowInsets?.systemGestureInsets
+            else -> null
+        }
         @Suppress("DEPRECATION")
         val systemBottom = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
@@ -192,12 +199,15 @@ internal class Cv10LaserInput(
             else -> 0
         }
         val bottomGap = (systemBottom + 8 * density).coerceAtLeast(24 * density)
+        val leftGap = (sideInsets?.left ?: 0).toFloat()
+        val rightGap = (sideInsets?.right ?: 0).toFloat()
+        val fromRight = view.width - x
         val fromBottom = view.height - y
         return when {
-            fromBottom < bottomGap -> Zone.SYSTEM_BOTTOM
+            fromBottom < bottomGap || x < leftGap || fromRight < rightGap -> Zone.SYSTEM
             fromBottom < bottomGap + 48 * density -> Zone.RECENTER
-            x < 40 * density -> Zone.LEFT
-            x > view.width - 40 * density -> Zone.RIGHT
+            x < leftGap + 40 * density -> Zone.LEFT
+            fromRight < rightGap + 40 * density -> Zone.RIGHT
             else -> Zone.POINTER
         }
     }

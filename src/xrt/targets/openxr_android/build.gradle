@@ -171,6 +171,9 @@ if (project.hasProperty("sharedStl") && project.getProperty("sharedStl")) {
     println "Using SHARED C++ standard library"
 }
 
+def cv10ApplicationId = 'org.cv10.monado'
+def cv10LauncherPreview = project.findProperty('cv10LauncherPreview') == 'true'
+
 android {
     compileSdk project.sharedCompileSdk
     buildToolsVersion = buildToolsVersion
@@ -179,7 +182,7 @@ android {
 
     def cv10Abi = project.findProperty('cv10Abi')
     defaultConfig {
-        applicationId 'org.cv10.monado'
+        applicationId cv10ApplicationId
         ndk {
             if (cv10Abi == null) {
                 abiFilters 'arm64-v8a', 'armeabi-v7a'
@@ -252,9 +255,14 @@ android {
     }
 
     def outOfProcessBaseConfig = { flavor, appName ->
+        def packageSuffix = cv10LauncherPreview ? '.out_of_process.launcher_preview' : '.out_of_process'
         flavor.dimension 'deployment'
-        flavor.applicationIdSuffix '.out_of_process'
-        flavor.externalNativeBuild.cmake.arguments += ["-DXRT_FEATURE_SERVICE=ON", "-DXRT_BUILD_CV10_SPATIAL_LAUNCHER=ON"]
+        flavor.applicationIdSuffix packageSuffix
+        flavor.externalNativeBuild.cmake.arguments += [
+            '-DXRT_FEATURE_SERVICE=ON',
+            '-DXRT_BUILD_CV10_SPATIAL_LAUNCHER=ON',
+            "-DXRT_ANDROID_PACKAGE=${cv10ApplicationId}${packageSuffix}",
+        ]
         flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service", "cv10-spatial-launcher"
         flavor.buildConfigField "boolean", "inProcess", "false"
         flavor.resValue "string", "app_name", appName
@@ -266,7 +274,7 @@ android {
             inProcessBaseConfig(it, "Monado In Process (Debugging)")
         }
         outOfProcess {
-            outOfProcessBaseConfig(it, "Monado CV10")
+            outOfProcessBaseConfig(it, cv10LauncherPreview ? 'Monado CV10 Preview' : 'Monado CV10')
         }
     }
     hilt {
