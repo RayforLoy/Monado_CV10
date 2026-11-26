@@ -1,0 +1,99 @@
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+index 2168a65..fab4988 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+@@ -10,6 +10,8 @@ import android.content.Context
+ import android.content.Intent
+ import android.content.IntentFilter
+ import android.content.pm.PackageManager
++import android.hardware.display.DisplayManager
++import android.hardware.display.VirtualDisplay
+ import android.net.Uri
+ import android.net.VpnService
+ import android.os.Build
+@@ -51,6 +53,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private var headLinkStarted = false
+     private var controlsAvailable = false
+     private var openingClient = false
++    private var diagnosticSpace: VirtualDisplay? = null
+     override var keepSessionWhilePaused = false
+         private set
+
+@@ -298,11 +301,11 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private fun startPreview(mode: Int) {
+         if (renderer != null || stopping || pendingPermission != null || pendingVpn) return
+         try {
+-            if (!Shizuku.pingBinder()) {
++            if (mode != MODE_SPACE && !Shizuku.pingBinder()) {
+                 status.setText(R.string.cv10_pocket_preview_needs_shizuku)
+                 return
+             }
+-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
++            if (mode != MODE_SPACE && Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                 pendingPermission = mode
+                 updateButtons()
+                 Shizuku.requestPermission(REQUEST_DISPLAY_PERMISSION)
+@@ -340,9 +343,24 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+             worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS,
+             onSurface = { surface ->
+                 if (transport === nextTransport) {
+-                    nextTransport.start(surface) { result ->
+-                        if (transport === nextTransport) {
+-                            result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
++                    if (mode == MODE_SPACE) {
++                        runCatching {
++                            val manager = getSystemService(DisplayManager::class.java)
++                            val display = checkNotNull(manager.createVirtualDisplay(
++                                "CV10 Pocket XR UI Diagnostic", 3840, 1080, 240, surface,
++                                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or
++                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY,
++                            ))
++                            diagnosticSpace = display
++                            displayId = display.display.displayId
++                            Log.i(TAG, "UI diagnostic space display id=$displayId")
++                            updateStatus()
++                        }.onFailure(::showError)
++                    } else {
++                        nextTransport.start(surface) { result ->
++                            if (transport === nextTransport) {
++                                result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
++                            }
+                         }
+                     }
+                 }
+@@ -386,6 +404,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+         controlsAvailable = false
+         openingClient = false
+         leavePhoneControls()
++        diagnosticSpace?.release()
++        diagnosticSpace = null
+         if (headLinkStarted) {
+             stopService(Cv10PocketHeadLinkService.intent(this))
+             headLinkStarted = false
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrTransport.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrTransport.kt
+index 3e1cab5..71964b0 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrTransport.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrTransport.kt
+@@ -5,6 +5,7 @@ import android.content.ComponentName
+ import android.content.Context
+ import android.content.ServiceConnection
+ import android.content.pm.PackageManager
++import android.hardware.display.DisplayManager
+ import android.os.Binder
+ import android.os.Build
+ import android.os.Handler
+@@ -115,6 +116,14 @@ internal class Cv10PocketXrTransport(
+     }
+
+     fun openClientDisplay(onResult: (Result<Int>) -> Unit) {
++        if (mode == ICv10PocketXrDisplay.MODE_SPACE) {
++            val display = context.getSystemService(DisplayManager::class.java).displays
++                .firstOrNull { it.name == "CV10 XR Own Focus Probe" }
++            onResult(display?.let { Result.success(it.displayId) } ?: Result.failure(
++                IllegalStateException("Start the trusted diagnostic client display with ADB first"),
++            ))
++            return
++        }
+         val service = remote
+         if (closing || service == null) {
+             onResult(Result.failure(IllegalStateException("The Pocket XR display service is unavailable")))

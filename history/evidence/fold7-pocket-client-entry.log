@@ -1,0 +1,32 @@
+Fold7 / 2026-11-27 Asia/Hong_Kong / Pocket XR app entry diagnostic
+On the stable Monado broker the phone displayed:
+Broker guard: 在 OpenXR Runtime Broker 中选择 Pocket XR，再从这里打开应用。
+
+With Pocket XR selected:
+11-27 05:31:23.487 27393 27606 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:31:23.586 27393 27606 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:31:23.991 27393 27393 I Cv10PocketXrPreview: First virtual display frame available on display 163
+11-27 05:31:30.026  2961  3042 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=168866875) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 05:31:30.053 27393 27393 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:31:30.053 27393 27393 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 164
+11-27 05:31:30.304 27889 27920 I OpenXR-Loader: Got runtime: package: com.hayeco.flipspaces, so filename: libopenxr_monado.so, native lib dir: <app-lib-dir>, has functions: no
+11-27 05:31:30.474 27656 27656 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 05:31:30.799 27889 27920 V hello_xr: [05:31:30.799][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2818476622549
+11-27 05:31:36.903 27656 27656 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:31:36.903 27656 27656 I PocketXrOpenXr: the glasses are back with the Space: the runtime stopped
+11-27 05:31:36.905 27889 27920 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x7593153a48 in tid 27920 (Thread-7), pid 27889 (llo_xr.opengles)
+
+ActivityTaskManager top resumed activities:
+Display #0 (activities from top to bottom):
+topResumedActivity=ActivityRecord{33518774 u0 com.hayeco.flipspaces/.TrackpadActivity t33204}
+Display #1 (activities from top to bottom):
+Display #91 (activities from top to bottom):
+Display #163 (activities from top to bottom):
+Display #164 (activities from top to bottom):
+topResumedActivity=ActivityRecord{117359952 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t33202}
+
+SurfaceFlinger Pocket XR game layer frame samples:
+game-surface-1.txt visible reason= buffer=118781615538241 frame=37 contentDirty
+game-surface-2.txt visible reason= buffer=118781615538241 frame=109 contentDirty
+game-surface-3.txt visible reason= buffer=118781615538244 frame=180 contentDirty
+game-surface-4.txt visible reason= buffer=118781615538244 frame=252 contentDirty

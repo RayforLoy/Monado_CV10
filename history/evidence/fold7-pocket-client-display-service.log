@@ -1,0 +1,5 @@
+Pocket Space display: 165
+Client display: Display id 166: DisplayInfo{"Monado CV10 OpenXR Client", displayId 166, displayGroupId 0, FLAG_TRUSTED, FLAG_OWN_FOCUS, real 1280 x 720 (60 Hz, 240 dpi)
+Replacement client display: 167
+Client reopen and independent close passed
+Closing the Space released both displays

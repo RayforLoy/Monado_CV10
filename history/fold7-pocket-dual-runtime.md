@@ -74,3 +74,14 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 ```
 
 最后一个参数可设为 `trusted` 或 `public`。探针打印屏 ID，在另一终端用 `am start --display <ID>` 选择游戏所在的屏。先关闭游戏，再用 `touch /data/local/tmp/cv10-pocket-focus-probe.stop` 释放显示屏，最后删除临时 JAR 和停止文件。[Android 16 虚拟屏标志](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/core/java/android/hardware/display/DisplayManager.java)
+
+## 从 Monado 手机端打开原版 OpenXR 样例
+
+2026-11-27 05:30 至 05:32（香港时间），沿用同一台 Fold7、CV10 和 53 版原厂供电线。Monado 源码 `4faeeaf` 新增 **在 Pocket XR 中打开 OpenXR 应用**。预览 APK SHA-256 为 `bf477ed3cc992f4d6e49c8c76376c7f72b78fb77e6a8dd0fd6578e348db327cb`，签名、APK 的 16 KiB 对齐及五个 arm64 ELF 库的加载段对齐均已核对。
+
+诊断 APK SHA-256 为 `1719bb1b5ad6deccbca6bec9d6c6a601aa8e3353e09050e753e2382443928cee`。沿用 ADB 授权放置原版 Pocket XR 空间，并用上一节的 shell 探针提供游戏虚拟屏。应用列表、Broker 检查、应用启动和切换手机控制均走预览 APK 的实现。正式入口通过预览自己的 Shizuku UserService 管理两块屏，这一段仍需在预览包获得授权后串联验收。[诊断 APK 的显示传输补丁](evidence/fold7-pocket-client-entry-transport.patch)
+
+- Broker 选择 **Monado CV10** 时，选中样例显示选择 **Pocket XR** 的提示。改选 **Pocket XR** 后，从 Monado 手机列表点选 **Hello XR (OpenGL ES)**。系统确认是预览包在屏 164 启动样例，主屏同时显示原版触控板。外层继续使用内置 Monado，样例由 Broker 加载原版 Pocket XR 运行时。
+- 样例进入 `FOCUSED`，游戏图层采样序号为 37、109、180、252，右镜拍到蓝色方块。对游戏屏发送返回后，原版空间收回游戏层，随后原版样例线程再次收到 `SIGSEGV`，与前几轮原版卸载时的崩溃一致。[筛选日志](evidence/fold7-pocket-client-entry.log) · [右镜实拍](evidence/fold7-pocket-client-entry-right.jpg)
+- 也在 ADB shell 中独立运行本次构建的原样显示服务代码。Fold7 成功创建原版空间与应用屏，验证令牌不匹配时屏幕继续存在、重开替换旧应用屏、单独关闭应用屏时保留空间，以及停止外层后释放两块屏。复测时将探针与 `Cv10PocketFocusProbe.java` 一起编译，并将本次 Gradle 构建的 `Cv10PocketXrDisplayService*.class` 与 `ICv10PocketXrDisplay*.class` 一起打成 DEX。这个探针通过 shell 直接调用服务，本轮未经过 Shizuku 的应用授权和跨进程绑定。[探针源码](Cv10PocketClientDisplaySmoke.java) · [服务实测日志](evidence/fold7-pocket-client-display-service.log)
+- 测试结束后，恢复稳定 **Monado CV10** Broker、原版 Pocket XR 的 **受限制** 电池模式与原预览 APK。最低刷新率为 `null`，两块诊断虚拟屏均已释放。
