@@ -1,0 +1,38 @@
+Fold7 / 2026-11-27 Asia/Hong_Kong / Pocket XR UX reentry
+
+11-27 05:39:29.806  1834  1868 V hello_xr: [05:39:29.806][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2820179569957
+Dismissed the notification prompt without granting access
+Monado preview PID stayed 802 with the app entry enabled
+11-27 05:39:52.272  2892  2940 V hello_xr: [05:39:52.272][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2820052644816
+
+Session and app entry logs:
+11-27 05:39:22.716   802  1104 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:39:23.124   802   802 I Cv10PocketXrPreview: First virtual display frame available on display 171
+11-27 05:39:25.568   802  1104 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:39:28.163   802  1104 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:39:29.209   802   802 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:39:29.209   802   802 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 172
+11-27 05:39:34.475  1210  1210 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:39:44.850   802  1104 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:39:47.318   802  1104 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:39:50.607   802  1104 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 05:39:51.630   802   802 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:39:51.630   802   802 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 172
+11-27 05:39:56.423  1210  1210 I PocketXrOpenXr: the glasses are back with the Space: the game left
+
+Crash buffer after returning from each client:
+11-27 05:39:34.482  1834  1868 F libc    : Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x758f353a48 in tid 1868 (Thread-7), pid 1834 (llo_xr.opengles)
+11-27 05:39:35.351  2203  2203 F DEBUG   : Cmdline: org.khronos.openxr.hello_xr.opengles
+11-27 05:39:35.351  2203  2203 F DEBUG   :       #00 pc 000000000016aa48  <anonymous:758f1e9000>
+11-27 05:39:35.351  2203  2203 F DEBUG   :       #01 pc 00000000000755ec  /apex/com.android.runtime/lib64/bionic/libc.so (__cxa_thread_finalize+80) (BuildId: f1997847031ec1e914ce221066cad9ff)
+11-27 05:39:56.427  2892  2940 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x7592f52a48 in tid 2940 (Thread-7), pid 2892 (llo_xr.opengles)
+11-27 05:39:56.801  3052  3052 F DEBUG   : Cmdline: org.khronos.openxr.hello_xr.opengles
+11-27 05:39:56.801  3052  3052 F DEBUG   :       #00 pc 0000007592f52a48  <unknown>
+11-27 05:39:56.801  3052  3052 F DEBUG   :       #01 pc 00000000000755ec  /apex/com.android.runtime/lib64/bionic/libc.so (__cxa_thread_finalize+80) (BuildId: f1997847031ec1e914ce221066cad9ff)
+
+SurfaceFlinger Pocket XR game layer frame samples:
+game-surface-1-0.txt visible reason= buffer=5196910428226 frame=34 contentDirty
+game-surface-1-1.txt visible reason= buffer=5196910428228 frame=100 contentDirty
+game-surface-1-2.txt visible reason= buffer=5196910428227 frame=171 contentDirty
+game-surface-2-1.txt visible reason= buffer=5196910428291 frame=67 contentDirty
+game-surface-2-2.txt visible reason= buffer=5196910428290 frame=134 contentDirty

@@ -1,0 +1,14 @@
+diff --git a/src/xrt/targets/openxr/CMakeLists.txt b/src/xrt/targets/openxr/CMakeLists.txt
+index 86b8271..6819174 100644
+--- a/src/xrt/targets/openxr/CMakeLists.txt
++++ b/src/xrt/targets/openxr/CMakeLists.txt
+@@ -23,4 +23,9 @@ else()
+ endif()
+
++if(ANDROID)
++	# The loader closes the runtime before its native thread-local destructors run.
++	target_link_options(${RUNTIME_TARGET} PRIVATE "LINKER:-z,nodelete")
++endif()
++
+ # Note: Order may matter in these lists!
+ target_link_libraries(${RUNTIME_TARGET} PUBLIC aux_vk aux_os aux_util aux_math)

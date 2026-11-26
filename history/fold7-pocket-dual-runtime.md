@@ -85,3 +85,13 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 - 样例进入 `FOCUSED`，游戏图层采样序号为 37、109、180、252，右镜拍到蓝色方块。对游戏屏发送返回后，原版空间收回游戏层，随后原版样例线程再次收到 `SIGSEGV`，与前几轮原版卸载时的崩溃一致。[筛选日志](evidence/fold7-pocket-client-entry.log) · [右镜实拍](evidence/fold7-pocket-client-entry-right.jpg)
 - 也在 ADB shell 中独立运行本次构建的原样显示服务代码。Fold7 成功创建原版空间与应用屏，验证令牌不匹配时屏幕继续存在、重开替换旧应用屏、单独关闭应用屏时保留空间，以及停止外层后释放两块屏。复测时将探针与 `Cv10PocketFocusProbe.java` 一起编译，并将本次 Gradle 构建的 `Cv10PocketXrDisplayService*.class` 与 `ICv10PocketXrDisplay*.class` 一起打成 DEX。这个探针通过 shell 直接调用服务，本轮未经过 Shizuku 的应用授权和跨进程绑定。[探针源码](Cv10PocketClientDisplaySmoke.java) · [服务实测日志](evidence/fold7-pocket-client-display-service.log)
 - 测试结束后，恢复稳定 **Monado CV10** Broker、原版 Pocket XR 的 **受限制** 电池模式与原预览 APK。最低刷新率为 `null`，两块诊断虚拟屏均已释放。
+
+## 返回预览并重新打开原版样例
+
+2026-11-27 05:39（香港时间），同一 Fold7 和原版 Pocket XR 1.6.28，沿用上节的 ADB 显示传输。源码 `2d79440` 使 Monado 菜单和通知都回到已有的预览 Activity。预览 APK SHA-256 为 `54a107e78d6e236670e197a5eb43363016b05cb3d6ae64f47fa637e347cb8d0b`，诊断 APK SHA-256 为 `46a6a9944d9ea3aefca870f6d4fa807c1b6bf8d22c23b177478350ed068ab454`。两包均完成签名与 16 KiB APK 对齐校验。
+
+第一次从 Monado 点选原版 `hello_xr` 后，样例进入 `FOCUSED`，右镜拍到蓝色方块。对应用屏发送返回后，原版空间收回游戏层，样例线程在 Android 的 `__cxa_thread_finalize` 中崩溃。随后从手机重新打开 Monado，按返回键关闭系统通知授权提示，从 **更多选项 → Pocket XR 外显预览** 回到同一个预览，PID 仍为 802，空间仍在显示屏 171。重新点选样例得到新 PID 2892，再次进入 `FOCUSED`，右镜再次出画。第二次退出仍复现相同的堆栈。实验结束后恢复稳定 Broker、原预览 APK、原电池选项和最低刷新率。[两轮日志](evidence/fold7-pocket-reentry.log) · [第二次启动的右镜实拍](evidence/fold7-pocket-reentry-right.jpg)
+
+比较官方 1.6.28 与 1.6.31 APK，两版的 arm64 `libopenxr_monado.so` 都是 2,048,592 字节，SHA-256 均为 `d514e935c5f9123660b4c775dc13846ef979c54e3b71e5003bc28257f99e37ca`，ELF `DT_FLAGS_1` 均只有 `NOW`。两个 APK 的发布签名相同。Fold7 仍保留 1.6.28，1.6.31 的结论来自发布包静态比较。[Pocket XR 1.6.31 发布页](https://github.com/pocket-xr/pocket-xr/releases/tag/v1.6.31)
+
+按 Pocket XR 的原生构建说明，在 Monado `ee03722885e777462708841223b60affe6873ac2` 应用原版 1.6.31 的 `monado-pocketxr.patch` 后，验证了 [Android 链接修补](evidence/pocketxr-monado-android-nodelete.patch) 可叠加。它与 Monado CV10 已实测的 `4fe230f` 使用同一链接选项，让运行时代码在客户端线程清理期间维持映射。Pocket XR 版补丁仍需重建运行时并实测两次退出与重进。[Pocket XR 原生构建文档](https://github.com/pocket-xr/pocket-xr/blob/v1.6.31/docs/OPENXR.md#building-monado)
