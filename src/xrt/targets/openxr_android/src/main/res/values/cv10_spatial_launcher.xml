@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cv10_spatial_title">CV10 Apps</string>
-    <string name="cv10_spatial_phone_controls">Aim the phone and tap to select\nSwipe inward from either side to go back\nSwipe up and hold just above the navigation area to recenter</string>
+    <string name="cv10_spatial_phone_controls">Aim the phone and tap to select\nSwipe inward from either side marker to go back\nSwipe up from the bottom marker and hold to recenter</string>
     <string name="cv10_spatial_opening">Opening the OpenXR launcher…</string>
     <string name="cv10_spatial_waiting">Waiting for the OpenXR session. If prompted, allow access to the CV10 over USB.</string>
     <string name="cv10_spatial_unavailable">The OpenXR launcher could not start. Connect the CV10, allow USB access, and confirm Monado CV10 is selected in the runtime broker.</string>

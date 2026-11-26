@@ -46,6 +46,14 @@ internal class Cv10LaserInput(
 
     private enum class Zone { POINTER, LEFT, RIGHT, RECENTER, SYSTEM }
 
+    internal data class GestureRegions(
+        val leftInset: Float,
+        val rightInset: Float,
+        val bottomInset: Float,
+        val backBandWidth: Float,
+        val recenterBandHeight: Float,
+    )
+
     private var finger = MotionEvent.INVALID_POINTER_ID
     private var zone = Zone.POINTER
     private var downX = 0f
@@ -181,34 +189,44 @@ internal class Cv10LaserInput(
         return true
     }
 
-    private fun zoneFor(x: Float, y: Float): Zone {
-        // Start the app gestures inside the Android Back and Home gesture areas.
+    fun gestureRegions(): GestureRegions {
         val windowInsets = view.rootWindowInsets
         @Suppress("DEPRECATION")
-        val sideInsets = when {
+        val systemInsets = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
                 windowInsets?.getInsets(WindowInsets.Type.systemGestures())
             Build.VERSION.SDK_INT == Build.VERSION_CODES.Q -> windowInsets?.systemGestureInsets
             else -> null
         }
         @Suppress("DEPRECATION")
-        val systemBottom = when {
+        val mandatoryBottom = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
                 windowInsets?.getInsets(WindowInsets.Type.mandatorySystemGestures())?.bottom ?: 0
             Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ->
                 windowInsets?.mandatorySystemGestureInsets?.bottom ?: 0
             else -> 0
         }
-        val bottomGap = (systemBottom + 8 * density).coerceAtLeast(24 * density)
-        val leftGap = (sideInsets?.left ?: 0).toFloat()
-        val rightGap = (sideInsets?.right ?: 0).toFloat()
+        val bottomGap = (maxOf(systemInsets?.bottom ?: 0, mandatoryBottom) + 8 * density)
+            .coerceAtLeast(24 * density)
+        return GestureRegions(
+            leftInset = (systemInsets?.left ?: 0).toFloat(),
+            rightInset = (systemInsets?.right ?: 0).toFloat(),
+            bottomInset = bottomGap,
+            backBandWidth = 40 * density,
+            recenterBandHeight = 48 * density,
+        )
+    }
+
+    private fun zoneFor(x: Float, y: Float): Zone {
+        val regions = gestureRegions()
         val fromRight = view.width - x
         val fromBottom = view.height - y
         return when {
-            fromBottom < bottomGap || x < leftGap || fromRight < rightGap -> Zone.SYSTEM
-            fromBottom < bottomGap + 48 * density -> Zone.RECENTER
-            x < leftGap + 40 * density -> Zone.LEFT
-            fromRight < rightGap + 40 * density -> Zone.RIGHT
+            fromBottom < regions.bottomInset || x < regions.leftInset ||
+                fromRight < regions.rightInset -> Zone.SYSTEM
+            x < regions.leftInset + regions.backBandWidth -> Zone.LEFT
+            fromRight < regions.rightInset + regions.backBandWidth -> Zone.RIGHT
+            fromBottom < regions.bottomInset + regions.recenterBandHeight -> Zone.RECENTER
             else -> Zone.POINTER
         }
     }

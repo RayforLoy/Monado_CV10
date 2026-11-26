@@ -493,6 +493,9 @@ private:
 		                   origin.z - panel_distance * std::cos(yaw) * std::cos(pitch)};
 		anchor_valid = true;
 		recent_generation = generation;
+		if (generation != 0) {
+			__android_log_print(ANDROID_LOG_DEBUG, tag, "Recentered 3D launcher (%d)", generation);
+		}
 	}
 
 	void
