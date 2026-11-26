@@ -32,11 +32,14 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 在 **Monado CV10 → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。两个入口均可离线使用，无需授予 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。3D 菜单通过 Broker 使用 Monado CV10，保持三星外接显示为 **已镜像**。
 
+- 首次使用或重新插入眼镜后，可先从 Monado 菜单选择 **CV10 USB access**，允许访问 **HUAWEI GLASS HID**，再进入应用启动器。
 - 应用列表默认筛选声明了 OpenXR 沉浸式入口的应用，并直接启动该入口。另有一些应用从普通界面进入 XR，例如 PiliPlus，可关闭 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。
-- 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从左或右侧向内滑动返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
+- 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从手机左右边缘的系统手势区内侧向中间滑动可返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。项目持有的华为 VR 桌面材料为已打包 APK，未找到可复用的公开源码。
 
 Fold7 已用独立测试 APK 验证 2D 和 3D 入口均可启动原版 Khronos `hello_xr` OpenGLES。3D 菜单先释放自己的会话，随后样例进入 `FOCUSED`。SurfaceFlinger 的 CV10 外屏合成截图显示双目菜单和激光指针。若冷启动找不到运行时，打开 Broker 确认选择后返回，轻触手机屏幕重试。
+
+Fold7 的整合预览包已通过 2D 入口启动原版 `hello_xr`，该样例和 3D 菜单均使用预览包自己的运行时。右镜片实拍确认了样例蓝色方块、3D 菜单和激光指针。
 
 ## Pocket XR 外屏兼容性
 
@@ -67,6 +70,14 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 ```
 
 仅构建一个架构时，通过 `-Pcv10Abi` 指定，例如 `.\gradlew.bat "-Pcv10Abi=arm64-v8a" :src:xrt:targets:openxr_android:packageOutOfProcessRelease`。`x86` 和 `x86_64` 可用同一参数显式构建，例如用于模拟器调试。Gradle 把未签名包输出到 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/release/`。上述脚本使用本机 Android 开发证书签名，并校验对齐和签名。首次构建请允许 Gradle 下载依赖。
+
+需要与正式包并排安装时，构建 **Monado CV10 Preview**，并在 Broker 选择同名运行时。
+
+```powershell
+.\gradlew.bat "-Pcv10Abi=arm64-v8a" "-Pcv10LauncherPreview=true" :src:xrt:targets:openxr_android:assembleOutOfProcessDebug
+```
+
+预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。Fold7 的 Android 16 会为当前调试包显示 16 KB ELF 对齐提示，本次实测设备使用 4 KB 内存页，点 **确定** 后可继续。16 KB 内存页设备仍待验证。[Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
 
 历史 APK 和对应实验说明见 [apk/archive](apk/archive) 和 [history](history)。上游项目说明与许可证见 [README.upstream.md](README.upstream.md) 和 [LICENSE](LICENSE)。
 
