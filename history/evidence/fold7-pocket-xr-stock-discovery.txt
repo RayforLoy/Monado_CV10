@@ -1,0 +1,20 @@
+Fold7, 2026-11-27, Hong Kong time
+
+Plain name: present both physical and virtual displays
+11-27 03:43:12.046 14528 14528 I Cv10PocketXrPreview: Stock discovery display id=114 name=CV10 Pocket XR Discovery Diagnostic
+11-27 03:43:14.876 14905 14905 I FlipSpaces/Mode: plug-in check, display 91: Android only mirrors to it; not opened (Shizuku NO_PERMISSION, opener FRONT_SCREEN)
+
+Ranked diagnostic name: the original app picks the virtual display
+11-27 03:45:01.933 16450 16450 I Cv10PocketXrPreview: Stock discovery display id=115 name=CV10 XREAL-format Discovery Diagnostic
+11-27 03:45:01.934 16450 17371 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 03:45:03.138 16450 17371 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 03:45:04.711 17456 17456 I FlipSpaces/Mode: plug-in check, display 115: Android only mirrors to it; not opened (Shizuku NO_PERMISSION, opener FRONT_SCREEN)
+11-27 03:45:06.123 17456 17456 I FlipSpaces/Mode: plug-in check, display 115: the main screen is in front and opens the glasses itself (Shizuku NO_PERMISSION, opener MAIN_SCREEN)
+11-27 03:45:09.305 17456 17456 I FlipSpaces/Mode: phone button, display 115: FLAT -> flat DeX home with banner; reasons: Shizuku 正在运行，但尚未允许 Pocket XR：应用面板需要 Shizuku 来创建虚拟显示屏。
+11-27 03:45:09.306 17456 17456 W FlipSpaces/Launch: Full screen start of .GlassesHomeActivity on display 115 failed: fullscreen windowing mode (denied), launch bounds of the whole display (3840x1080) (Permission Denial: starting Intent { flg=0x10000000 xflg=0x4 cmp=com.hayeco.flipspaces/.GlassesHomeActivity } from ProcessRecord{144894 17456:com.hayeco.flipspaces/u0a846} (pid=17456, uid=10846) with launchDisplayId=115), display id only (manifest layout and requestFullscreenMode) (Permission Denial: starting Intent { flg=0x10000000 xflg=0x4 cmp=com.hayeco.flipspaces/.GlassesHomeActivity } from ProcessRecord{144894 17456:com.hayeco.flipspaces/u0a846} (pid=17456, uid=10846) with launchDisplayId=115)
+11-27 03:45:09.376 16450 16450 I Cv10PocketXrPreview: Stock discovery display sent first frame
+
+Original Pocket XR phone settings after the standard Show on glasses action
+在眼镜上显示
+CV10 XREAL-format Discovery Diagnostic，虚拟显示屏（虚拟）
+Android 无法在眼镜上打开 Pocket XR：Permission Denial: starting Intent { flg=0x10000000 xflg=0x4 cmp=com.hayeco.flipspaces/.GlassesHomeActivity } from ProcessRecord{144894 17456:com.hayeco.flipspaces/u0a846} (pid=17456, uid=10846) with launchDisplayId=115 改为在眼镜上显示基础画面。

@@ -48,3 +48,12 @@
 - 第二轮打开原版 **空间窗口 → 打开启动器**。手机仍停在原版 `SpatialActivity` 时，眼镜两眼区同步显示新打开的菜单，右镜拍到正立菜单。返回预览并选择 **停止预览** 后，ADB 查不到本次虚拟屏和前台服务。通知停止入口和锁屏行为待验收。[外屏双眼截图](evidence/fold7-pocket-phone-controls-menu-display.png) · [右镜实拍](evidence/fold7-pocket-phone-controls-menu-right.jpg) · [筛选日志](evidence/fold7-pocket-phone-controls.log)
 
 本轮结束后 APK 恢复为 `eaf4ea4` 正式预览，Broker 恢复选择稳定 Monado CV10。正式预览的 Shizuku 一键启动仍待授权后实测。
+
+## 原版应用从手机侧发现虚拟屏
+
+2026-11-27 03:43 至 03:45（香港时间），Fold7 SM-F9660 沿用 C9.53.6 线材、外接 5 V 和三星 **已镜像**。原版 Pocket XR 仍为本文开头记录的 APK。整合预览 `4e85e3e` 加 [识别对照补丁](pocket-stock-display-discovery-diagnostic.patch) 构建的诊断 APK，SHA-256 为 `b2bb2a7a230b895a33419703deba5f880aae1d1477c2fa1ec84467c59ce05097`。APK v2 签名和 16 KiB ZIP 对齐通过。两轮都使用 3840×1080、60 Hz 的公共自有内容 Presentation 虚拟屏，未用 ADB 将原版 Activity 直接放到虚拟屏。
+
+- 普通诊断名下，原版的自动检测选中真实 `HUAWEIAV03`（显示 91），并报告 Samsung 当前只能镜像。加入 `XREAL` 关键词以触发原版显示排序后，原版选中诊断虚拟屏 115，手机上显示该屏名称并标为虚拟显示屏。两轮均报告 Shizuku `NO_PERMISSION`。[原版显示选择](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/DisplaySelection.kt)
+- 从原版手机设置点按 **在眼镜上显示**，原版选择 `FLAT` 并尝试自行打开 `.GlassesHomeActivity`。以全屏边界启动和只指定显示 ID 两种尝试均被 Android 拒绝。原版回退到自身的基础 Presentation，Monado 收到首帧，CV10 外屏两眼区显示了同一平面提示的不同片段。此对照验证了发现、选屏和基础画面输出，原版桌面和空间应用面板仍需单独验收。[系统拒绝与原版回退日志](evidence/fold7-pocket-xr-stock-discovery.txt) · [CV10 外屏原图](evidence/fold7-pocket-xr-stock-discovery-display.png) · [Android 显示启动策略](https://source.android.com/docs/core/display/multi_display/activity-launch)
+
+诊断名称和按钮改动仅用于此对照。测试后恢复完整整合预览 APK 和稳定 Broker，没有增加原版或预览的 Shizuku 授权。
