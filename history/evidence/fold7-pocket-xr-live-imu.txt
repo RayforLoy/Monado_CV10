@@ -1,0 +1,37 @@
+Fold7, Hong Kong time, 2026-11-27
+
+Android runtime with fixed CV10 headset and original hello_xr 1.1.65
+11-27 03:38:09.589 11322 11760 I MonadoCV10: CV10 IMU enabled, interrupt IN 0x84
+11-27 03:38:09.590 11322 11760 I Cv10HeadLiveDiag: Loopback TCP listeners ready
+11-27 03:38:09.594 11322 11760 I MonadoCV10: CV10 valid IMU samples=1 deviceNs=10772470249043
+11-27 03:38:09.636 11322 11808 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 03:38:10.243 11701 11734 V hello_xr: [03:38:10.243][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520671625521
+11-27 03:38:14.654 11322 11760 I MonadoCV10: CV10 valid IMU samples=5000 deviceNs=10777531410750
+11-27 03:38:16.243 11322 11777 I Cv10HeadLiveDiag: Accepted local Pocket XR connection on 52999
+11-27 03:38:16.273 11322 11777 I Cv10HeadLiveDiag: Pocket XR connection ended on 52999 (EOFException)
+11-27 03:38:16.273 11322 11775 I Cv10HeadLiveDiag: Accepted local Pocket XR connection on 52998
+11-27 03:38:16.275 11322 11775 I Cv10HeadLiveDiag: Sent first live CV10 IMU frame
+11-27 03:38:19.287 11322 11777 I Cv10HeadLiveDiag: Accepted local Pocket XR connection on 52999
+11-27 03:38:19.307 11322 11777 I Cv10HeadLiveDiag: Pocket XR connection ended on 52999 (EOFException)
+11-27 03:38:19.658 11322 11760 I MonadoCV10: CV10 valid IMU samples=10000 deviceNs=10782536233056
+11-27 03:38:20.289 11322 11775 I Cv10HeadLiveDiag: Pocket XR connection ended on 52998 (SocketException)
+11-27 03:38:20.290 11322 11775 I Cv10HeadLiveDiag: Accepted local Pocket XR connection on 52998
+11-27 03:38:20.292 11322 11775 I Cv10HeadLiveDiag: Sent first live CV10 IMU frame
+11-27 03:38:23.505 11701 11734 V hello_xr: [03:38:23.505][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2533934010047
+11-27 03:38:24.304 11322 11775 I Cv10HeadLiveDiag: Pocket XR connection ended on 52998 (SocketException)
+11-27 03:38:24.661 11322 11760 I MonadoCV10: CV10 valid IMU samples=15000 deviceNs=10787538232837
+11-27 03:38:25.356 11701 11734 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+11-27 03:38:26.902 11322 11760 I Cv10HeadLiveDiag: Loopback TCP listeners closed
+11-27 03:38:26.902 11322 11760 I MonadoCV10: CV10 IMU disable bytes=5
+
+Windows verifier compiled from unmodified Pocket XR 1.6.28 core
+Connection 1
+Stock control parser verified heartbeat and unsupported stereo-control reply
+3000 live frames, 0 dropped bytes, 999.67 Hz, max interval 1.999 ms
+Stock fusion angles (deg): yaw +0.004, pitch -0.230, roll -0.159
+Connection 2
+Stock control parser verified heartbeat and unsupported stereo-control reply
+3000 live frames, 0 dropped bytes, 999.99 Hz, max interval 1.668 ms
+Stock fusion angles (deg): yaw +0.004, pitch -0.213, roll -0.172
+Phone port 52998 closed after Back
+Phone port 52999 closed after Back

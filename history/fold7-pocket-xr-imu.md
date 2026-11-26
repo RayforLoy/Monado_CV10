@@ -20,4 +20,12 @@ Fold7 安装了同一提交构建的 ARM64 调试预览，包名为 `org.cv10.mo
 
 02:04 选中该预览包作为运行时后，未经修改的 Khronos `hello_xr` 进入 FOCUSED，右镜实拍可见蓝色方块。按返回后会话进入 STOPPING、IDLE，日志记录 `xrDestroyInstance` 完成。测试结束后返回三星桌面，Broker 恢复正式 Monado CV10，`min_refresh_rate` 为 `null`。[右镜实拍](evidence/fold7-pocket-xr-head-hello-right.jpg)
 
-Fold7 上的原版 Pocket XR 尚未连接实时头踪服务。保持既有授权查询路由时，手机未配置 `169.254.2.1/32`，ADB shell 到这一地址的路由指向 Wi-Fi 网关。Android VPN 授权后仍须验证原版能发现本机地址并收到实时样本，再用实物运动确认三轴方向、转角及重置。
+## Fold7 实时 TCP 对照
+
+03:38，原接线和固定镜位。诊断 APK 从整合预览 `4e85e3e` 加 [回环诊断补丁](pocket-head-live-loopback-diagnostic.patch) 构建，SHA-256 为 `230ddff11593cc118378cebfc6c2be2c6dd038099022fd3e0c1ff10504fa523a`。v2 签名和 16 KiB ZIP 对齐通过，五个原生库与整合预览逐字节一致。补丁在 CV10 HID 读取器成功打开时启动同一个 `Cv10PocketHeadLink`，监听手机的 `127.0.0.1`，读取器关闭时释放监听。
+
+从 2D 启动器打开原版 Khronos `hello_xr`，会话进入 `FOCUSED`，右镜拍到蓝方块。经临时 ADB 转发，把手机端两个诊断端口接到电脑上的 [验证器](VerifyFold7LiveImu.kt)。验证器与 Pocket XR v1.6.28 发布提交 `af04bc43c6cdf8863b3ac51e6f9b79f817e5abff` 的 `core/src/main` 一起编译，核心源码保持原样。两次连续连接各接收 3000 个当时从 CV10 HID 读出的报文，均未丢弃字节。速率分别为 999.67 Hz 和 999.99 Hz，原版姿态融合器输出有限角度，两次心跳和不支持的立体模式查询回应均通过原版解析器。[实时日志](evidence/fold7-pocket-xr-live-imu.txt) · [右镜实拍](evidence/fold7-pocket-xr-live-imu-right.jpg)
+
+按返回后 `hello_xr` 完成 `xrDestroyInstance`，手机确认两个回环端口均关闭。测试已移除 ADB 转发，恢复完整整合预览 APK 和稳定 Broker。全程沿用已有授权，未增加 VPN 或 Shizuku 授权。
+
+手机上的原版 Pocket XR 尚未连接实时头踪服务。保持既有授权查询路由时，手机未配置 `169.254.2.1/32`，ADB shell 到这一地址的路由指向 Wi-Fi 网关。VPN 授权后仍须验证原版应用能发现本机地址并读取实时样本，再用实物运动确认三轴方向、转角及重置。
