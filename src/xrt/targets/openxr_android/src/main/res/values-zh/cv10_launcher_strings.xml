@@ -13,6 +13,7 @@
     <string name="cv10_pocket_pc_setup">在手机上设置电脑屏幕</string>
     <string name="cv10_pocket_pc_sbs">电脑屏幕 3D（左右并排）</string>
     <string name="cv10_pocket_pc_unavailable">请先安装支持电脑屏幕的 Pocket XR。</string>
+    <string name="cv10_pocket_pc_waiting_for_stream">正在等待 Pocket XR 收到电脑画面。如果尚未配对，请停止预览，再选择「在手机上设置电脑屏幕」。</string>
     <string name="cv10_pocket_preview_test">显示左右眼测试卡</string>
     <string name="cv10_pocket_preview_stop">停止预览</string>
     <string name="cv10_pocket_preview_controls">打开手机控制</string>

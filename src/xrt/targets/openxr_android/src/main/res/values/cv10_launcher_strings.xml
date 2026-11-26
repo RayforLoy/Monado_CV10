@@ -13,6 +13,7 @@
     <string name="cv10_pocket_pc_setup">Set up PC Screen on phone</string>
     <string name="cv10_pocket_pc_sbs">PC Screen 3D (side by side)</string>
     <string name="cv10_pocket_pc_unavailable">Install Pocket XR with PC Screen support first.</string>
+    <string name="cv10_pocket_pc_waiting_for_stream">Waiting for Pocket XR to receive video from the PC. If the PC is unpaired, stop the preview and choose Set up PC Screen on phone.</string>
     <string name="cv10_pocket_preview_test">Show left and right test card</string>
     <string name="cv10_pocket_preview_stop">Stop preview</string>
     <string name="cv10_pocket_preview_controls">Open phone controls</string>

@@ -255,11 +255,14 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         })
         fun updateStatus() {
             val id = displayId ?: return
-            if (hasFrame && transport === nextTransport) {
+            if (transport !== nextTransport) return
+            if (hasFrame) {
                 status.text = getString(R.string.cv10_pocket_preview_receiving, id)
                 Log.i(TAG, "First virtual display frame available on display $id")
                 controlsAvailable = mode == MODE_SPACE
                 updateButtons()
+            } else if (mode == MODE_PC_SCREEN_SBS) {
+                status.setText(R.string.cv10_pocket_pc_waiting_for_stream)
             }
         }
         val nextRenderer = Cv10PocketXrRenderer(
