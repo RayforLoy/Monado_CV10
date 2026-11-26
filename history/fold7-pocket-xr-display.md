@@ -35,3 +35,16 @@
 手机端一键打开原版外显走预览包自己的 Shizuku 服务。在原版空间中投射实际应用面板还需要 Pocket XR 自己的 Shizuku 授权。上述复测沿用已有 ADB 授权。[原版清单](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/AndroidManifest.xml) · [Android 显示启动权限检查](https://developer.android.com/reference/android/app/ActivityManager#isActivityStartAllowedOnDisplay(android.content.Context,%20int,%20android.content.Intent))
 
 原版 `SpaceRenderer` 的普通应用面板可以按眼裁分左右并排纹理，内置 PC Screen 的实时解码支路则把整帧送给每只眼。由此可知，兼容层搬运双目画布本身不会把 PC Screen 的普通输入变成左右眼不同的画面。普通面板的 3D 视频和 PC Screen 串流需分别验收。[Pocket XR 1.6.28 面板绘制](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/kotlin/com/hayeco/flipspaces/spatial/SpaceRenderer.kt#L4659-L4693)
+
+## 切到原版手机控制时保留眼镜画面
+
+02:50，用 `6e536a4` 光学诊断包复现。Fold7 主屏切到原版 Pocket XR，OpenXR 会话从 `FOCUSED` 经 `VISIBLE`、`SYNCHRONIZED`、`STOPPING` 退到 `IDLE`。此时 CV10 回到三星镜像画面。切回 Monado 后会话重新进入 `FOCUSED`。
+
+`eaf4ea4` 为 Pocket XR 外显增加 **打开手机控制**。该入口启动原版手机界面，并在这次切换期间使用前台服务保留 CV10 会话。回到预览应用后退出这一模式。停止预览会释放本次虚拟显示、OpenXR 会话和前台服务。机制仅用于预览包内的 Pocket XR 外显活动。正式 ARM64 预览 APK 的 SHA-256 为 `899b45200c4312a38f7c7400f83b616f1efd8ecaa63d19e48ff6180903981e77`。APK v2 签名、16 KiB ZIP 对齐和五个 ARM64 库的 15 个 `PT_LOAD` 段检查通过。
+
+02:55 至 02:57，在同一 Fold7、镜像设置、53 版原厂线和 5 V 供电下，用 `eaf4ea4` 加 [控制切换诊断补丁](pocket-phone-controls-diagnostic.patch) 构建的 APK 复测，SHA-256 为 `cfaa0ef7d3fce9542879390a4b868885c9bc029b8e32041f74a07710d4593e11`。补丁仅为测试改用由已授权 ADB 启动的公共虚拟屏，并允许在测试卡模式点击同一个手机控制按钮。
+
+- 点击 **打开手机控制** 后，原版 `TrackpadActivity` 成为手机前台，原版 `SpaceActivity` 保持虚拟屏前台。十多秒后右镜仍显示正立的 `RIGHT EYE`。这期间 OpenXR 会话保持 `FOCUSED`。[触控板前台时的右镜实拍](evidence/fold7-pocket-phone-controls-card-right.jpg)
+- 第二轮打开原版 **空间窗口 → 打开启动器**。手机仍停在原版 `SpatialActivity` 时，眼镜两眼区同步显示新打开的菜单，右镜拍到正立菜单。返回预览并选择 **停止预览** 后，ADB 查不到本次虚拟屏和前台服务。通知停止入口和锁屏行为待验收。[外屏双眼截图](evidence/fold7-pocket-phone-controls-menu-display.png) · [右镜实拍](evidence/fold7-pocket-phone-controls-menu-right.jpg) · [筛选日志](evidence/fold7-pocket-phone-controls.log)
+
+本轮结束后 APK 恢复为 `eaf4ea4` 正式预览，Broker 恢复选择稳定 Monado CV10。正式预览的 Shizuku 一键启动仍待授权后实测。

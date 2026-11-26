@@ -1,0 +1,71 @@
+Baseline 6e536a4 with optical diagnostic
+    topResumedActivity=ActivityRecord{196366219 u0 com.hayeco.flipspaces/.MainActivity t32332}
+    topResumedActivity=ActivityRecord{72100840 u0 com.hayeco.flipspaces/.spatial.SpaceActivity t32331}
+  ResumedActivity: ActivityRecord{196366219 u0 com.hayeco.flipspaces/.MainActivity t32332}
+11-27 02:50:01.611  3094  3566 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 02:50:01.611  3094  3566 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 02:50:01.613  3094  3094 I Cv10PocketXrPreview: Public diagnostic display id=107
+11-27 02:50:01.618  3094  3566 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:50:01.618  3094  3566 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:50:01.618  3094  3566 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 02:50:01.890  3094  3094 I Cv10PocketXrPreview: First public diagnostic display frame
+11-27 02:50:06.239  3094  3566 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:50:06.239  3094  3566 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:50:06.239  3094  3566 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 02:50:06.239  3094  3566 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 02:50:10.948  3094  3566 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 02:50:10.950  3094  3566 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:50:10.951  3094  3566 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:50:10.951  3094  3566 I Cv10SpatialLauncher: OpenXR session state 5
+
+eaf4ea4 with controller optical diagnostic: Test card
+    topResumedActivity=ActivityRecord{70619279 u0 com.hayeco.flipspaces/.TrackpadActivity t32354}
+    topResumedActivity=ActivityRecord{38311846 u0 com.hayeco.flipspaces/.spatial.SpaceActivity t32351}
+  ResumedActivity: ActivityRecord{70619279 u0 com.hayeco.flipspaces/.TrackpadActivity t32354}
+11-27 02:55:10.397  7069  7069 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 02:55:10.417  7069  7069 I ActivityLifecycleListener: org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity@d31c15b onActivityPaused
+11-27 02:55:52.241  7069  7069 I ActivityLifecycleListener: org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity@d31c15b onActivityPaused
+11-27 02:55:52.249  7069  7351 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:55:52.249  7069  7351 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:55:52.249  7069  7351 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 02:55:52.249  7069  7351 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 02:55:52.293  7069  7351 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 02:55:52.305  7069  7351 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:55:52.305  7069  7351 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:55:52.305  7069  7351 I Cv10SpatialLauncher: OpenXR session state 5
+
+eaf4ea4 with controller optical diagnostic: Launcher shown with Pocket XR on the phone
+11-27 02:57:00.988  9424  9642 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 02:57:00.989  9424  9642 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 02:57:00.992  9424  9424 I Cv10PocketXrPreview: Public diagnostic display id=109
+11-27 02:57:00.992  9424  9642 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:57:00.992  9424  9642 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:57:00.993  9424  9642 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 02:57:01.235  9424  9424 I Cv10PocketXrPreview: First public diagnostic display frame
+11-27 02:57:01.473  9689  9718 I FlipSpaces/Space: viewport 3840x1080, display 3840x1080: side by side 3D, one half per eye (eyes 63 mm apart), each eye 1920x1080 at 44.2 by 25.8 degrees (glasses optics 51 degrees diagonal on 1920x1200 panels (44.2 by 28.5 degrees)); per-row pose on for side by side, the footprint filter (four taps) per panel pixel
+11-27 02:57:01.474  9689  9718 I FlipSpaces/Space: viewport 3840x1080, display 3840x1080: side by side 3D, one half per eye (eyes 63 mm apart), each eye 1920x1080 at 44.2 by 25.8 degrees (glasses optics 51 degrees diagonal on 1920x1200 panels (44.2 by 28.5 degrees)); per-row pose on for side by side, the footprint filter (four taps) per panel pixel
+11-27 02:57:02.963  9424  9424 I ActivityLifecycleListener: org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity@b8483f6 onActivityPaused
+11-27 02:57:02.975  9424  9642 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:57:02.975  9424  9642 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:57:02.975  9424  9642 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 02:57:02.975  9424  9642 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 02:57:03.027  9424  9642 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 02:57:03.027  9424  9642 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:57:03.028  9424  9642 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:57:03.028  9424  9642 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 02:57:03.947  9424  9424 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 02:57:03.950  9424  9424 I ActivityLifecycleListener: org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity@b8483f6 onActivityPaused
+11-27 02:57:12.844  9689  9718 I FlipSpaces/Space: launcher opened: 28 pages (the home tray and 27 of All apps), 393 apps, 4 pinned; panel 1450 x 950 dp, 1.007 x 0.660 m (53.4 x 36.5 degrees) at 1.00 m, yaw 0.0, pitch -5.0
+11-27 02:57:19.513  9424  9424 I ActivityLifecycleListener: org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity@b8483f6 onActivityPaused
+11-27 02:57:19.525  9424  9642 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:57:19.526  9424  9642 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:57:19.526  9424  9642 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 02:57:19.526  9424  9642 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 02:57:19.568  9424  9642 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 02:57:19.581  9424  9642 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 02:57:19.581  9424  9642 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 02:57:19.581  9424  9642 I Cv10SpatialLauncher: OpenXR session state 5
+    topResumedActivity=ActivityRecord{208505318 u0 com.hayeco.flipspaces/.SpatialActivity t32376}
+    topResumedActivity=ActivityRecord{51247701 u0 com.hayeco.flipspaces/.spatial.SpaceActivity t32372}
+    isForeground=true foregroundId=52997 types=0x00000010 foregroundNoti=Notification(channel=pocket_display_controls shortcut=null contentView=null vibrate=null sound=null defaults=0 flags=ONGOING_EVENT|FOREGROUND_SERVICE color=0x00000000 actions=1 vis=PRIVATE semFlags=0x0 semPriority=0 semMissedCount=0 semScenarioType=0)
+After Stop preview: controller service absent, virtual display absent

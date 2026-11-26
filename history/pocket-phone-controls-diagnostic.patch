@@ -1,0 +1,88 @@
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+index 7423d2d..5898869 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+@@ -8,6 +8,8 @@ import android.content.Context
+ import android.content.Intent
+ import android.content.IntentFilter
+ import android.content.pm.PackageManager
++import android.hardware.display.DisplayManager
++import android.hardware.display.VirtualDisplay
+ import android.net.VpnService
+ import android.os.Bundle
+ import android.util.Log
+@@ -35,6 +37,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private var pendingVpn = false
+     private var headLinkStarted = false
+     private var controlsAvailable = false
++    private var opticalDiagnostic: VirtualDisplay? = null
+     override var keepSessionWhilePaused = false
+         private set
+
+@@ -81,7 +84,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+         }
+         test = Button(this).apply {
+             setText(R.string.cv10_pocket_preview_test)
+-            setOnClickListener { startPreview(true) }
++            setOnClickListener { startOpticalDiagnostic() }
+         }
+         controls = Button(this).apply {
+             setText(R.string.cv10_pocket_preview_controls)
+@@ -175,6 +178,48 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+         }
+     }
+
++    private fun startOpticalDiagnostic() {
++        if (renderer != null || stopping) return
++        lateinit var diagnostic: Cv10PocketXrRenderer
++        diagnostic = Cv10PocketXrRenderer(
++            activity = this,
++            onSurface = { surface ->
++                if (renderer === diagnostic) {
++                    try {
++                        val manager = getSystemService(DisplayManager::class.java)
++                        val display = checkNotNull(manager.createVirtualDisplay(
++                            "CV10 Pocket XR Optical Diagnostic", 3840, 1080, 240, surface,
++                            DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY,
++                        ))
++                        opticalDiagnostic = display
++                        Log.i(TAG, "Public diagnostic display id=${display.display.displayId}")
++                    } catch (error: RuntimeException) {
++                        showError(error)
++                    }
++                }
++            },
++            onFirstFrame = {
++                if (renderer === diagnostic) {
++                    controlsAvailable = true
++                    updateButtons()
++                    Log.i(TAG, "First public diagnostic display frame")
++                }
++            },
++            onFinished = { failure ->
++                if (renderer === diagnostic) {
++                    if (failure == null) stopPreview(getString(R.string.cv10_pocket_preview_session_ended))
++                    else showError(IllegalStateException(failure))
++                }
++            },
++        )
++        renderer = diagnostic
++        status.postDelayed({
++            if (renderer === diagnostic) stopPreview(getString(R.string.cv10_pocket_preview_intro))
++        }, 90_000)
++        updateButtons()
++        diagnostic.start()
++    }
++
+     @Deprecated("Used for Android's VPN consent activity")
+     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+         super.onActivityResult(requestCode, resultCode, data)
+@@ -264,6 +309,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     }
+
+     private fun stopPreview(message: String) {
++        opticalDiagnostic?.release()
++        opticalDiagnostic = null
+         val previousTransport = transport
+         val previousRenderer = renderer
+         transport = null

@@ -60,9 +60,9 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建，在 Broker 选择 **Monado CV10 Preview**。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
-- **打开 Pocket XR 空间** 后，在其手机端 **空间窗口** 打开启动器，再在启动器中使用 **深度（3D 左右并排）** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
+- **打开 Pocket XR 空间** 并收到画面后，使用 **打开手机控制** 切到原版 Pocket XR，同时保持眼镜会话。可在手机端 **空间窗口** 打开启动器，再在启动器中使用 **深度（3D 左右并排）** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
 - **通过 Android 本机 VPN 接入头部追踪（实验）** 可在打开空间前选用。勾选后由 Android 询问 VPN 授权。打开空间时，预览只为原版 Pocket XR 宣告本机 `169.254.2.1/32`，将 CV10 的 HID 样本和控制心跳送到该地址的两个 TCP 端口。预览退出时关闭连接。
-- **停止预览** 释放本次虚拟显示和 OpenXR 会话。
+- 返回预览页选择 **停止预览**，会释放本次虚拟显示和 OpenXR 会话。手机通知也可提供停止入口。
 
 Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。整合预览 `6e536a4` 复测了内置 3D 菜单和原版测试卡。Android 在该设备上拒绝普通应用把原版空间入口启动到诊断虚拟屏。电脑端用 Fold7 静止样本验证了实验 TCP 服务和原版解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后的实时连接、头动方向、手机端一键启动和 3D 视频投屏仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [IMU 采集、TCP 回放与权限检查](history/fold7-pocket-xr-imu.md)
 
