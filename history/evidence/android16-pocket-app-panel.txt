@@ -1,0 +1,29 @@
+Android 16 Google APIs x86_64 emulator, ARM translation, 4096-byte pages
+2026-11-27 Asia/Hong_Kong. Guest-only Shizuku authorization, shell uid 2000.
+wifi_on=0, mobile_data=0, overlay_display_devices=3840x1080/240
+Pocket XR 1.6.28 (214) APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Shizuku 13.6.0 (1086) APK SHA-256 6e273ab0e991c4e79bc8b1bbb9b9dd739ccac1a8712a541a214078886b7b790f
+
+SwiftShader (-gpu swiftshader, Android guest Vulkan disabled)
+06:54:49.661 FlipSpaces/Mode: view switched to 3D side by side (the launcher's 3D / 2D button)
+06:55:33.256 FlipSpaces/Space: launcher: Clock (com.google.android.deskclock) launched into a window where the launcher was
+06:55:33.275 FlipSpaces/PanelHost: created display 3 1786x976 at 60.0 Hz flags=0x7d49
+06:56:37.954 FlipSpaces/Space: panel 1 images 387 taken, 120 replaced, 0 held, 267 copied; prepare: 144 panel copies
+06:56:59.823 FlipSpaces/Space: launcher: Settings (com.android.settings) launched into a window where the launcher was
+06:56:59.838 FlipSpaces/PanelHost: created display 4 1786x976 at 60.0 Hz flags=0x7d49
+06:57:02.986 FlipSpaces/Space: panel 1 images 84 taken, 31 replaced, 0 held, 53 copied; prepare: 53 panel copies
+Clock SBS PNG (before and twice during stopwatch) SHA-256 89a04572b93b38c1e62e1ad1a1a105fc13ccf1ca806917b6ead1c4a939d189e4
+Settings SBS PNG (before and after opening Network & internet) SHA-256 1b7d3789807a96562a8a94270dfd3aa31ab8cfe15dfea29637f686f322d27c4e
+Settings panel display PNG before SHA-256 809b8a69ef595ac8fe585e25198f672bbd41588b72b3c8ec8852c8d83bfc2db2
+Settings panel display PNG after SHA-256 88203145e4d48122bb60bc65d78ade545ce572362c1249ec65dcc21d32e609bb
+
+ANGLE with SwiftShader Vulkan backend (-gpu swangle, Android guest Vulkan disabled)
+06:58:39.698 FlipSpaces/Space: viewport 3840x1080; side by side 3D; eyes 63 mm apart; each eye 1920x1080
+06:59:50.249 FlipSpaces/Space: launcher: Clock (com.google.android.deskclock) launched into a window where the launcher was
+06:59:50.290 FlipSpaces/PanelHost: created display 3 1786x976 at 60.0 Hz flags=0x7d49
+07:00:30.189 FlipSpaces/Space: panel 1 images 245 taken, 63 replaced, 3 held, 180 copied; prepare: 89 panel copies
+ActivityManager: display #3 top resumed com.google.android.deskclock/com.android.deskclock.DeskClock
+SurfaceFlinger before Close: Overlay #1 and Pocket XR: Clock (virtual:com.android.shell,2000,Pocket XR: Clock,0)
+SurfaceFlinger after Close: Overlay #1 only (plus the primary emulator display)
+android16-pocket-app-panel-sbs-1.png 3840x1080 reads 06.78 in both halves; SHA-256 a519c7afada67239dbcd605b56bc4afcbd019aea4987073e4a9d7b06c0043a27
+android16-pocket-app-panel-sbs-2.png 3840x1080 reads 10.20 in both halves; SHA-256 9607d168dcf8ed053f7a1983667f033dc5349db5206b24a2667fa42c2c7f5ef8

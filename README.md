@@ -57,7 +57,9 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 外显诊断在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由已授权的 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡在 CV10 两个眼区显示各自的标记，右镜拍到正立的 `RIGHT EYE`。在原版空间启动器切换到 **3D** 后，实测菜单左右眼各 1920×1080，右镜拍到完整菜单。点选 `hello_xr` 后出现提示缺少 Shizuku 授权的双目占位窗口。
 
-从 Monado 2D 启动器取消 **仅显示 XR 应用**，可打开原版 Pocket XR 的手机触控板。手机端一键启动外显需要预览包自己的 Shizuku 授权，创建和投射应用面板还需要原版 Pocket XR 的 Shizuku 授权。原版手机端能发现诊断虚拟屏，Android 拒绝它在该屏自行打开平面桌面 Activity，原版随后回退到基础画面。独立电脑屏幕模式已用原版 Pocket XR 把实况左右并排视频投到 CV10，右镜实拍通过。Monado 已验证用 CV10 姿态固定整个双目画面。原版空间里的应用面板和左镜实拍仍待验收。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md) · [电脑屏幕 3D 实测](history/fold7-pocket-pc-sbs.md) · [固定双目画面的实测](history/fold7-pocket-world-anchor.md)
+从 Monado 2D 启动器取消 **仅显示 XR 应用**，可打开原版 Pocket XR 的手机触控板。手机端一键启动外显需要预览包自己的 Shizuku 授权，创建和投射应用面板还需要原版 Pocket XR 的 Shizuku 授权。原版手机端能发现诊断虚拟屏，Android 拒绝它在该屏自行打开平面桌面 Activity，原版随后回退到基础画面。独立电脑屏幕模式已用原版 Pocket XR 把实况左右并排视频投到 CV10，右镜实拍通过。Monado 已验证用 CV10 姿态固定整个双目画面。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md) · [电脑屏幕 3D 实测](history/fold7-pocket-pc-sbs.md) · [固定双目画面的实测](history/fold7-pocket-world-anchor.md)
+
+在关闭 Wi-Fi 和移动数据的 Android 16 模拟器中，给原版 Pocket XR 授权 Shizuku 后，可从其 3D 启动器打开时钟面板。ANGLE 后端的双目画面显示秒表实时更新，关闭面板后系统释放其虚拟屏。Fold7 上的原版应用面板、实时头踪和左镜实拍仍待验收。[原版应用面板对照](history/fold7-pocket-xr-display.md#android-16-模拟器原版应用面板)
 
 ### Pocket XR 外显实验预览
 

@@ -57,3 +57,11 @@
 - 从原版手机设置点按 **在眼镜上显示**，原版选择 `FLAT` 并尝试自行打开 `.GlassesHomeActivity`。以全屏边界启动和只指定显示 ID 两种尝试均被 Android 拒绝。原版回退到自身的基础 Presentation，Monado 收到首帧，CV10 外屏两眼区显示了同一平面提示的不同片段。此对照验证了发现、选屏和基础画面输出，原版桌面和空间应用面板仍需单独验收。[系统拒绝与原版回退日志](evidence/fold7-pocket-xr-stock-discovery.txt) · [CV10 外屏原图](evidence/fold7-pocket-xr-stock-discovery-display.png) · [Android 显示启动策略](https://source.android.com/docs/core/display/multi_display/activity-launch)
 
 诊断名称和按钮改动仅用于此对照。测试后恢复完整整合预览 APK 和稳定 Broker，没有增加原版或预览的 Shizuku 授权。
+
+## Android 16 模拟器原版应用面板
+
+2026-11-27 06:50 至 07:01（香港时间），在隔离的 Android 16 Google APIs x86_64 模拟器（ARM 转译、4 KiB 页）中，安装本文开头对应的原版 Pocket XR 1.6.28，以及官方 Shizuku 13.6.0。Shizuku 以 `shell` 身份运行，并仅在该模拟器向原版 Pocket XR 授权。关闭模拟器的 Wi-Fi 和移动数据后，用 ADB 把原版 `SpaceActivity` 打开在 Android 的 3840×1080、60 Hz 模拟外屏，原版切到 **3D** 后每眼为 1920×1080，虚拟眼距 63 mm。[Shizuku 13.6.0](https://github.com/RikkaApps/Shizuku/releases/tag/v13.6.0)
+
+两轮都通过 Pocket XR 的原版菜单搜索并打开系统应用。用 SwiftShader 时，**Clock** 和 **Settings** 各自进入由 Pocket XR 建立的 1786×976 虚拟屏，直接抓取这些屏幕可见应用已正常更新，双目输出却仍显示各自的启动图标。换成 ANGLE（`-gpu swangle`）后，从原版菜单重新打开 **Clock**，在时钟所在虚拟屏触发秒表，双目输出先后显示 6.78 秒和 10.20 秒，日志也记录到连续复制新帧。在原版手机界面关闭面板后，`Pocket XR: Clock` 从系统显示列表消失。[06.78 秒双目原图](evidence/android16-pocket-app-panel-sbs-1.png) · [10.20 秒双目原图](evidence/android16-pocket-app-panel-sbs-2.png) · [两种图形后端日志与截图摘要](evidence/android16-pocket-app-panel.txt)
+
+该轮验证了原版空间内从菜单启动应用、实时渲染双目面板和关闭清理。秒表按键用 ADB 触发，Fold7、Monado 外显转接及 CV10 镜片未参与本轮。
