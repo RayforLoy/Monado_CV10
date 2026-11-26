@@ -45,6 +45,8 @@ Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停�
 
 两个应用入口均在预览包未获得 Shizuku 权限时通过。移除预览包的 `INTERNET` 权限后，3D 菜单和从 2D 列表启动的原版 `hello_xr` 均在 CV10 显示。诊断期间也复现了三星 Freecess 冻结运行时导致的黑屏或退出无响应。关闭系统 Wi-Fi 的独立复测待做。[应用网络隔离对照](history/fold7-offline-launcher.md#fold7-应用网络隔离对照)
 
+同一 ARM64 预览 APK 在 16 KiB 的 Android 16 模拟器验证了安装、原生库加载和 Vulkan 启动失败后的重试，在 4 KiB 的 Fold7 验证了 2D 直启、3D 点选和同进程重进。两轮样例均在右镜出图，按返回键后完成实例销毁。[APK 校验与复测记录](history/fold7-offline-launcher.md#独立启动器的-16-kib-与-fold7-回归)
+
 ## Pocket XR 外屏兼容性
 
 安装原版 Pocket XR 后，在 Monado CV10 菜单打开 **Pocket XR 外显兼容性**。该页面显示 CV10 的活动时序，以及 Android 是否允许 Pocket XR 在外屏启动。Fold7 的 **设置 → 已连接的设备 → Samsung DeX → 连接的显示设备** 可切换 **已扩展** 和 **已镜像**。
@@ -55,7 +57,9 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 外显诊断在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由已授权的 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡在 CV10 两个眼区显示各自的标记，右镜拍到正立的 `RIGHT EYE`。在原版启动器使用 **深度（3D 左右并排）** 后，实测菜单左右眼各 1920×1080，右镜拍到完整菜单。点选 `hello_xr` 后出现提示缺少 Shizuku 授权的双目占位窗口。
 
-从 Monado 2D 启动器取消 **仅显示 XR 应用**，可打开原版 Pocket XR 的手机触控板。手机端一键启动外显需要预览包自己的 Shizuku 授权，创建和投射应用面板还需要原版 Pocket XR 的 Shizuku 授权。实时头踪、左镜实拍和 3D 视频投屏仍待实机验收。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md)
+从 Monado 2D 启动器取消 **仅显示 XR 应用**，可打开原版 Pocket XR 的手机触控板。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md)
+
+实验分支在 Fold7 通过 ADB 诊断验证过原版 Pocket XR 独立电脑屏幕的 Half SBS 串流。Sunshine 提供实时画面，Monado 分眼，外屏截图和右镜实拍均有分眼标记。关闭 Wi-Fi 和移动数据的 Android 16 模拟器也验证了原版启动器点选时钟、双目面板内容持续更新，以及关闭后释放虚拟屏。实验分支的手机端一键启动外显需要预览包自己的 Shizuku 授权，原版空间内的应用面板还需要 Pocket XR 自己的 Shizuku 授权。Fold7 上的一键串流、原版应用面板、原版应用接收 CV10 实时头踪及左镜实拍仍待验证。
 
 ## 原厂手机线
 

@@ -1,0 +1,19 @@
+=== 2D entry ===
+11-27 07:17:18.655 30745 30768 V hello_xr: [07:17:18.655][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520453197603
+11-27 07:17:18.813 30521 30794 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+=== 2D exit ===
+11-27 07:17:23.709 30745 30768 V hello_xr: [07:17:23.709][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598486720 time=2525507426560
+11-27 07:17:23.709 30745 30768 V hello_xr: [07:17:23.709][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598486720 time=2525508035258
+11-27 07:17:25.559 30745 30768 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+=== 3D menu ===
+11-27 07:17:31.729 32241 32348 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 07:17:31.909 30521 32398 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+=== 3D selection ===
+11-27 07:17:38.265 30745 32604 V hello_xr: [07:17:38.265][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2526967191820
+11-27 07:17:38.446 30521 32398 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+=== 3D exit ===
+11-27 07:17:43.463 30745 32604 V hello_xr: [07:17:43.463][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598486720 time=2532165463276
+11-27 07:17:43.463 30745 32604 V hello_xr: [07:17:43.463][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598486720 time=2532165692182
+11-27 07:17:44.807 30745 32604 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Restored stable Monado CV10 Broker selection and original preview APK SHA-256 8d1bbb5bc75e24e8d225872e0def4ecbc5768ad0cd849c5d21e00af50c4713db.
+Battery 73%, minimum refresh rate null, Wi-Fi on.

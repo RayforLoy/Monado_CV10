@@ -42,3 +42,10 @@
 - 02:33:05.375，系统 Loader 查不到 Broker Provider。内置菜单在独立的 `:spatialLauncher` 进程使用 `XR_EXT_loader_init_properties` 指定由本包生成的 `XR_RUNTIME_JSON`，让官方 Loader 加载本包的 Monado。02:33:05.998 菜单进入 `FOCUSED`，右镜实拍有原版 `hello_xr` 卡片和激光指针。[启动日志摘录](evidence/fold7-launcher-bundled-runtime.txt) · [右镜实拍](evidence/fold7-launcher-bundled-runtime-right.jpg)
 
 这个回退作用于内置菜单的 Loader。第三方应用仍通过系统 Broker 选择运行时，三星 Freecess 冻结运行时导致的 ANR 也需要单独处理。[OpenXR Loader 1.1.65 实现](https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/release-1.1.65/src/loader/loader_init_data.cpp)
+
+## 独立启动器的 16 KiB 与 Fold7 回归
+
+2026-11-27 07:16–07:18 香港时间。独立启动器分支从 `76ad245b5113a6a347593d6e6ba78d630f0c026d` 构建，使用 `-Pcv10LauncherPreview=true -Pcv10Abi=arm64-v8a`。APK SHA-256 为 `31777c5b42b83d3e5d8eea727802d0981b079710717b8192d38199bbcb42859b`，v2 签名、`zipalign -c -P 16 4` 及五个 ARM64 ELF 的 15 个 `PT_LOAD` 段通过检查。调试证书与本页首轮使用的证书相同。
+
+- Android 16 Google APIs 16 KiB 镜像（API 36、x86_64、修订版 7）实测 `PAGE_SIZE=16384`。APK 经 ARM64 转译安装并加载内置 OpenXR 运行时。模拟器缺少所需的 Vulkan 实例扩展，首次启动和点击 **重试** 均返回 `xrGetSystem` 错误并出现恢复提示，两个进程继续运行。取消提示后按返回可回到 2D 列表。[16 KiB 安装和恢复日志](evidence/android16-16k-launcher-76ad245.txt)
+- Fold7（SM-F9660）实测 `PAGE_SIZE=4096`，沿用 C9.53.6 原厂线和 5 V 供电。CV10 保持 3200×1600、90 Hz。由 2D 列表直开原版 `hello_xr`，返回后进入 3D 菜单，底部上滑停留置中并点选同一应用。样例在同一 PID 30745 两次进入 `FOCUSED`、两次正常销毁实例。外屏截图显示双目方块，固定摄像头三次拍到右镜输出。结束后恢复稳定 Broker 和原预览 APK。Wi-Fi 保持开启，最低刷新率为 `null`，未新增 Shizuku 或 VPN 授权。[日志](evidence/fold7-launcher-76ad245.log) · [2D 直启右镜](evidence/fold7-launcher-76ad245-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-76ad245-menu-right.jpg) · [3D 点选右镜](evidence/fold7-launcher-76ad245-select-right.jpg) · [双目外屏](evidence/fold7-launcher-76ad245-select-display.png)
