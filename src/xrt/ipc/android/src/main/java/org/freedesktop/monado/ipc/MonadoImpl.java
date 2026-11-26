@@ -18,6 +18,7 @@ import android.view.Surface;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import java.io.IOException;
+import org.freedesktop.monado.auxiliary.MonadoView;
 
 /**
  * Java implementation of the IMonado IPC interface.
@@ -87,7 +88,8 @@ public class MonadoImpl extends IMonado.Stub {
     @Override
     public boolean canDrawOverOtherApps() {
         Log.i(TAG, "canDrawOverOtherApps");
-        return Settings.canDrawOverlays(context);
+        // The client supplies its own surface only if the runtime cannot create the display window.
+        return MonadoView.canPresentOnCv10(context) || Settings.canDrawOverlays(context);
     }
 
     public void shutdown() {

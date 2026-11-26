@@ -16,7 +16,9 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.Log;
@@ -89,6 +91,7 @@ public class Client implements ServiceConnection {
 
     // The client owns the presentation when the service cannot draw its own window.
     private MonadoView appView;
+    private Runnable releaseCv10RateVote;
     private boolean closed;
 
     private void shutdown() {
@@ -97,6 +100,10 @@ public class Client implements ServiceConnection {
             if (appView != null) {
                 MonadoView.removeFromWindow(appView);
                 appView = null;
+            }
+            if (releaseCv10RateVote != null) {
+                new Handler(Looper.getMainLooper()).post(releaseCv10RateVote);
+                releaseCv10RateVote = null;
             }
         }
         monado = null;
@@ -176,7 +183,7 @@ public class Client implements ServiceConnection {
                             }
 
                             try {
-                                if (!monado.canDrawOverOtherApps() && activity != null) {
+                                if (activity != null && !monado.canDrawOverOtherApps()) {
                                     Surface surface = attachViewAndGetSurface(activity);
                                     if (surface == null) {
                                         Log.e(TAG, "Failed to create surface");
@@ -185,6 +192,15 @@ public class Client implements ServiceConnection {
                                     }
 
                                     monado.passAppSurface(surface);
+                                } else if (activity != null && MonadoView.canPresentOnCv10(activity)) {
+                                    Activity owner = activity;
+                                    owner.runOnUiThread(() -> {
+                                        synchronized (Client.this) {
+                                            if (!closed && !owner.isDestroyed()) {
+                                                releaseCv10RateVote = MonadoView.requestCv10PrimaryRate(owner);
+                                            }
+                                        }
+                                    });
                                 }
                             } catch (RemoteException e) {
                                 e.printStackTrace();

@@ -44,6 +44,7 @@ struct comp_window_android
 	struct comp_target_swapchain base;
 
 	struct android_custom_surface *custom_surface;
+	struct ANativeWindow *window;
 };
 
 
@@ -74,6 +75,12 @@ comp_window_android_destroy(struct comp_target *ct)
 
 	comp_target_swapchain_cleanup(&cwa->base);
 
+	if (cwa->window != NULL) {
+		if (cwa->custom_surface != NULL) {
+			android_globals_clear_window((struct _ANativeWindow *)cwa->window);
+		}
+		ANativeWindow_release(cwa->window);
+	}
 	android_custom_surface_destroy(&cwa->custom_surface);
 
 	free(ct);
@@ -148,7 +155,7 @@ comp_window_android_init_swapchain(struct comp_target *ct, uint32_t width, uint3
 	if (android_globals_get_activity() != NULL) {
 		/* In process: Creating surface from activity */
 		window = _create_android_window(cwa);
-	} else if (android_custom_surface_can_draw_overlays(android_globals_get_vm(), android_globals_get_context())) {
+	} else if (android_custom_surface_can_create_window(android_globals_get_vm(), android_globals_get_context())) {
 		/* Out of process: Create surface */
 		window = _create_android_window(cwa);
 	} else {
@@ -158,7 +165,7 @@ comp_window_android_init_swapchain(struct comp_target *ct, uint32_t width, uint3
 		 * of polling here
 		 */
 		for (int i = 0; i < 100; i++) {
-			window = (struct ANativeWindow *)android_globals_get_window();
+			window = (struct ANativeWindow *)android_globals_acquire_window();
 			if (window)
 				break;
 			os_nanosleep(20 * U_TIME_1MS_IN_NS);
@@ -170,12 +177,16 @@ comp_window_android_init_swapchain(struct comp_target *ct, uint32_t width, uint3
 		COMP_ERROR(cwa->base.base.c, "could not get ANativeWindow");
 		return false;
 	}
-	android_globals_store_window((struct _ANativeWindow *)window);
+	cwa->window = window;
 
 	ret = comp_window_android_create_surface(cwa, window, &cwa->base.surface.handle);
 	if (ret != VK_SUCCESS) {
 		COMP_ERROR(ct->c, "Failed to create surface '%s'!", vk_str_result(ret));
 		return false;
+	}
+	if (cwa->custom_surface != NULL) {
+		ANativeWindow_acquire(window);
+		android_globals_store_window((struct _ANativeWindow *)window);
 	}
 
 	return true;
