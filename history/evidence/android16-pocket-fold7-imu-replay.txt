@@ -1,0 +1,17 @@
+2026-11-27 07:22 Hong Kong time. Google APIs Android 16 guest, API 36, stock ARM64 Pocket XR 1.6.28 versionCode 214.
+ro.kernel.qemu=1; wifi_on=0; mobile_data=0; no Shizuku process.
+Stock APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337.
+Fold7 CV10 capture SHA-256 229090fcd078cb3251463701b11a8fd2ca722aaa65178bd7e029f6aa80cbb0bc, 3000 stationary HID samples.
+Probe APK SHA-256 1b27e87459f19088977d20fe3e0aa9ba959fe7b15eca09cd71d716a4262763f0. Production bridge and VPN service from 595683d.
+
+11-27 07:22:44.498  3334  3353 I Cv10Replay: Replaying 3000 Fold7 CV10 samples, source span 3007957469 ns
+11-27 07:22:46.175  3334  3358 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52998
+11-27 07:22:46.179  3375  3406 I FlipSpaces/Head: first IMU report over tun0 (vpn), app socket bound to the network
+11-27 07:22:46.350  3334  3359 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+11-27 07:22:56.178  3375  3406 I FlipSpaces/Head: head chain: IMU 1000 Hz in 489 reads a second (about 2 reports a read), newest report 0.2 ms in the pipe, pose predicted p50 33.9 ms p95 43.6 ms ahead; late draw model: pose sampled 7.8 ms before the latch deadline, pose to photons 31.5 ms (budget + deadline to present + 8.0 ms glasses delay), the pose taken for the late warp's pass
+11-27 07:22:56.181  3375  3406 I FlipSpaces/Head: head attitude: yaw 0.0 pitch -0.23 roll -0.14 deg (tracking frame); gravity mean says pitch -0.23 roll -0.13 deg (tilt error 0.00 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias -0.00005, -0.00006, 0.00006 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 07:23:06.178  3375  3406 I FlipSpaces/Head: head chain: IMU 1000 Hz in 475 reads a second (about 2 reports a read), newest report 0.1 ms in the pipe, pose predicted p50 29.1 ms p95 33.1 ms ahead; late draw model: pose sampled 3.0 ms before the latch deadline, pose to photons 26.7 ms (budget + deadline to present + 8.0 ms glasses delay), the pose taken for the late warp's pass
+11-27 07:23:06.181  3375  3406 I FlipSpaces/Head: head attitude: yaw 0.0 pitch -0.23 roll -0.14 deg (tracking frame); gravity mean says pitch -0.22 roll -0.15 deg (tilt error 0.00 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias -0.00005, -0.00007, 0.00006 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 07:23:11.578  3334  3353 I Cv10Replay: Finished replay of 27000 captured samples
+11-27 07:23:19.579  3375  3406 I FlipSpaces/Head: head tracking stream over tun0 (vpn), app socket bound to the network ended after 33.402 s: Lost the sensor stream over tun0 (vpn), app socket bound to the network: the glasses closed the connection. Retrying.; the last pose holds for up to 5 s while it reconnects
+11-27 07:23:22.584  3334  3358 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52998

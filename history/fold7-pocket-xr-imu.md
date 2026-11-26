@@ -46,3 +46,9 @@ Fold7 安装了同一提交构建的 ARM64 调试预览，包名为 `org.cv10.mo
 `627c32b` 修正停止预览时 VPN 接口残留的问题。调用旧停止路径后，Android 系统仍绑定 VPN 服务且 `tun0` 存在。修复后 `tun0` 和服务记录均消失。重新启动后，原版 Pocket XR 在同一个 PID 5402 内再次收到首帧 IMU。[模拟器与电脑端日志](evidence/android16-pocket-head-link.txt)
 
 这轮验证了原版 Android 应用接收、融合姿态和重连。CV10 实物姿态的方向、重置和镜片表现仍需在 Fold7 上确认。Fold7 的 Android VPN 权限保持原值。
+
+## 在原版 Android 应用回放 Fold7 实测样本
+
+07:22 香港时间，Android 16 API 36 模拟器关闭 Wi-Fi 和移动数据，Shizuku 未运行。测试小程序使用 `595683d` 的正式头踪桥与 VPN 服务，以录制的采样间隔将 Fold7 实测的 3000 帧静置 IMU 数据循环送回采样入口。源文件为上文 `4d92709` 采集的 `cv10-pocket-imu.bin`，SHA-256 为 `229090fcd078cb3251463701b11a8fd2ca722aaa65178bd7e029f6aa80cbb0bc`。构建探针时把该文件放入 `assets`，与 [回放 Activity](VerifyPocketAndroidReplay.kt) 及生产的 `Cv10PocketImu`、`Cv10PocketHeadLink` 和 `Cv10PocketHeadLinkService` 一同打包。
+
+未修改的 Pocket XR 1.6.28 在 3840×1080、60 Hz 的测试显示上运行 `SpaceActivity`。原版连接了本机 VPN 的 52998 和 52999 端口，报告 1000 Hz，融合结果为 yaw 约 0.0°、pitch −0.23°、roll −0.14°，与电脑端的静置记录一致。模拟器端收到的是 Fold7 的录制样本。验收 Fold7 上的实时连接及实物转动仍需要可用的本机头踪授权和佩戴转头测试。[原版应用与回放日志](evidence/android16-pocket-fold7-imu-replay.txt)
