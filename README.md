@@ -61,9 +61,10 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
 - **打开 Pocket XR 空间** 后，在其手机端 **空间窗口** 打开启动器，再在启动器中使用 **深度（3D 左右并排）** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
+- **通过 Android 本机 VPN 接入头部追踪（实验）** 可在打开空间前选用。勾选后由 Android 询问 VPN 授权。打开空间时，预览只为原版 Pocket XR 宣告本机 `169.254.2.1/32`，将 CV10 的 HID 样本和控制心跳送到该地址的两个 TCP 端口。预览退出时关闭连接。
 - **停止预览** 释放本次虚拟显示和 OpenXR 会话。
 
-Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。调试包还复用了 CV10 运行时的 USB HID 样本，原版 Pocket XR 解析器读取 3000 帧静止样本，平均 997 Hz。样本在电脑上回放，Fold7 上的原版应用仍需接入实时传输。手机端一键启动和 3D 视频投屏仍待授权与实测。[外显验收](history/fold7-pocket-xr-display.md) · [IMU 采集与解析](history/fold7-pocket-xr-imu.md)
+Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。电脑端用 Fold7 静止样本验证了实验 TCP 服务和原版解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后的实时连接、头动方向、手机端一键启动和 3D 视频投屏仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [IMU 采集、TCP 回放与权限检查](history/fold7-pocket-xr-imu.md)
 
 ## 原厂手机线
 

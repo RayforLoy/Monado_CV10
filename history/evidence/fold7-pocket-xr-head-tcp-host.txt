@@ -1,0 +1,12 @@
+Accepted local Pocket XR connection on 52999
+Accepted local Pocket XR connection on 52998
+Pocket XR connection ended on 52999 (EOFException)
+Sent first live CV10 IMU frame
+Connection 1: 300 Fold7 samples, 0 dropped bytes, heartbeats and unsupported control verified
+Accepted local Pocket XR connection on 52999
+Pocket XR connection ended on 52999 (EOFException)
+Pocket XR connection ended on 52998 (SocketException)
+Accepted local Pocket XR connection on 52998
+Sent first live CV10 IMU frame
+Connection 2: 300 Fold7 samples, 0 dropped bytes, heartbeats and unsupported control verified
+Both listen ports released and rebound
