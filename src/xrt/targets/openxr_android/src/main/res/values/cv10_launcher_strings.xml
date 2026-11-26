@@ -7,4 +7,15 @@
     <string name="cv10_xr_apps_only">XR apps only</string>
     <string name="cv10_no_matching_apps">No matching apps. Turn off the XR filter or change the search.</string>
     <string name="cv10_app_launch_failed">Could not open %1$s</string>
+    <string name="cv10_pocket_preview_title">Pocket XR display preview</string>
+    <string name="cv10_pocket_preview_intro">Select Monado CV10 Preview in Runtime Broker and allow access to the CV10 USB device. For the Pocket XR Space, first enable its 3D setting in Spatial windows.</string>
+    <string name="cv10_pocket_preview_open">Open Pocket XR Space</string>
+    <string name="cv10_pocket_preview_test">Show left and right test card</string>
+    <string name="cv10_pocket_preview_stop">Stop preview</string>
+    <string name="cv10_pocket_preview_needs_shizuku">Start Shizuku to create a virtual display for Pocket XR.</string>
+    <string name="cv10_pocket_preview_shizuku_denied">Allow Monado CV10 Preview in Shizuku to create a virtual display.</string>
+    <string name="cv10_pocket_preview_starting">Opening the OpenXR session and virtual display…</string>
+    <string name="cv10_pocket_preview_receiving">Receiving virtual display frames on display %1$d.</string>
+    <string name="cv10_pocket_preview_failure">Pocket XR display preview failed: %1$s</string>
+    <string name="cv10_pocket_preview_session_ended">The OpenXR session ended. Check CV10 and Runtime Broker, then retry.</string>
 </resources>

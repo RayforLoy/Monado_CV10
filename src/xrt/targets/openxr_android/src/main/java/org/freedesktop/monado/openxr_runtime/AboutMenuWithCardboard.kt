@@ -33,6 +33,7 @@ class AboutMenuWithCardboard @Inject constructor(private val scanner: ScannerPro
             setTitle(org.freedesktop.monado.auxiliary.R.string.cv10_external_compatibility_title)
             isVisible = !BuildConfig.inProcess
         }
+        menu.findItem(R.id.cv10_pocket_preview).isVisible = BuildConfig.cv10LauncherPreview && !BuildConfig.inProcess
     }
 
     override fun onOptionsItemSelected(context: Context, item: MenuItem): Boolean {
@@ -42,6 +43,10 @@ class AboutMenuWithCardboard @Inject constructor(private val scanner: ScannerPro
         }
         if (item.itemId == R.id.cv10_external_compatibility && context is Activity) {
             Cv10ExternalAppCompatibility.show(context)
+            return true
+        }
+        if (item.itemId == R.id.cv10_pocket_preview) {
+            context.startActivity(Intent(context, Cv10PocketXrPreviewActivity::class.java))
             return true
         }
         if (item.itemId == R.id.qrscan) {

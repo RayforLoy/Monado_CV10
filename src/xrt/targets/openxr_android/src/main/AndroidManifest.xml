@@ -79,6 +79,11 @@
             android:process=":spatialLauncher"
             android:screenOrientation="landscape" />
 
+        <activity
+            android:name=".Cv10PocketXrPreviewActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|screenLayout"
+            android:exported="false" />
+
         <!-- VR Listener service, for interop with Android VR mode. -->
         <service
             android:name="org.freedesktop.monado.android_common.MonadoVrListener"

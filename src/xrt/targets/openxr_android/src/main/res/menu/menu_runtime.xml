@@ -15,6 +15,10 @@
         android:id="@+id/cv10_external_compatibility" />
 
     <item
+        android:id="@+id/cv10_pocket_preview"
+        android:title="@string/cv10_pocket_preview_title" />
+
+    <item
         android:id="@+id/qrscan"
         android:title="@string/qr"
         app:showAsAction="always" />
