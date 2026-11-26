@@ -37,9 +37,11 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从手机左右边缘的系统手势区内侧向中间滑动可返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。项目持有的华为 VR 桌面材料为已打包 APK，未找到可复用的公开源码。
 
-Fold7 已用独立测试 APK 验证 2D 和 3D 入口均可启动原版 Khronos `hello_xr` OpenGLES。3D 菜单先释放自己的会话，随后样例进入 `FOCUSED`。SurfaceFlinger 的 CV10 外屏合成截图显示双目菜单和激光指针。若冷启动找不到运行时，可在启动提示中打开 Broker，确认运行时选择后返回，或选择 **重试**。
+若冷启动找不到运行时，可在启动提示中打开 Broker，确认运行时选择后返回，或选择 **重试**。
 
-Fold7 的整合预览包已通过 2D 入口启动原版 `hello_xr`，该样例和 3D 菜单均使用预览包自己的运行时。右镜片实拍确认了样例蓝色方块、3D 菜单和激光指针。
+Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条完整路径。直接点 2D 列表，以及打开 3D 菜单后用激光笔点按，都能启动未修改的 Khronos `hello_xr` OpenGLES 并进入 `FOCUSED`。两条路径均使用自己的预览运行时。SurfaceFlinger 外屏截图记录了左右眼画面，固定摄像头从右镜片拍到蓝方块、3D 菜单和激光指针。3D 路径验证使用源码 `4fe230f` 的 ARM64 预览包，SHA-256 为 `92dda4b0080e832d702a2704ab90efa08bb345b8e26e67a87b435f8156f30616`。
+
+同一预览包在 Fold7 注入触摸事件验证了左右内侧手势返回、底部上滑停留触发置中和轻触确认，也通过了 Android 返回键。激光笔俯仰修正和横向方向通过合成传感器样本复测，手持转动手机的复测待做。
 
 ## Pocket XR 外屏兼容性
 
@@ -48,6 +50,8 @@ Fold7 的整合预览包已通过 2D 入口启动原版 `hello_xr`，该样例�
 Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 3200×1600 画幅宽高比为 2:1，低于其 3.2 的双目判定阈值，该版本也没有 CV10 的 IMU 支持。允许外屏启动时可以试用原版的平面入口。空间投屏、双目光学和头部跟踪仍需要 Pocket XR 侧适配。[Pocket XR 双目判定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/GlassesOptics.kt#L211-L262) · [空间模式前置条件](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L146-L171)
 
 Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
+
+另一次实验在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。日志显示空间渲染线程跑到约 60 fps，但最终选择 2D 单画布，录制中的稳定区间为黑帧，并且没有实际头部姿态输入。Pocket XR 当时也没有获得自己的 Shizuku 授权。这个结果尚不能验证空间桌面、镜片双目或 3D 投屏兼容性。
 
 ## 原厂手机线
 
