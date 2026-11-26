@@ -21,6 +21,15 @@
 
 2026-11-27 04:23（香港时间），在同一 Fold7 上用新预览和原版 Pocket XR 的默认电脑屏幕配对临时 Sunshine 2026.914.233613。用探针重新启动已配对的原版 `PcScreenActivity` 后，显示服务创建了 1920×1080、60 Hz 的受信任屏 126。第一张为原版的「正在启动 Desktop」界面，随后手机的 Qualcomm HEVC 解码器启动。第二张原始采样为 1920×1080，左蓝右红的 Half SBS 测试卡时钟为 00:50.11。原版请求 120 fps，虚拟屏报告 60 Hz，这轮没有测量视频或眼镜的实际帧率。正确令牌释放显示屏，原版默认槽的临时配对和主机地址已清空，临时 Sunshine 已停止。本轮在虚拟屏采样，先前 [右镜光学验证](fold7-pocket-pc-sbs.md) 使用第 6 槽和诊断显示屏。Monado 界面经 Shizuku 一键启动后的镜片输出仍待实测。[视频源帧](evidence/fold7-pocket-shell-pc-sbs.png) · [手机和主机日志](evidence/fold7-pocket-shell-pc-sbs.log)
 
+## 原版 Pocket XR 运行时对照
+
+2026-11-27 04:30 至 04:33（香港时间），沿用同一手机和两个 APK，用探针把原版 Pocket XR 测试卡放到受信任虚拟屏。在 Broker 临时选择 **Pocket XR**，再从手机主屏启动未经修改的 Khronos OpenGLES `hello_xr`（SHA-256 `29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962`）。原版 Pocket XR 自带 Monado 运行时，会在原版空间的外屏窗口上创建独立游戏图层。[原版运行时](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/kotlin/com/hayeco/flipspaces/openxr/OpenXrRuntimeService.kt) · [原版游戏图层](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/kotlin/com/hayeco/flipspaces/openxr/OpenXrGlassesLayer.kt)
+
+- 手机原设为 **受限制**。加载器选中 `com.hayeco.flipspaces`，三星 MARs 拦截 `bindService`，`xrCreateInstance` 返回 `XR_ERROR_RUNTIME_UNAVAILABLE`。
+- 仅临时修改 `RUN_ANY_IN_BACKGROUND` 仍被 MARs 拦截。从三星电池设置临时切到 **优化** 后，Pocket XR 创建 3840×1080 游戏 Surface，原版 `hello_xr` 进入 `FOCUSED`。SurfaceFlinger 记录游戏图层首缓冲区，386 毫秒后三星 Freecess 冻结 Pocket XR。探针未采到有效的游戏画面。在游戏未退出时释放虚拟屏，Pocket XR 自带运行时记录 `VK_ERROR_SURFACE_LOST_KHR`，随后崩溃。
+
+复测后恢复 **受限制** 和稳定的 **Monado CV10** Broker，未增加电池不限、Shizuku 或 VPN 授权。普通应用面板与原版游戏图层分别验收。原版游戏仍需验证稳定画面、关闭游戏再释放虚拟屏，以及经 Monado 送到镜片的完整路径。[筛选对照日志](evidence/fold7-pocket-stock-openxr.log)
+
 ## 复测
 
 用 JDK 17 和 Android SDK 构建探针。将 `$serial` 指向本机 Fold7，保持 Android 调试已经授权。探针需要安装 Monado 预览和原版 Pocket XR。

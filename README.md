@@ -70,6 +70,8 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 Fold7 已验证预览内的显示服务能创建和释放受信任虚拟屏。原版空间在该屏输出双目测试卡和应用占位窗口。默认电脑屏幕配对 Sunshine 后在该屏收到了 1920×1080 的 HEVC Half SBS 视频。[服务与默认电脑屏幕实测](history/fold7-pocket-shell-service.md)
 
+原版 Pocket XR 自带另一个 OpenXR 运行时。临时选用它做对照时，Fold7 在「优化」电池模式下能把原版 `hello_xr` 启动到 `FOCUSED`，随后系统冻结 Pocket XR，游戏画面仍待验收。日常运行 CV10 的 OpenXR 应用，继续按上面的启动流程选择 **Monado CV10**。[原版运行时对照](history/fold7-pocket-shell-service.md#原版-pocket-xr-运行时对照)
+
 Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。整合预览 `6e536a4` 复测了内置 3D 菜单和原版测试卡。Android 在该设备上拒绝普通应用把原版空间入口启动到诊断虚拟屏。Fold7 的真实 CV10 IMU 通过回环诊断连续两次把约 1000 Hz 的样本送入电脑端原版 Pocket XR 解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后手机端原版连接、实物头动方向和 Shizuku 一键开流仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [实时 IMU 对照](history/fold7-pocket-xr-imu.md#fold7-实时-tcp-对照)
 
 ## 原厂手机线

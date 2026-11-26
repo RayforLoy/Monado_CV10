@@ -1,0 +1,31 @@
+Restricted Pocket XR battery setting
+11-27 04:30:44.398 21340 21340 I Cv10PocketXrDisplay: Pocket XR mode 1 start accepted on 129 (3840x1080, 240 dpi)
+11-27 04:30:47.368 21429 21448 I OpenXR-Loader: Got runtime: package: com.hayeco.flipspaces, so filename: libopenxr_monado.so
+11-27 04:30:47.401  2961  5864 W ActivityManager: isRestricted by MARs! target : com.hayeco.flipspaces, type : bindService
+11-27 04:30:47.401 21429 21448 E monado-ipc-client: bindService: Service Intent { act=org.freedesktop.monado.ipc.CONNECT xflg=0x4 pkg=com.hayeco.flipspaces } could not be found to bind!
+11-27 04:30:47.402 21429 21448 E hello_xr: [04:30:47.402][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+
+Optimized Pocket XR battery setting
+11-27 04:32:32.471 24036 24036 I Cv10PocketXrDisplay: Pocket XR mode 1 start accepted on 131 (3840x1080, 240 dpi)
+11-27 04:32:35.522 23955 23955 I PocketXrOpenXr: the glasses: 3840x1080 at 60.0 Hz, field of view tangents 0.40642235 by 0.22861257
+11-27 04:32:35.527 23955 23955 I PocketXrOpenXr: the eyes: IPD 63.0 mm, the glasses' 3D distance 4.00 m, each view turned out by 0.45 degrees
+11-27 04:32:35.542 23955 23955 I PocketXrOpenXr: head feed on
+11-27 04:32:35.544 23955 23955 I PocketXrOpenXr: a game owns the glasses
+11-27 04:32:35.548 23955 23955 I PocketXrOpenXr: the game's surface is ready
+11-27 04:32:35.549 23955 23955 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 04:32:35.903 24122 24140 V hello_xr: [04:32:35.903][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819730020407
+11-27 04:32:36.061 23955 24178 I BLASTBufferQueue: [fb586b4 SurfaceView[Pocket XR game]@0#5](f:0,a:0,s:0) onFrameAvailable the first frame is available
+11-27 04:32:36.447  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [23955] reason: Bg-buff
+11-27 04:32:49.242  2961  5763 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [23955] reason: bf_input
+11-27 04:32:49.263 23955 23955 I PocketXrOpenXr: the game's surface is gone
+11-27 04:32:49.266 23955 24178 E monado.comp_target_swapchain_acquire_next_image: ERROR [comp_target_swapchain_acquire_next_image] vkAcquireNextImageKHR failed: VK_ERROR_SURFACE_LOST_KHR
+11-27 04:32:49.266 23955 24178 E monado.renderer_acquire_swapchain_image: ERROR [renderer_acquire_swapchain_image] comp_target_acquire: VK_ERROR_SURFACE_LOST_KHR
+11-27 04:32:49.278 23955 24178 E monado.renderer_present_swapchain_image: ERROR [renderer_present_swapchain_image] vk_swapchain_present: VK_ERROR_SURFACE_LOST_KHR
+11-27 04:32:49.295 23955 24178 E monado.vk_enumerate_surface_present_modes: ERROR [vk_enumerate_surface_present_modes] vkGetPhysicalDeviceSurfacePresentModesKHR failed: VK_ERROR_SURFACE_LOST_KHR
+11-27 04:32:49.295 23955 24178 E monado.vk_surface_info_fill_in: ERROR [vk_surface_info_fill_in] vk_enumerate_surface_present_modes failed: VK_ERROR_SURFACE_LOST_KHR
+11-27 04:32:49.295 23955 24178 E monado.comp_target_swapchain_create_images: ERROR [comp_target_swapchain_create_images] vk_surface_info_fill_in: VK_ERROR_SURFACE_LOST_KHR
+11-27 04:32:49.297 23955 24178 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x20 in tid 24178 (Thread-12), pid 23955 (yeco.flipspaces)
+11-27 04:32:49.600 23955 23955 I PocketXrOpenXr: head feed off
+11-27 04:32:49.604 23955 23955 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 04:32:49.608 23955 23955 I PocketXrOpenXr: head feed off
+11-27 04:32:49.608 23955 23955 I PocketXrOpenXr: the glasses are back with the Space: the runtime stopped
