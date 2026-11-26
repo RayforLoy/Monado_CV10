@@ -7,6 +7,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/cv10_app_launcher"
+        android:title="@string/cv10_app_launcher_title"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/cv10_external_compatibility" />
+
+    <item
         android:id="@+id/qrscan"
         android:title="@string/qr"
         app:showAsAction="always" />

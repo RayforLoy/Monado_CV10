@@ -254,8 +254,8 @@ android {
     def outOfProcessBaseConfig = { flavor, appName ->
         flavor.dimension 'deployment'
         flavor.applicationIdSuffix '.out_of_process'
-        flavor.externalNativeBuild.cmake.arguments += "-DXRT_FEATURE_SERVICE=ON"
-        flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service"
+        flavor.externalNativeBuild.cmake.arguments += ["-DXRT_FEATURE_SERVICE=ON", "-DXRT_BUILD_CV10_SPATIAL_LAUNCHER=ON"]
+        flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service", "cv10-spatial-launcher"
         flavor.buildConfigField "boolean", "inProcess", "false"
         flavor.resValue "string", "app_name", appName
     }
@@ -293,6 +293,7 @@ android {
     }
     buildFeatures {
         buildConfig true
+        prefab true
     }
 }
 
@@ -326,6 +327,7 @@ dependencies {
     implementation "com.mikepenz:aboutlibraries:${latestAboutLibsRelease}"
     implementation "androidx.cardview:cardview:$androidxCardViewVersion"
     implementation "androidx.recyclerview:recyclerview:$androidxRecyclerViewVersion"
+    outOfProcessImplementation 'org.khronos.openxr:openxr_loader_for_android:1.1.65'
 
 
     // for Hilt dependency injection

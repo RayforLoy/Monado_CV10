@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_app_launcher_title">应用启动器</string>
+    <string name="cv10_open_spatial_launcher">打开 3D 启动器</string>
+    <string name="cv10_search_apps">搜索已安装应用</string>
+    <string name="cv10_xr_apps_only">仅显示 XR 应用</string>
+    <string name="cv10_no_matching_apps">没有匹配的应用。可关闭 XR 筛选或修改搜索内容。</string>
+    <string name="cv10_app_launch_failed">无法打开 %1$s</string>
+</resources>

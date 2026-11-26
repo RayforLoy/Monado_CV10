@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_external_compatibility_title">Pocket XR display compatibility</string>
+    <string name="cv10_external_display_unavailable">Android has not detected a CV10 display.</string>
+    <string name="cv10_external_display_mode">CV10 display %1$d is running at %2$d × %3$d, %4$.2f Hz.</string>
+    <string name="cv10_external_display_allowed">Android allows opening the Pocket XR launcher on this display. Check both lenses after launching.</string>
+    <string name="cv10_external_display_denied">Android blocks Pocket XR from opening directly on this display. Check the extended display option under Samsung DeX.</string>
+    <string name="cv10_external_display_unchecked">Could not check whether Android allows an app launch on this display. Check that the cable is connected, then reopen this panel.</string>
+    <string name="cv10_external_non_native_mode">The active mode differs from the CV10’s native 3200 × 1600 image size.</string>
+    <string name="cv10_external_native_mode_unavailable">Android does not offer a 3200 × 1600 mode for the CV10 in the current display configuration.</string>
+    <string name="cv10_external_pocket_missing">Pocket XR is unavailable on this phone.</string>
+    <string name="cv10_external_pocket_no_entry">This Pocket XR version has no public secondary display launcher.</string>
+    <string name="cv10_external_pocket_tracking">Pocket XR 1.6.28 treats the 3200 × 1600 mode as monoscopic and has no CV10 head tracker.</string>
+    <string name="cv10_external_display_settings">Display settings</string>
+    <string name="cv10_external_open_glasses">Open on CV10</string>
+    <string name="cv10_external_open_phone">Open on phone</string>
+    <string name="cv10_external_launch_failed">Pocket XR could not be opened on the requested display.</string>
+</resources>

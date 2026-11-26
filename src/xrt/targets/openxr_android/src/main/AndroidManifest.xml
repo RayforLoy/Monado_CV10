@@ -46,6 +46,19 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="org.khronos.openxr.intent.category.IMMERSIVE_HMD" />
+        </intent>
+        <package android:name="com.hayeco.flipspaces" />
+        <package android:name="org.khronos.openxr.runtime_broker" />
+    </queries>
+
     <application
         android:name="org.freedesktop.monado.openxr_runtime.MonadoOpenXrApplication"
         android:allowBackup="true"
@@ -54,6 +67,17 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".Cv10LauncherActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".Cv10SpatialLauncherActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize|screenLayout"
+            android:exported="false"
+            android:process=":spatialLauncher"
+            android:screenOrientation="landscape" />
 
         <!-- VR Listener service, for interop with Android VR mode. -->
         <service

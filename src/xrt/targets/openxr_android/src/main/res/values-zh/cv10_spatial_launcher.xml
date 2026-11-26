@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cv10_spatial_title">CV10 应用</string>
+    <string name="cv10_spatial_phone_controls">转动手机瞄准，轻触确认\n从任一侧边缘向内滑动返回\n从系统导航区上方上滑并停留可居中</string>
+    <string name="cv10_spatial_opening">正在打开 OpenXR 启动器…</string>
+    <string name="cv10_spatial_waiting">正在等待 OpenXR 会话。如出现系统提示，请允许通过 USB 访问 CV10。</string>
+    <string name="cv10_spatial_unavailable">无法打开 OpenXR 启动器。请连接 CV10，打开 OpenXR Runtime Broker 并确认已选中 Monado CV10，然后返回并轻触重试。</string>
+    <string name="cv10_spatial_xr_apps">XR 应用</string>
+    <string name="cv10_spatial_all_apps">全部应用</string>
+    <string name="cv10_spatial_close">关闭</string>
+    <string name="cv10_spatial_previous">上一页</string>
+    <string name="cv10_spatial_next">下一页</string>
+    <string name="cv10_spatial_empty">列表中没有应用</string>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_external_compatibility_title">Pocket XR 外显兼容性</string>
+    <string name="cv10_external_display_unavailable">Android 尚未识别到 CV10 外接显示器。</string>
+    <string name="cv10_external_display_mode">CV10 显示 ID %1$d，当前时序为 %2$d × %3$d、%4$.2f Hz。</string>
+    <string name="cv10_external_display_allowed">Android 允许在此显示器打开 Pocket XR 入口。启动后请检查左右镜片。</string>
+    <string name="cv10_external_display_denied">Android 拒绝在此显示器直接打开 Pocket XR。可在 Samsung DeX 设置中查看「已扩展」选项。</string>
+    <string name="cv10_external_display_unchecked">当前无法读取 Android 的外显启动权限。可检查接线后重新打开本页。</string>
+    <string name="cv10_external_non_native_mode">当前分辨率与 CV10 的 3200 × 1600 原生画幅不同。</string>
+    <string name="cv10_external_native_mode_unavailable">当前显示配置下，Android 没有为 CV10 提供 3200 × 1600 时序。</string>
+    <string name="cv10_external_pocket_missing">手机上没有可用的 Pocket XR 应用。</string>
+    <string name="cv10_external_pocket_no_entry">此版本的 Pocket XR 未公开独立外屏启动入口。</string>
+    <string name="cv10_external_pocket_tracking">Pocket XR 1.6.28 会将 3200 × 1600 视为单目模式，且没有 CV10 头部追踪驱动。</string>
+    <string name="cv10_external_display_settings">显示设置</string>
+    <string name="cv10_external_open_glasses">在 CV10 打开</string>
+    <string name="cv10_external_open_phone">在手机打开</string>
+    <string name="cv10_external_launch_failed">无法在指定屏幕打开 Pocket XR。</string>
+</resources>

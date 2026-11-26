@@ -28,6 +28,24 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 需要让 Fold7 主屏独立跑 120 Hz 时，在启动 OpenXR 应用前启动 Shizuku，确认已授权 Monado CV10，然后在 Monado 菜单选择 **开启独立 120 Hz**。
 
+## 离线应用启动器
+
+在 **Monado CV10 → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。两个入口均可离线使用，无需授予 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。3D 菜单通过 Broker 使用 Monado CV10，保持三星外接显示为 **已镜像**。
+
+- 应用列表默认筛选声明了 OpenXR 沉浸式入口的应用，并直接启动该入口。另有一些应用从普通界面进入 XR，例如 PiliPlus，可关闭 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。
+- 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从左或右侧向内滑动返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
+- 3D 菜单是本项目实现的 OpenXR 客户端。项目持有的华为 VR 桌面材料为已打包 APK，未找到可复用的公开源码。
+
+Fold7 已用独立测试 APK 验证 2D 和 3D 入口均可启动原版 Khronos `hello_xr` OpenGLES。3D 菜单先释放自己的会话，随后样例进入 `FOCUSED`。SurfaceFlinger 的 CV10 外屏合成截图显示双目菜单和激光指针。若冷启动找不到运行时，打开 Broker 确认选择后返回，轻触手机屏幕重试。
+
+## Pocket XR 外屏兼容性
+
+安装原版 Pocket XR 后，在 Monado CV10 菜单打开 **Pocket XR 外显兼容性**。该页面显示 CV10 的活动时序，以及 Android 是否允许 Pocket XR 在外屏启动。Fold7 的 **设置 → 已连接的设备 → Samsung DeX → 连接的显示设备** 可切换 **已扩展** 和 **已镜像**。
+
+Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 3200×1600 画幅宽高比为 2:1，低于其 3.2 的双目判定阈值，该版本也没有 CV10 的 IMU 支持。允许外屏启动时可以试用原版的平面入口。空间投屏、双目光学和头部跟踪仍需要 Pocket XR 侧适配。[Pocket XR 双目判定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/GlassesOptics.kt#L211-L262) · [空间模式前置条件](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L146-L171)
+
+Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
+
 ## 原厂手机线
 
 运行时识别到原厂线且当前来源为 PC 时，会请求切换到手机来源。获取 HID 后会请求启用佩戴传感器。拔插后重新获取 HID 时，即使 Android 复用了设备 ID，运行时也会重新发送开屏指令。

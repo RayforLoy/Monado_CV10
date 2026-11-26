@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:focusableInTouchMode="true"
+    android:orientation="vertical">
+
+    <Toolbar
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/actionBarSize"
+        android:title="@string/cv10_app_launcher_title" />
+
+    <Button
+        android:id="@+id/cv10_launch_spatial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/cv10_open_spatial_launcher" />
+
+    <SearchView
+        android:id="@+id/cv10_app_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:iconifiedByDefault="false"
+        android:minHeight="48dp"
+        android:queryHint="@string/cv10_search_apps" />
+
+    <CheckBox
+        android:id="@+id/cv10_xr_only"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:checked="true"
+        android:minHeight="48dp"
+        android:text="@string/cv10_xr_apps_only" />
+
+    <ListView
+        android:id="@+id/cv10_apps"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/cv10_apps_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="20dp"
+        android:text="@string/cv10_no_matching_apps"
+        android:visibility="gone" />
+</LinearLayout>
