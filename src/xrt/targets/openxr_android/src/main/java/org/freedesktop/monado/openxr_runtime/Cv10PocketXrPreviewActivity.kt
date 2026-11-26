@@ -417,7 +417,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         openingClient = false
         leavePhoneControls()
         if (headLinkStarted) {
-            stopService(Cv10PocketHeadLinkService.intent(this))
+            Cv10PocketHeadLinkService.stop(this)
             headLinkStarted = false
         }
         status.text = message

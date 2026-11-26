@@ -23,6 +23,11 @@ class Cv10PocketHeadLinkService : VpnService() {
     private var headLink: Cv10PocketHeadLink? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == STOP) {
+            release()
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
         if (intent?.action != START || !BuildConfig.cv10LauncherPreview || BuildConfig.inProcess) {
             stopSelf(startId)
             return START_NOT_STICKY
@@ -93,6 +98,7 @@ class Cv10PocketHeadLinkService : VpnService() {
     companion object {
         internal const val POCKET_PACKAGE = "com.hayeco.flipspaces"
         private const val START = "org.cv10.monado.pocket.HEAD_LINK"
+        private const val STOP = "org.cv10.monado.pocket.STOP_HEAD_LINK"
         private const val VPN_ADDRESS = "169.254.2.1"
         private const val TAG = "Cv10PocketHeadLink"
         private const val CHANNEL = "pocket_head_link"
@@ -107,5 +113,16 @@ class Cv10PocketHeadLinkService : VpnService() {
         }
 
         internal fun intent(context: Context) = Intent(context, Cv10PocketHeadLinkService::class.java).setAction(START)
+
+        internal fun stop(context: Context) {
+            // Android keeps the service bound until its VPN interface closes.
+            val request = Intent(context, Cv10PocketHeadLinkService::class.java).setAction(STOP)
+            try {
+                context.startService(request)
+            } catch (error: IllegalStateException) {
+                Log.d(TAG, "VPN stop command was rejected", error)
+                context.stopService(request)
+            }
+        }
     }
 }
