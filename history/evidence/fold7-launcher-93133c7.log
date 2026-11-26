@@ -1,0 +1,24 @@
+2026-11-27 HKT, Fold7 SM-F9660 with HUAWEI CV10, C9.53.6 original cable + 5 V.
+From Monado CV10 93133c7, APK SHA-256 fdfd59a043dbdce2aaec35bd88d596c9196ef05eba1b928c8ccc68876c778032.
+Package org.cv10.monado.out_of_process.launcher_preview. No grant to the preview package from Shizuku.
+Tested using the Monado CV10 Preview Broker entry. Restored the stable Monado CV10 Broker entry afterwards.
+
+direct.log
+11-27 06:03:37.142 30767 30786 V hello_xr: [06:03:37.142][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520585394531
+
+back.log
+11-27 06:03:43.134 30767 30786 V hello_xr: [06:03:43.134][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2526576826092
+11-27 06:03:45.105 30767 30786 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+menu.log
+11-27 06:03:45.105 30767 30786 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:03:52.020 31202 31239 I Cv10SpatialLauncher: OpenXR session state 5
+
+select.log
+11-27 06:03:58.027 31202 31239 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 06:03:58.168 31202 31239 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:03:58.813 31391 31428 V hello_xr: [06:03:58.813][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2527283725779
+
+back.log
+11-27 06:04:04.054 31391 31428 V hello_xr: [06:04:04.054][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2532524637652
+11-27 06:04:05.945 31391 31428 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline

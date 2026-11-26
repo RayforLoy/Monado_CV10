@@ -54,3 +54,9 @@
 - 03:30 从同一个隔离包的 2D 列表直接启动原版 `hello_xr`，未配置电池豁免，也未在点选前重新打开 Broker。样例进入 `FOCUSED`，外屏双眼区均有蓝方块，右镜实拍可见蓝方块。按返回键后进入 `STOPPING`、`IDLE`，并完成 `xrDestroyInstance`。[双目外屏原始帧](evidence/fold7-launcher-integrated-isolated-direct-display.png) · [右镜实拍](evidence/fold7-launcher-integrated-isolated-direct-right.jpg)
 
 无线 ADB 和电量监测期间保留 Wi-Fi。采证后移除了临时端口映射和电池豁免，恢复稳定 Monado CV10 Broker 和完整整合预览 APK，系统最低刷新率为 `null`。
+
+## Pocket XR 整合分支的启动器回归
+
+2026-11-27 06:03 至 06:04（香港时间）。ARM64 预览从 `93133c7` 用 `-Pcv10LauncherPreview=true -Pcv10Abi=arm64-v8a` 构建，APK SHA-256 为 `fdfd59a043dbdce2aaec35bd88d596c9196ef05eba1b928c8ccc68876c778032`。校验了 APK 签名、16 KiB ZIP 对齐和五个 arm64 库的 15 个 `PT_LOAD` 段。Fold7 实际系统页大小为 4096，这轮实机运行覆盖 4 KiB 系统。
+
+同一台 Fold7、C9.53.6 原厂线和 5 V 供电，CV10 为 3200×1600、90 Hz。Broker 选 **Monado CV10 Preview**，预览没有 Shizuku 授权。从 2D 列表直开原版 `hello_xr`，以及底部上滑停留置中后从 3D 菜单点选样例，两次均进入 `FOCUSED`，右镜拍到蓝色方块。两次系统返回均进入 `STOPPING` 并完成 `xrDestroyInstance`。3D 菜单也拍到激光指针。完成后恢复稳定 **Monado CV10** Broker、原预览 APK，最低刷新率为 `null`。[回归日志](evidence/fold7-launcher-93133c7.log) · [3D 菜单右镜](evidence/fold7-launcher-93133c7-menu-right.jpg)

@@ -1,0 +1,29 @@
+2026-11-27 HKT, Fold7 and CV10, C9.53.6 original cable with 5 V. ADB diagnostic display transport.
+Original Pocket XR 1.6.28 and original hello_xr. Source-rebuilt NODELETE client selected in Broker.
+05:57:41 to 06:02:50, 309 seconds between initial focus and final right-eye capture.
+
+elapsed=0s pid=27725 battery=68% frame=214
+elapsed=31s pid=27725 battery=68% frame=2042
+elapsed=61s pid=27725 battery=68% frame=842
+elapsed=91s pid=27725 battery=68% frame=2674
+elapsed=122s pid=27725 battery=68% frame=4502
+elapsed=152s pid=27725 battery=67% frame=6326
+elapsed=182s pid=27725 battery=67% frame=8159
+elapsed=212s pid=27725 battery=67% frame=9987
+elapsed=243s pid=27725 battery=67% frame=11811
+elapsed=273s pid=27725 battery=67% frame=13638
+
+11-27 05:57:41.262 27725 27756 V hello_xr: [05:57:41.262][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819008121931
+11-27 05:58:30.011 27725 27756 V hello_xr: [05:58:30.011][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_FOCUSED->XR_SESSION_STATE_VISIBLE session=-5476376638598498384 time=2867757044464
+11-27 05:58:30.011 27725 27756 V hello_xr: [05:58:30.011][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2867757044464
+11-27 05:58:30.011 27725 27756 V hello_xr: [05:58:30.011][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2867757304933
+11-27 05:58:30.072  2961  5867 I WindowManager: Display id=1 rotation changed to 3 from 0, lastOrientation=-1 userRotationMode=0 userRotation=0 lastSensorRotation=-1
+11-27 05:58:30.072  2961  5867 I WindowManager: Display id=0 rotation changed to 1 from 0, lastOrientation=0 userRotationMode=1 userRotation=0 lastSensorRotation=-1
+11-27 05:58:30.519 27725 27756 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:58:30.524 26822 26822 I PocketXrOpenXr: the game's surface is gone
+11-27 05:58:31.128 26822 26822 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 05:58:31.438 27725 28039 V hello_xr: [05:58:31.438][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2818490918325
+11-27 06:02:50.676  2961  4594 I InputDispatcher: Dropping KEY event because there is no focused window or focused application in display 186.
+11-27 06:02:50.692  2961  4594 I InputDispatcher: Dropping KEY event because there is no focused window or focused application in display 186.
+11-27 06:02:53.861  2961  7268 D InputDispatcher: Focus left window (0): 1029923 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity
+The final Back targeted display 186. The harness subsequently force-stopped the sample during cleanup.
