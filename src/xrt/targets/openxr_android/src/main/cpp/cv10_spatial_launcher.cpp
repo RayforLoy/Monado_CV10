@@ -200,9 +200,9 @@ public:
 	}
 
 	void
-	run(jobject activity, jobject application_context)
+	run(jobject activity, jobject application_context, const std::string &runtime_manifest)
 	{
-		initialize_xr(activity, application_context);
+		initialize_xr(activity, application_context, runtime_manifest);
 		initialize_egl();
 		initialize_session();
 		initialize_drawing();
@@ -217,7 +217,7 @@ public:
 
 private:
 	void
-	initialize_xr(jobject activity, jobject application_context)
+	initialize_xr(jobject activity, jobject application_context, const std::string &runtime_manifest)
 	{
 		JavaVM *vm = nullptr;
 		if (state.env->GetJavaVM(&vm) != JNI_OK) {
@@ -226,12 +226,18 @@ private:
 		PFN_xrVoidFunction function = nullptr;
 		check(xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", &function),
 		      "xrGetInstanceProcAddr(xrInitializeLoaderKHR)");
+		const auto initialize_loader = reinterpret_cast<PFN_xrInitializeLoaderKHR>(function);
+		// Clear any fallback from an earlier session in this dedicated launcher process.
+		XrLoaderInitPropertyValueEXT runtime_property{"XR_RUNTIME_JSON", ""};
+		XrLoaderInitInfoPropertiesEXT loader_properties{XR_TYPE_LOADER_INIT_INFO_PROPERTIES_EXT};
+		loader_properties.propertyValueCount = 1;
+		loader_properties.propertyValues = &runtime_property;
 		XrLoaderInitInfoAndroidKHR loader_info{XR_TYPE_LOADER_INIT_INFO_ANDROID_KHR};
+		loader_info.next = &loader_properties;
 		loader_info.applicationVM = vm;
 		loader_info.applicationContext = application_context;
-		check(reinterpret_cast<PFN_xrInitializeLoaderKHR>(function)(
-		          reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR *>(&loader_info)),
-		      "xrInitializeLoaderKHR");
+		const auto *loader_header = reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR *>(&loader_info);
+		check(initialize_loader(loader_header), "xrInitializeLoaderKHR");
 
 		XrInstanceCreateInfoAndroidKHR android_info{XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR};
 		android_info.applicationVM = vm;
@@ -245,7 +251,14 @@ private:
 		instance_info.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 0);
 		instance_info.enabledExtensionCount = 2;
 		instance_info.enabledExtensionNames = extensions;
-		check(xrCreateInstance(&instance_info, &instance), "xrCreateInstance");
+		XrResult result = xrCreateInstance(&instance_info, &instance);
+		if (result == XR_ERROR_RUNTIME_UNAVAILABLE && !runtime_manifest.empty()) {
+			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR runtime unavailable, trying bundled Monado CV10");
+			runtime_property.value = runtime_manifest.c_str();
+			check(initialize_loader(loader_header), "xrInitializeLoaderKHR(bundled Monado CV10)");
+			result = xrCreateInstance(&instance_info, &instance);
+		}
+		check(result, "xrCreateInstance");
 
 		XrInstanceProperties properties{XR_TYPE_INSTANCE_PROPERTIES};
 		check(xrGetInstanceProperties(instance, &properties), "xrGetInstanceProperties");
@@ -599,7 +612,8 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRun(JNIEnv *env,
                                                                                   jobject activity,
                                                                                   jobject application_context,
-                                                                                  jobject java_state)
+                                                                                  jobject java_state,
+                                                                                  jstring java_runtime_manifest)
 {
 	try {
 		// A display configuration change can start a new Activity before the old worker exits.
@@ -607,7 +621,16 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
 		JavaState state(env, java_state);
 		Launcher launcher(state);
 		if (!state.should_stop()) {
-			launcher.run(activity, application_context);
+			std::string runtime_manifest;
+			if (java_runtime_manifest != nullptr) {
+				const char *path = env->GetStringUTFChars(java_runtime_manifest, nullptr);
+				if (path == nullptr) {
+					return nullptr;
+				}
+				runtime_manifest = path;
+				env->ReleaseStringUTFChars(java_runtime_manifest, path);
+			}
+			launcher.run(activity, application_context, runtime_manifest);
 		}
 		return nullptr;
 	} catch (const std::exception &error) {

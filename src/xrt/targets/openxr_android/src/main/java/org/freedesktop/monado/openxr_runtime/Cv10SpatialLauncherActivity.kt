@@ -17,15 +17,19 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.text.TextPaint
 import android.text.TextUtils
+import android.util.AtomicFile
 import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.Keep
+import java.io.File
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import org.json.JSONObject
 
 /** An offline OpenXR app picker that runs in a separate client process. */
 class Cv10SpatialLauncherActivity : Activity() {
@@ -135,7 +139,8 @@ class Cv10SpatialLauncherActivity : Activity() {
                     val failure =
                         try {
                             System.loadLibrary("cv10-spatial-launcher")
-                            nativeRun(applicationContext, state)
+                            val manifest = synchronized(runtimeManifestLock) { bundledRuntimeManifest() }
+                            nativeRun(applicationContext, state, manifest)
                         } catch (error: LinkageError) {
                             Log.e(TAG, "OpenXR launcher native library unavailable", error)
                             error.message ?: error.toString()
@@ -146,6 +151,29 @@ class Cv10SpatialLauncherActivity : Activity() {
                 "Cv10SpatialLauncher",
             )
             .start()
+    }
+
+    private fun bundledRuntimeManifest(): String? {
+        val runtime = File(applicationInfo.nativeLibraryDir, "libopenxr_monado.so")
+        if (!runtime.isFile) return null
+        val manifest = AtomicFile(File(cacheDir, "cv10-spatial-runtime.json"))
+        val contents = JSONObject()
+            .put("file_format_version", "1.0.0")
+            .put("runtime", JSONObject().put("library_path", runtime.absolutePath))
+        return try {
+            val stream = manifest.startWrite()
+            try {
+                stream.write(contents.toString().toByteArray(Charsets.UTF_8))
+                manifest.finishWrite(stream)
+            } catch (error: IOException) {
+                manifest.failWrite(stream)
+                throw error
+            }
+            manifest.baseFile.absolutePath
+        } catch (error: IOException) {
+            Log.w(TAG, "Unable to prepare the bundled OpenXR runtime", error)
+            null
+        }
     }
 
     private fun rendererEnded(state: SpatialLauncherState, failure: String?) {
@@ -312,7 +340,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 
     @Keep
-    private external fun nativeRun(context: Context, state: SpatialLauncherState): String?
+    private external fun nativeRun(context: Context, state: SpatialLauncherState, runtimeManifest: String?): String?
 
     private data class HitTarget(val bounds: RectF, val action: () -> Unit)
 
@@ -322,6 +350,7 @@ class Cv10SpatialLauncherActivity : Activity() {
         private const val PANEL_HEIGHT = 720
         private const val PAGE_SIZE = 6
         private const val STARTUP_NOTICE_MILLIS = 15_000L
+        private val runtimeManifestLock = Any()
         private val BACKGROUND = Color.rgb(18, 24, 36)
         private val PHONE_BACKGROUND = Color.rgb(14, 19, 28)
         private val TILE = Color.rgb(42, 55, 77)
