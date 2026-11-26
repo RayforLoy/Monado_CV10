@@ -596,6 +596,8 @@ private:
 		recent_generation = generation;
 		if (capture_world_anchored) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "Anchored Pocket XR canvas (recenter %d)", generation);
+	} else if (generation != 0) {
+		__android_log_print(ANDROID_LOG_DEBUG, tag, "Recentered 3D launcher (%d)", generation);
 		}
 	}
 

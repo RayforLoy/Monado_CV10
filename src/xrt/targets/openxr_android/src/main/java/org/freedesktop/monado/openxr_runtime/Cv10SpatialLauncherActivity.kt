@@ -20,6 +20,7 @@ import android.text.TextUtils
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.Keep
@@ -45,7 +46,32 @@ class Cv10SpatialLauncherActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        controls = TextView(this).apply {
+        controls = object : TextView(this) {
+            private val guidePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.rgb(136, 188, 232)
+                strokeCap = Paint.Cap.ROUND
+                strokeWidth = 3 * resources.displayMetrics.density
+            }
+
+            override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+                invalidate()
+                return super.onApplyWindowInsets(insets)
+            }
+
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                if (!::input.isInitialized || renderState?.ready != true) return
+                val regions = input.gestureRegions()
+                val left = regions.leftInset + regions.backBandWidth / 2
+                val right = width - regions.rightInset - regions.backBandWidth / 2
+                val bottom = height - regions.bottomInset - regions.recenterBandHeight / 2
+                val guideHalfLength = 18 * resources.displayMetrics.density
+                canvas.drawLine(left, height / 2f - guideHalfLength, left, height / 2f + guideHalfLength, guidePaint)
+                canvas.drawLine(right, height / 2f - guideHalfLength, right, height / 2f + guideHalfLength, guidePaint)
+                val center = (left + right) / 2
+                canvas.drawLine(center - guideHalfLength, bottom, center + guideHalfLength, bottom, guidePaint)
+            }
+        }.apply {
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             setBackgroundColor(PHONE_BACKGROUND)
