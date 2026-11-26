@@ -33,3 +33,12 @@
 - 02:14:24.357 和 02:19:43.002，三星 `FreecessController` 均记录以 `Bg-buff` 原因冻结预览运行时。第二次冻结时外屏已出图。02:19 的样例按返回后再现 `xrWaitFrame` 等待本地 IPC 的调用栈。02:20:23.937 运行时解除冻结，随即恢复 USB 读数和帧处理。[冻结与 ANR 日志摘录](evidence/fold7-launcher-isolated-freecess.txt)
 
 本轮保留 Wi-Fi 以维持无线 ADB。隔离包仅用于应用层对照。恢复时 Broker 选回稳定运行时，系统最低刷新率为 `null`，临时日志级别和 ADB 反向端口均已清理。
+
+## 3D 菜单的运行时回退
+
+预览包从 `f17ea5f` 的运行时代码构建，ARM64 APK SHA-256 为 `e2c7269e342bcef451e2472e683381c74fbb3d15f325fe8c7e857342fefd763e`。签名和 ZIP 对齐检查通过，五个 ARM64 ELF 的 15 个 `PT_LOAD` 段为 `0x4000` 对齐。该包保留标准 `INTERNET` 声明，本轮沿用上文接线，保持系统 Wi-Fi 开启。
+
+- 02:32:50 系统 Broker 正常返回 Monado CV10，菜单于 02:32:51.036 进入 `FOCUSED`。按返回键结束菜单后重新打开。
+- 02:33:05.375，系统 Loader 查不到 Broker Provider。内置菜单在独立的 `:spatialLauncher` 进程使用 `XR_EXT_loader_init_properties` 指定由本包生成的 `XR_RUNTIME_JSON`，让官方 Loader 加载本包的 Monado。02:33:05.998 菜单进入 `FOCUSED`，右镜实拍有原版 `hello_xr` 卡片和激光指针。[启动日志摘录](evidence/fold7-launcher-bundled-runtime.txt) · [右镜实拍](evidence/fold7-launcher-bundled-runtime-right.jpg)
+
+这个回退作用于内置菜单的 Loader。第三方应用仍通过系统 Broker 选择运行时，三星 Freecess 冻结运行时导致的 ANR 也需要单独处理。[OpenXR Loader 1.1.65 实现](https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/release-1.1.65/src/loader/loader_init_data.cpp)
