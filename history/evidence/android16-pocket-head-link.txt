@@ -1,0 +1,56 @@
+2026-11-27 Hong Kong time; selected Android and host diagnostics.
+Android emulator 37.4.2; Google APIs Android 16 (API 36) image revision 7.
+ro.kernel.qemu=1; ro.product.cpu.abilist=x86_64,arm64-v8a
+wifi_on=0; mobile_data=0; Shizuku package query returned no matching package.
+Pocket XR 1.6.28 versionCode 214 stock APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337.
+
+Before 310f140 (first control connection and timeouts):
+11-27 06:26:40.535  2835  3903 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+11-27 06:26:48.558  2835  3903 I Cv10PocketHeadLink: Pocket XR connection ended on 52999 (SocketTimeoutException)
+11-27 06:26:48.586  2835  3903 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+11-27 06:26:56.639  2835  3903 I Cv10PocketHeadLink: Pocket XR connection ended on 52999 (SocketTimeoutException)
+11-27 06:26:56.662  2835  3903 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+11-27 06:27:04.714  2835  3903 I Cv10PocketHeadLink: Pocket XR connection ended on 52999 (SocketTimeoutException)
+11-27 06:27:04.740  2835  3903 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+
+With 310f140 (one control connection, motion and rate samples through 06:30:22):
+11-27 06:29:12.224  4492  4530 I FlipSpaces/Head: first IMU report over tun0 (vpn), app socket bound to the network
+11-27 06:29:12.439  4455  4477 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+11-27 06:29:17.536  4455  4472 I Cv10AvdProbe: Holding synthetic pitch +17.189 deg
+11-27 06:29:22.216  4492  4530 I FlipSpaces/Head: head attitude: yaw 0.0 pitch 17.19 roll 0.00 deg (tracking frame); gravity mean says pitch 17.19 roll 0.00 deg (tilt error 0.02 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias 0.00002, 0.00000, 0.00000 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 06:29:33.536  4455  4472 I Cv10AvdProbe: Holding synthetic pitch -17.189 deg
+11-27 06:29:42.220  4492  4530 I FlipSpaces/Head: head attitude: yaw 0.0 pitch -17.19 roll 0.00 deg (tracking frame); gravity mean says pitch -17.19 roll 0.00 deg (tilt error 0.00 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias 0.00001, 0.00000, 0.00000 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 06:29:50.536  4455  4472 I Cv10AvdProbe: Holding synthetic yaw +14.324 deg
+11-27 06:29:52.219  4492  4530 I FlipSpaces/Head: head attitude: yaw -14.3 pitch 0.05 roll 0.24 deg (tracking frame); gravity mean says pitch -0.00 roll -0.00 deg (tilt error 0.25 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias 0.00001, 0.00000, 0.00000 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 06:30:02.223  4492  4530 I FlipSpaces/Head: head attitude: yaw -14.3 pitch 0.04 roll 0.21 deg (tracking frame); gravity mean says pitch -0.00 roll -0.00 deg (tilt error 0.22 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias 0.00001, 0.00000, 0.00000 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 06:30:06.536  4455  4472 I Cv10AvdProbe: Holding synthetic yaw -14.324 deg
+11-27 06:30:12.224  4492  4530 I FlipSpaces/Head: head attitude: yaw 14.3 pitch -0.07 roll 0.18 deg (tracking frame); gravity mean says pitch 0.00 roll -0.00 deg (tilt error 0.19 deg, size off 0.00 %); mount roll 0.00 pitch 0.00 deg; 0 recentres; bias 0.00001, -0.00000, 0.00000 rad/s, 0.00000, 0.00000, 0.00000 from the static one
+11-27 06:30:22.536  4455  4472 I Cv10AvdProbe: Holding synthetic neutral
+11-27 06:30:22.222  4492  4530 I FlipSpaces/Head: head chain: IMU 200 Hz in 100 reads a second (about 2 reports a read), newest report 0.8 ms in the pipe, pose predicted p50 47.5 ms p95 52.5 ms ahead; late draw model: pose sampled 4.1 ms before the latch deadline, pose to photons 27.8 ms (budget + deadline to present + 8.0 ms glasses delay)
+
+Host idle/control framing regression:
+Accepted local Pocket XR connection on 52999
+Heartbeat succeeded on the same socket after 9 seconds idle
+Incomplete control frame timed out
+Pocket XR connection ended on 52999 (SocketTimeoutException)
+Accepted local Pocket XR connection on 52999
+Accepted local Pocket XR connection on 52999
+Both listener ports were released and the reopened bridge answered
+
+Before 627c32b (stopService was issued, but VPN remained bound):
+    inet 169.254.2.1/32 scope global tun0
+  * ServiceRecord{f792044 u0 org.cv10.monado.pocket_avd/org.freedesktop.monado.openxr_runtime.Cv10PocketHeadLinkService c:org.cv10.monado.pocket_avd}
+    startRequested=false delayedStop=false stopIfKilled=true callStart=false lastStartId=1
+      intent={act=android.net.VpnService xflg=0x4 cmp=org.cv10.monado.pocket_avd/org.freedesktop.monado.openxr_runtime.Cv10PocketHeadLinkService}
+
+With 627c32b (explicit stop then start):
+11-27 06:36:41.794  5344  5344 I Cv10AvdProbe: Requesting the local head link
+11-27 06:36:41.833  5344  5344 I Cv10PocketHeadLink: Listening on 169.254.2.1/32 for local Pocket XR head tracking
+11-27 06:36:42.471  5402  5431 I FlipSpaces/Head: first IMU report over tun0 (vpn), app socket bound to the network
+11-27 06:36:43.263  5402  5431 I FlipSpaces/Head: head tracking stream over tun0 (vpn), app socket bound to the network ended after 0.807 s: Lost the sensor stream over tun0 (vpn), app socket bound to the network: the glasses closed the connection. Retrying.; the last pose holds for up to 5 s while it reconnects
+11-27 06:36:44.489  5344  5344 I Cv10AvdProbe: Requesting the local head link
+11-27 06:36:44.505  5344  5344 I Cv10PocketHeadLink: Listening on 169.254.2.1/32 for local Pocket XR head tracking
+11-27 06:36:46.268  5402  5431 I FlipSpaces/Head: head tracking: the glasses' network changed; trying again with the backoff reset
+11-27 06:36:46.283  5402  5431 I FlipSpaces/Head: first IMU report over tun0 (vpn), app socket bound to the network
+Stop removed tun0 and the VPN ServiceRecord while the probe and stock app remained installed.
+On restart the same Pocket XR PID 5402 received a new first IMU report.

@@ -29,3 +29,20 @@ Fold7 安装了同一提交构建的 ARM64 调试预览，包名为 `org.cv10.mo
 按返回后 `hello_xr` 完成 `xrDestroyInstance`，手机确认两个回环端口均关闭。测试已移除 ADB 转发，恢复完整整合预览 APK 和稳定 Broker。全程沿用已有授权，未增加 VPN 或 Shizuku 授权。
 
 手机上的原版 Pocket XR 尚未连接实时头踪服务。保持既有授权查询路由时，手机未配置 `169.254.2.1/32`，ADB shell 到这一地址的路由指向 Wi-Fi 网关。VPN 授权后仍须验证原版应用能发现本机地址并读取实时样本，再用实物运动确认三轴方向、转角及重置。
+
+## Android 16 原版 Pocket XR 接入
+
+06:26–06:36 香港时间。在 Android 16 Google APIs 模拟器（API 36、镜像修订版 7）上，关闭 Wi-Fi 和移动数据，系统未安装 Shizuku。安装官方 ARM64 Pocket XR 1.6.28（versionCode 214），APK SHA-256 为 `81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337`。测试小程序复用生产的 `Cv10PocketHeadLinkService`、`Cv10PocketHeadLink` 和 `Cv10PocketImu`，在模拟器中经 Android 授权建立本机 VPN，向采样入口送入模拟陀螺仪和重力数据。用 ADB 将原版 `SpaceActivity` 打开到 3840×1080、60 Hz 测试显示屏。
+
+原版自行发现 `169.254.2.1`，通过 `tun0` 连接 52998 和 52999，报告 IMU 速率为 200 Hz。原版融合器输出以下读数。正 Y 轴旋转的 yaw 符号采用原版 `SpatialMath.yawPitchRoll()` 的约定。[原版角度约定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMath.kt)
+
+| 输入 | 原版融合器输出 |
+| --- | --- |
+| 绕 X 轴 +17.189° / −17.189° | pitch +17.19° / −17.19° |
+| 绕 Y 轴 +14.324° / −14.324° | yaw −14.3° / +14.3° |
+
+`310f140` 修正空闲控制连接每约 8 秒断开的问题。修复后，原版连接保持超过 70 秒。收到一条控制消息的首字节后仍有读取超时。电脑端回归验证空闲 9 秒后还能在同一套接字回复心跳、半条消息会超时，而且关闭后可重开监听器。[电脑端回归源码](VerifyPocketControlIdle.java)
+
+`627c32b` 修正停止预览时 VPN 接口残留的问题。调用旧停止路径后，Android 系统仍绑定 VPN 服务且 `tun0` 存在。修复后 `tun0` 和服务记录均消失。重新启动后，原版 Pocket XR 在同一个 PID 5402 内再次收到首帧 IMU。[模拟器与电脑端日志](evidence/android16-pocket-head-link.txt)
+
+这轮验证了原版 Android 应用接收、融合姿态和重连。CV10 实物姿态的方向、重置和镜片表现仍需在 Fold7 上确认。Fold7 的 Android VPN 权限保持原值。

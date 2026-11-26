@@ -1,0 +1,19 @@
+2026-11-27 Hong Kong time; Fold7 launcher regressions for 627c32b.
+APK SHA-256 4447087444bee5dcea4fffd8c4db2873798a86b8759fc1add1f97c3cc33b9a55; v2 signature and 16 KiB ZIP alignment passed.
+
+Verified Broker: Monado CV10 Preview
+11-27 06:37:22.799 19800 19862 V hello_xr: [06:37:22.799][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520443675313
+11-27 06:37:36.580 20205 20242 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 06:37:43.617 20369 20396 V hello_xr: [06:37:43.617][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2527463394580
+Verified Broker: Monado CV10
+  level: 69
+null
+RUN_ANY_IN_BACKGROUND: ignore
+
+2D direct launch, device exit logs:
+11-27 06:37:28.143 19800 19862 V hello_xr: [06:37:28.143][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2525788114946
+11-27 06:37:30.036 19800 19862 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+3D selection, device exit logs:
+11-27 06:37:48.910 20369 20396 V hello_xr: [06:37:48.910][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2532756841610
+11-27 06:37:50.137 20369 20396 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
