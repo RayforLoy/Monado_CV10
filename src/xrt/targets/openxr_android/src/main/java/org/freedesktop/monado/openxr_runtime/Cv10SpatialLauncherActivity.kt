@@ -3,7 +3,10 @@
 package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -33,6 +36,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     private var page = 0
     private var visible = false
     private var closing = false
+    private var startupFailed = false
     private var pendingLaunch: Cv10AppEntry? = null
     private var renderState: SpatialLauncherState? = null
     private var hitTargets = emptyList<HitTarget>()
@@ -59,7 +63,11 @@ class Cv10SpatialLauncherActivity : Activity() {
             )
         controls.setOnTouchListener(input)
         controls.setOnClickListener {
-            if (renderState == null) startRenderer() else input.confirm()
+            when {
+                renderState != null -> input.confirm()
+                startupFailed -> showStartupOptions()
+                else -> startRenderer()
+            }
         }
     }
 
@@ -93,6 +101,7 @@ class Cv10SpatialLauncherActivity : Activity() {
 
     private fun startRenderer() {
         if (renderState != null || closing) return
+        startupFailed = false
         val state =
             SpatialLauncherState {
                 runOnUiThread {
@@ -149,8 +158,30 @@ class Cv10SpatialLauncherActivity : Activity() {
             startRenderer()
         } else {
             if (failure != null) Log.e(TAG, failure)
+            startupFailed = true
             controls.setText(R.string.cv10_spatial_unavailable)
+            if (hasWindowFocus()) showStartupOptions()
         }
+    }
+
+    private fun showStartupOptions() {
+        AlertDialog.Builder(this)
+            .setMessage(R.string.cv10_spatial_unavailable)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setNeutralButton(R.string.cv10_spatial_retry) { _, _ -> startRenderer() }
+            .setPositiveButton(R.string.cv10_spatial_open_broker) { _, _ ->
+                val intent = Intent(Intent.ACTION_MAIN).setClassName(
+                    "org.khronos.openxr.runtime_broker",
+                    "org.khronos.openxr.runtime_broker.MainActivity",
+                )
+                try {
+                    startActivity(intent)
+                } catch (error: ActivityNotFoundException) {
+                    Log.w(TAG, "OpenXR Runtime Broker activity is unavailable", error)
+                    controls.setText(R.string.cv10_spatial_broker_missing)
+                }
+            }
+            .show()
     }
 
     private fun close(app: Cv10AppEntry? = null) {

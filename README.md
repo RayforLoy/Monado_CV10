@@ -37,7 +37,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从手机左右边缘的系统手势区内侧向中间滑动可返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。项目持有的华为 VR 桌面材料为已打包 APK，未找到可复用的公开源码。
 
-Fold7 已用独立测试 APK 验证 2D 和 3D 入口均可启动原版 Khronos `hello_xr` OpenGLES。3D 菜单先释放自己的会话，随后样例进入 `FOCUSED`。SurfaceFlinger 的 CV10 外屏合成截图显示双目菜单和激光指针。若冷启动找不到运行时，打开 Broker 确认选择后返回，轻触手机屏幕重试。
+Fold7 已用独立测试 APK 验证 2D 和 3D 入口均可启动原版 Khronos `hello_xr` OpenGLES。3D 菜单先释放自己的会话，随后样例进入 `FOCUSED`。SurfaceFlinger 的 CV10 外屏合成截图显示双目菜单和激光指针。若冷启动找不到运行时，可在启动提示中打开 Broker，确认运行时选择后返回，或选择 **重试**。
 
 Fold7 的整合预览包已通过 2D 入口启动原版 `hello_xr`，该样例和 3D 菜单均使用预览包自己的运行时。右镜片实拍确认了样例蓝色方块、3D 菜单和激光指针。
 
