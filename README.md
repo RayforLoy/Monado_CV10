@@ -60,10 +60,10 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建，在 Broker 选择 **Monado CV10 Preview**。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
-- **打开 Pocket XR 空间** 前先在 Pocket XR 设置启用 3D。Pocket XR 自己创建应用面板需要其独立的 Shizuku 授权。
+- **打开 Pocket XR 空间** 后，在其手机端 **空间窗口** 打开启动器，再在启动器中使用 **深度（3D 左右并排）** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
 - **停止预览** 释放本次虚拟显示和 OpenXR 会话。
 
-Fold7 上使用独立诊断包，将本地白色顶部标记和红、蓝左右眼画面送入相同的 `SurfaceTexture` 与 OpenXR 渲染代码。3200×1600 外屏截图记录了两个眼区的独立图案，右镜头实拍确认 `LOCAL RIGHT` 正立、白块在上。同一渲染路径随后接到了 ADB 启动的原版 Pocket XR 测试卡。手机端一键启动、真实头部姿态和 3D 投屏仍待联调。[验收记录](history/fold7-pocket-xr-display.md)
+Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。调试包还复用了 CV10 运行时的 USB HID 样本，原版 Pocket XR 解析器读取 3000 帧静止样本，平均 997 Hz。样本在电脑上回放，Fold7 上的原版应用仍需接入实时传输。手机端一键启动和 3D 视频投屏仍待授权与实测。[外显验收](history/fold7-pocket-xr-display.md) · [IMU 采集与解析](history/fold7-pocket-xr-imu.md)
 
 ## 原厂手机线
 
