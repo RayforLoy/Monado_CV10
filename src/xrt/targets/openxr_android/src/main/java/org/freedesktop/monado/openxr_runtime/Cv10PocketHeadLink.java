@@ -55,7 +55,12 @@ final class Cv10PocketHeadLink implements AutoCloseable {
         DataInputStream input = new DataInputStream(socket.getInputStream());
         OutputStream output = socket.getOutputStream();
         while (!Thread.currentThread().isInterrupted()) {
-            int type = input.readUnsignedShort();
+            // Pocket XR keeps this connection open between commands, even with no heartbeats.
+            socket.setSoTimeout(0);
+            int first = input.read();
+            if (first < 0) return;
+            socket.setSoTimeout(READ_TIMEOUT_MS);
+            int type = (first << 8) | input.readUnsignedByte();
             int size = input.readInt();
             if (size < 0 || size > MAX_CONTROL_BYTES) throw new ProtocolException("Invalid control packet size");
             byte[] request = new byte[size];
@@ -131,7 +136,6 @@ final class Cv10PocketHeadLink implements AutoCloseable {
                         client = socket;
                     }
                     socket.setTcpNoDelay(true);
-                    socket.setSoTimeout(READ_TIMEOUT_MS);
                     log.accept("Accepted local Pocket XR connection on " + port);
                     connection.serve(socket);
                 } catch (InterruptedException ended) {
