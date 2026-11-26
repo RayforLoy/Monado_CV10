@@ -41,7 +41,9 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条路径。先从 2D 列表启动未修改的 Khronos `hello_xr` OpenGLES，返回后从 3D 菜单重进，同一个应用进程两次达到 `FOCUSED`，外屏截图和右镜均有画面。结束样例进程后，3D 菜单也能启动新的样例进程并出图。运行时在 Android 12 或更新版本直接管理 CV10 的 Presentation，覆盖 3D 菜单关闭时眼镜失去画面的故障。[Fold7 验收记录](history/fold7-offline-launcher.md)
 
-Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。激光笔俯仰修正和横向方向通过合成传感器样本复测，手持转动手机的复测待做。移除预览包的 `INTERNET` 权限且未授予 Shizuku 权限时，2D 和 3D 菜单都能启动原版 `hello_xr` 并在 CV10 出图。若遇到 `XR_ERROR_RUNTIME_UNAVAILABLE`，打开已选定运行时的 Broker，再返回菜单点选。关闭系统 Wi-Fi 的独立复测待做。[整合预览网络隔离实测](history/fold7-offline-launcher.md#整合预览在网络隔离下启动原版样例)
+Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正、左右指向和上滑停留置中。两路外显截图与右镜实拍一致，手持转动复测待做。[激光笔方向对照](history/fold7-phone-laser-axis.md)
+
+移除预览包的 `INTERNET` 权限且未授予 Shizuku 权限时，2D 和 3D 菜单都能启动原版 `hello_xr` 并在 CV10 出图。若遇到 `XR_ERROR_RUNTIME_UNAVAILABLE`，打开已选定运行时的 Broker，再返回菜单点选。关闭系统 Wi-Fi 的独立复测待做。[整合预览网络隔离实测](history/fold7-offline-launcher.md#整合预览在网络隔离下启动原版样例)
 
 ## Pocket XR 外屏兼容性
 
