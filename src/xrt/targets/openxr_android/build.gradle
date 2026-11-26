@@ -184,6 +184,7 @@ android {
     defaultConfig {
         applicationId cv10ApplicationId
         buildConfigField "boolean", "cv10LauncherPreview", cv10LauncherPreview.toString()
+        manifestPlaceholders += [cv10LauncherPreview: cv10LauncherPreview.toString()]
         ndk {
             if (cv10Abi == null) {
                 abiFilters 'arm64-v8a', 'armeabi-v7a'

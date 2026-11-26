@@ -18,4 +18,10 @@
     <string name="cv10_pocket_preview_receiving">正在接收显示屏 %1$d 的虚拟屏画面。</string>
     <string name="cv10_pocket_preview_failure">Pocket XR 外显预览失败：%1$s</string>
     <string name="cv10_pocket_preview_session_ended">OpenXR 会话已结束。请检查 CV10 和 Runtime Broker 后重试。</string>
+    <string name="cv10_pocket_head_link">Pocket XR 头部追踪</string>
+    <string name="cv10_pocket_head_link_opt_in">通过 Android 本机 VPN 接入头部追踪（实验）</string>
+    <string name="cv10_pocket_head_link_running">预览期间向 Pocket XR 提供 CV10 头动数据。</string>
+    <string name="cv10_pocket_head_link_vpn_conflict">系统已有 VPN 连接。保持头部追踪关闭可继续使用现有连接。</string>
+    <string name="cv10_pocket_head_link_unavailable">无法启动 Pocket XR 头部追踪连接。</string>
+    <string name="cv10_pocket_head_link_denied">头部追踪已关闭，仍可打开 Pocket XR 显示预览。</string>
 </resources>

@@ -18,4 +18,10 @@
     <string name="cv10_pocket_preview_receiving">Receiving virtual display frames on display %1$d.</string>
     <string name="cv10_pocket_preview_failure">Pocket XR display preview failed: %1$s</string>
     <string name="cv10_pocket_preview_session_ended">The OpenXR session ended. Check CV10 and Runtime Broker, then retry.</string>
+    <string name="cv10_pocket_head_link">Pocket XR head tracking</string>
+    <string name="cv10_pocket_head_link_opt_in">Experimental head tracking through a local Android VPN</string>
+    <string name="cv10_pocket_head_link_running">Shares CV10 motion with Pocket XR while the preview is open.</string>
+    <string name="cv10_pocket_head_link_vpn_conflict">An Android VPN is already active. Leave head tracking off to keep using it.</string>
+    <string name="cv10_pocket_head_link_unavailable">The Pocket XR head tracking connection could not start.</string>
+    <string name="cv10_pocket_head_link_denied">Head tracking is off. You can still open the Pocket XR display preview.</string>
 </resources>
