@@ -43,11 +43,11 @@ Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的
 
 Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正、左右指向和上滑停留置中。两路外显截图与右镜实拍一致，手持转动复测待做。[激光笔方向对照](history/fold7-phone-laser-axis.md)
 
-两个应用入口均在预览包未获得 Shizuku 权限时通过。移除预览包的 `INTERNET` 权限后，3D 菜单和从 2D 列表启动的原版 `hello_xr` 均在 CV10 显示。复测 3D 点选时，三星 Freecess 冻结运行时，出现黑屏、画面停止更新或退出无响应。关闭系统 Wi-Fi 的独立复测待做。[应用网络隔离对照](history/fold7-offline-launcher.md#fold7-应用网络隔离对照) · [后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照)
+使用无 `INTERNET` 权限且未获得 Shizuku 授权的预览包，从 2D 直启和 3D 点选原版 `hello_xr` 均已实测在 CV10 出图和正常退出。该轮采用预览包默认后台策略，系统 Wi-Fi 用于无线 ADB，关闭系统 Wi-Fi 的实机复测待做。[应用网络隔离复测](history/fold7-offline-launcher.md#独立预览的网络隔离复测)
 
 同一 ARM64 预览 APK 在 16 KiB 的 Android 16 模拟器验证了安装、原生库加载和 Vulkan 启动失败后的重试，在 4 KiB 的 Fold7 验证了 2D 直启、3D 点选和同进程重进。两轮样例均在右镜出图，按返回键后完成实例销毁。[APK 校验与复测记录](history/fold7-offline-launcher.md#独立启动器的-16-kib-与-fold7-回归)
 
-如果 2D 列表显示 **后台运行受限**，点击提示可进入 Monado CV10 的 Android 应用详情。Fold7 的对照测试中，将预览包恢复到默认后台运行策略后，3D 点选可以持续出帧并正常退出。可在应用详情的 **电池** 页面核对后台使用设置。启动器会读取 Android 报告的状态，电池设置由用户决定。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
+如果 2D 列表显示 **后台运行受限**，点击提示可进入 Monado CV10 的 Android 应用详情，在 **电池** 页面核对后台使用设置。Fold7 在受限时曾冻结运行时，出现黑屏、画面停止更新或退出无响应。临时使用默认后台策略复测时，3D 点选持续出帧并正常退出。启动器会读取 Android 报告的状态，电池设置由用户决定。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
 
 ## Pocket XR 外屏兼容性
 

@@ -34,6 +34,12 @@
 
 本轮保留 Wi-Fi 以维持无线 ADB。隔离包仅用于应用层对照。恢复时 Broker 选回稳定运行时，系统最低刷新率为 `null`，临时日志级别和 ADB 反向端口均已清理。
 
+### 独立预览的网络隔离复测
+
+2026-11-27 07:53 香港时间开始。使用 `dbc8141` 的启动器代码，在诊断分支 `ecab336` 上从合并清单移除 `INTERNET`。ARM64 APK SHA-256 为 `b8c7f725abe8da04535f7858c0d1c2997b9244f6e18f3ed29c064c292a8679df`，通过 v2 签名校验、16 KiB ZIP 对齐及 ARM64 ELF 校验。原版 `hello_xr` 在 Fold7 上的已安装 APK 摘要为 `29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962`，同样无 `INTERNET`。预览包未获得 Shizuku 授权。预览进程尝试创建 IPv4、IPv6 套接字，均返回 `Operation not permitted`。已在启动测试前撤销临时回环端口。
+
+预览包的 `RUN_ANY_IN_BACKGROUND` 临时设为 `default`。2D 列表直启和 3D 菜单点选的原版 `hello_xr` 在同一 PID 25558 两次进入 `FOCUSED`，分别按返回并成功销毁实例。3D 点选第 2、7、14、24 秒均有外屏呈现记录，第 24 秒图层每秒有 60.32 次不同的呈现时间戳，右镜拍到蓝块。CV10 保持 3200×1600、90 Hz。Fold7 系统 Wi-Fi 供 ADB 使用，系统内的 Shizuku 服务仍在运行。复测后恢复预览包原先的后台策略、原 APK 和稳定版 Broker。[日志摘录](evidence/fold7-launcher-ecab336-no-internet.txt) · [3D 点选第 24 秒右镜](evidence/fold7-launcher-ecab336-3d-24s-right.jpg)
+
 ## 3D 菜单的运行时回退
 
 预览包从 `f17ea5f` 的运行时代码构建，ARM64 APK SHA-256 为 `e2c7269e342bcef451e2472e683381c74fbb3d15f325fe8c7e857342fefd763e`。签名和 ZIP 对齐检查通过，五个 ARM64 ELF 的 15 个 `PT_LOAD` 段为 `0x4000` 对齐。该包保留标准 `INTERNET` 声明，本轮沿用上文接线，保持系统 Wi-Fi 开启。
