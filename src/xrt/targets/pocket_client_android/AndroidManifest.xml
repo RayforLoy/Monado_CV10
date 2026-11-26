@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.cv10.monado.pocket_client"
+    android:versionCode="1"
+    android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+    <queries>
+        <package android:name="com.hayeco.flipspaces" />
+    </queries>
+    <application android:label="Pocket XR (Monado CV10)" android:extractNativeLibs="true"
+        android:allowBackup="false">
+        <service android:name=".RuntimeDiscoveryService" android:exported="true">
+            <meta-data android:name="org.khronos.openxr.OpenXRRuntime.SoFilename"
+                android:value="libopenxr_monado.so" />
+            <meta-data android:name="org.khronos.openxr.OpenXRRuntime.MajorVersion"
+                android:value="1" />
+            <intent-filter>
+                <action android:name="org.khronos.openxr.OpenXRRuntimeService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

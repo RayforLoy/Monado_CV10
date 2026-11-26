@@ -14,6 +14,7 @@ import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -211,9 +212,18 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private fun openClientApp(entry: Cv10AppEntry) {
         val session = transport ?: return
         if (!controlsAvailable || openingClient) return
-        if (activeBrokerPackage() != Cv10PocketHeadLinkService.POCKET_PACKAGE) {
-            status.setText(R.string.cv10_pocket_choose_runtime)
-            return
+        when (activeBrokerPackage()) {
+            Cv10PocketHeadLinkService.POCKET_PACKAGE -> Unit
+            POCKET_CLIENT_PACKAGE -> {
+                if (!hasMatchingPocketClient()) {
+                    status.setText(R.string.cv10_pocket_client_incompatible)
+                    return
+                }
+            }
+            else -> {
+                status.setText(R.string.cv10_pocket_choose_runtime)
+                return
+            }
         }
         openingClient = true
         updateButtons()
@@ -235,6 +245,25 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 status.setText(R.string.cv10_pocket_client_display_failed)
             }
         }
+    }
+
+    private fun hasMatchingPocketClient(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+        val manager = packageManager
+        if (manager.checkSignatures(packageName, POCKET_CLIENT_PACKAGE) != PackageManager.SIGNATURE_MATCH) {
+            return false
+        }
+        val pocketPackage = Cv10PocketHeadLinkService.POCKET_PACKAGE
+        val version = try {
+            manager.getPackageInfo(pocketPackage, 0).longVersionCode
+        } catch (_: PackageManager.NameNotFoundException) {
+            return false
+        }
+        return (version == 214L || version == 217L) && manager.hasSigningCertificate(
+            pocketPackage,
+            Base64.decode(POCKET_RELEASE_SIGNER, Base64.DEFAULT),
+            PackageManager.CERT_INPUT_SHA256,
+        )
     }
 
     private fun activeBrokerPackage(): String? {
@@ -425,6 +454,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
         private const val TAG = "Cv10PocketXrPreview"
+        private const val POCKET_CLIENT_PACKAGE = "org.cv10.monado.pocket_client"
+        private const val POCKET_RELEASE_SIGNER = "M+rUzfrJVxaWq8sq6kRliRww7R2CVxJ4pKVLhwuik60="
         private const val REQUEST_DISPLAY_PERMISSION = 18_011
         private const val REQUEST_HEAD_LINK = 18_012
     }
