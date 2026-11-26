@@ -2,6 +2,7 @@
 
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
+#include <GLES2/gl2ext.h>
 #include <android/bitmap.h>
 #include <android/log.h>
 #include <jni.h>
@@ -12,6 +13,7 @@
 #include <openxr/openxr_platform.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -28,6 +30,8 @@ namespace {
 constexpr char tag[] = "Cv10SpatialLauncher";
 constexpr uint32_t panel_width = 1280;
 constexpr uint32_t panel_height = 720;
+constexpr uint32_t pocket_width = 3840;
+constexpr uint32_t pocket_height = 1080;
 constexpr float panel_distance = 1.45f;
 constexpr float panel_width_m = 1.62f;
 std::mutex session_mutex;
@@ -61,6 +65,19 @@ void main() {
     float centerDot = 1.0 - smoothstep(2.2, 3.5, cursorDistance);
     vec3 panelColor = texture(panel, uv).rgb;
     color = vec4(mix(panelColor, vec3(0.34, 1.0, 0.75), max(rayOpacity, max(ring, centerDot))), 1.0);
+}
+)";
+
+constexpr char capture_shader[] = R"(#version 300 es
+#extension GL_OES_EGL_image_external_essl3 : require
+precision highp float;
+in vec2 uv;
+uniform samplerExternalOES panel;
+uniform mat4 textureTransform;
+out vec4 color;
+void main() {
+    vec2 source = (textureTransform * vec4(uv.x, 1.0 - uv.y, 0.0, 1.0)).xy;
+    color = vec4(texture(panel, source).rgb, 1.0);
 }
 )";
 
@@ -158,14 +175,82 @@ private:
 	jmethodID recenter_method = nullptr;
 };
 
+class DisplayCapture
+{
+public:
+	DisplayCapture(JNIEnv *env, jobject capture) : env(env), capture(capture)
+	{
+		if (capture == nullptr) {
+			return;
+		}
+		jclass cls = env->GetObjectClass(capture);
+		start_method = env->GetMethodID(cls, "startCapture", "(III)Z");
+		update_method = env->GetMethodID(cls, "updateCapture", "([F)Z");
+		stop_method = env->GetMethodID(cls, "stopCapture", "()V");
+		env->DeleteLocalRef(cls);
+		matrix = env->NewFloatArray(16);
+	}
+
+	~DisplayCapture()
+	{
+		stop();
+		if (matrix != nullptr) {
+			env->DeleteLocalRef(matrix);
+		}
+	}
+
+	void
+	stop()
+	{
+		if (started) {
+			env->CallVoidMethod(capture, stop_method);
+			started = false;
+		}
+	}
+
+	explicit operator bool() const { return capture != nullptr; }
+
+	void
+	start(GLuint texture)
+	{
+		started = true;
+		if (!env->CallBooleanMethod(capture, start_method, static_cast<jint>(texture),
+		                            static_cast<jint>(pocket_width), static_cast<jint>(pocket_height))) {
+			throw std::runtime_error("Cannot create the Pocket XR capture surface");
+		}
+	}
+
+	bool
+	update(GLint transform_uniform)
+	{
+		if (!env->CallBooleanMethod(capture, update_method, matrix)) {
+			return false;
+		}
+		std::array<jfloat, 16> transform{};
+		env->GetFloatArrayRegion(matrix, 0, transform.size(), transform.data());
+		glUniformMatrix4fv(transform_uniform, 1, GL_FALSE, transform.data());
+		return true;
+	}
+
+private:
+	JNIEnv *const env;
+	const jobject capture;
+	jmethodID start_method = nullptr;
+	jmethodID update_method = nullptr;
+	jmethodID stop_method = nullptr;
+	jfloatArray matrix = nullptr;
+	bool started = false;
+};
+
 class Launcher
 {
 public:
-	explicit Launcher(JavaState &state) : state(state) {}
+	explicit Launcher(JavaState &state, DisplayCapture &capture) : state(state), capture(capture) {}
 
 	~Launcher()
 	{
 		state.set_ready(false);
+		capture.stop();
 		if (swapchain != XR_NULL_HANDLE) {
 			xrDestroySwapchain(swapchain);
 		}
@@ -360,8 +445,8 @@ private:
 		chain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
 		chain_info.format = panel_format;
 		chain_info.sampleCount = 1;
-		chain_info.width = panel_width;
-		chain_info.height = panel_height;
+		chain_info.width = capture ? pocket_width : panel_width;
+		chain_info.height = capture ? pocket_height : panel_height;
 		chain_info.faceCount = 1;
 		chain_info.arraySize = 1;
 		chain_info.mipCount = 1;
@@ -381,7 +466,7 @@ private:
 		const GLuint vertex = compile_shader(GL_VERTEX_SHADER, vertex_shader);
 		glAttachShader(program, vertex);
 		glDeleteShader(vertex);
-		const GLuint fragment = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
+		const GLuint fragment = compile_shader(GL_FRAGMENT_SHADER, capture ? capture_shader : fragment_shader);
 		glAttachShader(program, fragment);
 		glDeleteShader(fragment);
 		glLinkProgram(program);
@@ -394,17 +479,24 @@ private:
 		}
 		glUseProgram(program);
 		glUniform1i(glGetUniformLocation(program, "panel"), 0);
-		glUniform2f(glGetUniformLocation(program, "size"), panel_width, panel_height);
-		aim_uniform = glGetUniformLocation(program, "aim");
 		glGenFramebuffers(1, &framebuffer);
 		glGenTextures(1, &panel_texture);
-		glBindTexture(GL_TEXTURE_2D, panel_texture);
-		glTexStorage2D(GL_TEXTURE_2D, 1, panel_format, panel_width, panel_height);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glViewport(0, 0, panel_width, panel_height);
+		const GLenum target = capture ? GL_TEXTURE_EXTERNAL_OES : GL_TEXTURE_2D;
+		glBindTexture(target, panel_texture);
+		glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		if (capture) {
+			transform_uniform = glGetUniformLocation(program, "textureTransform");
+			glViewport(0, 0, pocket_width, pocket_height);
+			capture.start(panel_texture);
+		} else {
+			glUniform2f(glGetUniformLocation(program, "size"), panel_width, panel_height);
+			aim_uniform = glGetUniformLocation(program, "aim");
+			glTexStorage2D(target, 1, panel_format, panel_width, panel_height);
+			glViewport(0, 0, panel_width, panel_height);
+		}
 	}
 
 	bool
@@ -513,7 +605,9 @@ private:
 	void
 	draw_panel()
 	{
-		upload_panel();
+		if (!capture) {
+			upload_panel();
+		}
 		uint32_t index = 0;
 		const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
 		check(xrAcquireSwapchainImage(swapchain, &acquire, &index), "xrAcquireSwapchainImage");
@@ -525,10 +619,12 @@ private:
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 			throw std::runtime_error("OpenXR swapchain framebuffer is incomplete");
 		}
-		float x = 0.0f;
-		float y = 0.0f;
-		state.read_aim(x, y);
-		glUniform2f(aim_uniform, (x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f);
+		if (!capture) {
+			float x = 0.0f;
+			float y = 0.0f;
+			state.read_aim(x, y);
+			glUniform2f(aim_uniform, (x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f);
+		}
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glFlush();
@@ -550,11 +646,32 @@ private:
 		end_info.displayTime = frame.predictedDisplayTime;
 		end_info.environmentBlendMode = blend_mode;
 
-		XrCompositionLayerQuad quad{XR_TYPE_COMPOSITION_LAYER_QUAD};
-		const auto *layer = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quad);
-		if (frame.shouldRender) {
+		XrCompositionLayerQuad quads[] = {{XR_TYPE_COMPOSITION_LAYER_QUAD}, {XR_TYPE_COMPOSITION_LAYER_QUAD}};
+		const XrCompositionLayerBaseHeader *layers[] = {
+		    reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quads[0]),
+		    reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quads[1]),
+		};
+		if (frame.shouldRender && capture && capture.update(transform_uniform)) {
+			draw_panel();
+			// Pocket XR has already rendered each eye in head coordinates.
+			constexpr int32_t eye_width = pocket_width / 2;
+			for (int eye = 0; eye < 2; ++eye) {
+				auto &quad = quads[eye];
+				quad.space = view_space;
+				quad.eyeVisibility = eye == 0 ? XR_EYE_VISIBILITY_LEFT : XR_EYE_VISIBILITY_RIGHT;
+				quad.subImage.swapchain = swapchain;
+				quad.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, pocket_height}};
+				quad.pose.orientation.w = 1.0f;
+				quad.pose.position.z = -1.0f;
+				// Pocket XR's uncalibrated 44.2 by 25.8 degree view at one meter.
+				quad.size = {0.812f, 0.458f};
+			}
+			end_info.layerCount = 2;
+			end_info.layers = layers;
+		} else if (frame.shouldRender && !capture) {
 			update_anchor(frame.predictedDisplayTime);
 			if (anchor_valid) {
+				auto &quad = quads[0];
 				draw_panel();
 				quad.space = local_space;
 				quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
@@ -563,13 +680,14 @@ private:
 				quad.pose = anchor;
 				quad.size = {panel_width_m, panel_width_m * panel_height / panel_width};
 				end_info.layerCount = 1;
-				end_info.layers = &layer;
+				end_info.layers = layers;
 			}
 		}
 		check(xrEndFrame(session, &end_info), "xrEndFrame");
 	}
 
 	JavaState &state;
+	DisplayCapture &capture;
 	XrInstance instance = XR_NULL_HANDLE;
 	XrSystemId system_id = XR_NULL_SYSTEM_ID;
 	XrSession session = XR_NULL_HANDLE;
@@ -591,7 +709,26 @@ private:
 	GLuint framebuffer = 0;
 	GLuint program = 0;
 	GLint aim_uniform = -1;
+	GLint transform_uniform = -1;
 };
+
+jstring
+run_launcher(JNIEnv *env, jobject activity, jobject application_context, jobject java_state, jobject java_capture)
+{
+	try {
+		// A display configuration change can start a new Activity before the old worker exits.
+		std::lock_guard<std::mutex> lock(session_mutex);
+		JavaState state(env, java_state);
+		DisplayCapture capture(env, java_capture);
+		Launcher launcher(state, capture);
+		if (!state.should_stop()) {
+			launcher.run(activity, application_context);
+		}
+		return nullptr;
+	} catch (const std::exception &error) {
+		return env->NewStringUTF(error.what());
+	}
+}
 
 } // namespace
 
@@ -601,16 +738,16 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jobject application_context,
                                                                                   jobject java_state)
 {
-	try {
-		// A display configuration change can start a new Activity before the old worker exits.
-		std::lock_guard<std::mutex> lock(session_mutex);
-		JavaState state(env, java_state);
-		Launcher launcher(state);
-		if (!state.should_stop()) {
-			launcher.run(activity, application_context);
-		}
-		return nullptr;
-	} catch (const std::exception &error) {
-		return env->NewStringUTF(error.what());
-	}
+	return run_launcher(env, activity, application_context, java_state, nullptr);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEnv *env,
+                                                                           jobject /* renderer */,
+                                                                           jobject activity,
+                                                                           jobject application_context,
+                                                                           jobject java_state,
+                                                                           jobject java_capture)
+{
+	return run_launcher(env, activity, application_context, java_state, java_capture);
 }
