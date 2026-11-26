@@ -1285,14 +1285,18 @@ VkResult
 vk_init_mutex(struct vk_bundle *vk)
 {
 	assert(vk != NULL);
+	assert(vk->queue_mutex_count == 0);
 
 	for (uint32_t i = 0; i < ARRAY_SIZE(vk->queues); ++i) {
 		struct vk_bundle_queue *q = &vk->queues[i];
 
-		if (os_mutex_init(&q->mutex) < 0) {
+		if (os_mutex_init(&q->mutex) != 0) {
+			q->mutex = (struct os_mutex){0};
+			vk_deinit_mutex(vk);
 			VK_ERROR(vk, "failed to initialize queue mutex");
 			return VK_ERROR_INITIALIZATION_FAILED;
 		}
+		++vk->queue_mutex_count;
 	}
 	return VK_SUCCESS;
 }
@@ -1302,8 +1306,8 @@ vk_deinit_mutex(struct vk_bundle *vk)
 {
 	assert(vk != NULL);
 
-	for (uint32_t i = 0; i < ARRAY_SIZE(vk->queues); ++i) {
-		struct vk_bundle_queue *q = &vk->queues[i];
+	while (vk->queue_mutex_count > 0) {
+		struct vk_bundle_queue *q = &vk->queues[--vk->queue_mutex_count];
 		os_mutex_destroy(&q->mutex);
 		q->mutex = (struct os_mutex){0};
 	}

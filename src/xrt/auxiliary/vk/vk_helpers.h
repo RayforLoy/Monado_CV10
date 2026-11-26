@@ -97,6 +97,8 @@ struct vk_bundle
 	 * Should not be used directly, @see main_queue, graphics_queue, encode_queue
 	 */
 	struct vk_bundle_queue queues[VK_BUNDLE_MAX_QUEUES];
+	//! Number of queue mutexes initialized, in array order.
+	uint32_t queue_mutex_count;
 
 	/*!
 	 * @brief Main queue for general work.
