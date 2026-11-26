@@ -26,3 +26,20 @@
 `5d58700` 的普通 arm64 预览包 SHA-256 为 `e08a76447ec20644de1340f1494ba0f18f6a01cd4eda7b32b2f6be7fdf9becf3`。Fold7 安装文件的摘要一致。预览包通过 v2 签名和 16 KiB ZIP 对齐验证，五个原生库与此前的 3D 投屏包逐字节一致，DEX 中无诊断输入。
 
 从 Monado 2D 启动器进入 3D 菜单，底部上滑停留后点按，未经修改的 `hello_xr` 进入 `FOCUSED` 且右镜实拍蓝色立方体。原样例 APK SHA-256 为 `29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962`。Android 返回键使样例进入 `STOPPING` 并完成 `xrDestroyInstance`。结束后保留修正版预览包，Broker 选回稳定版 Monado CV10，最低刷新率为 `null`。手持手机转动和左镜光学实拍仍待复测。[普通预览包右镜实拍](evidence/fold7-laser-preview-hello-right.jpg)
+
+## 与 Android 手势的边界
+
+在相同接线下使用 Fold7 外屏横屏（2520×1080），开启 Android 全面屏手势。手机控制页的两侧和底部以蓝线提示起点，蓝线随 Android 返回、Home 和安全边距调整。底部两角优先按左右返回识别。台架通过 ADB 注入触控，手机和摄像头位置固定。
+
+| 预览包 | 构建源码 | SHA-256 |
+| --- | --- | --- |
+| Pocket XR 兼容与离线启动器整合包 | `9fdb45e` | `837f8421bb204957e21244b9136fcaec98846af0b1e50c918bf850263231cda8` |
+| 标准 OpenXR 离线启动器包 | `722183a` | `e85132fd9df7d66050ba6a8830a959c30526ac16e90e4cb5badadd6937beea18` |
+
+两只 APK 都以同一调试证书签名，五只 ARM64 原生库的 ZIP 位置及 15 个 ELF LOAD 段均满足 16 KiB 对齐。
+
+- 整合包从左蓝线向内滑、从右下角沿右蓝线向内滑及从屏幕最左沿使用系统返回，三次均由 3D 菜单返回 2D 应用列表。
+- 标准包从底部蓝线上划 120 ms 随即松手，没有产生置中事件。上划后停留 460 ms 产生一次置中，随后点按选中原版 `hello_xr`。样例进入 `FOCUSED`，CV10 右镜拍到蓝色立方体。样例返回后进入 `STOPPING` 并完成 `xrDestroyInstance`。
+- 标准包再次打开 3D 菜单。从屏幕最下沿上滑，第一次显示系统导航条，第二次回到三星桌面。这两次滑动没有产生置中事件。结束后 Broker 恢复稳定版 Monado CV10，最低刷新率为 `null`。
+
+[手机手势标记截图](evidence/fold7-laser-gesture-guides.png) · [选中样例右镜实拍](evidence/fold7-laser-gesture-hello-right.jpg) · [置中、样例退出与系统 Home 日志](evidence/fold7-laser-gesture-boundaries.log)
