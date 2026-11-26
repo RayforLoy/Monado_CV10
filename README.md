@@ -47,11 +47,13 @@ Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停�
 
 安装原版 Pocket XR 后，在 Monado CV10 菜单打开 **Pocket XR 外显兼容性**。该页面显示 CV10 的活动时序，以及 Android 是否允许 Pocket XR 在外屏启动。Fold7 的 **设置 → 已连接的设备 → Samsung DeX → 连接的显示设备** 可切换 **已扩展** 和 **已镜像**。
 
-Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 3200×1600 画幅宽高比为 2:1，低于其 3.2 的双目判定阈值，该版本也没有 CV10 的 IMU 支持。系统允许外屏启动时可打开原版的平面入口。实验分支 `codex/cv10-pocket-renderer` 使用 Android 虚拟屏接收 Pocket XR 的左右眼画面，再由 Monado 送到 CV10。原版应用到镜片的完整路径仍待授权后验证。[Pocket XR 双目判定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/GlassesOptics.kt#L211-L262) · [空间模式前置条件](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L146-L171)
+Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 3200×1600 画幅宽高比为 2:1，低于其 3.2 的双目判定阈值，该版本也没有 CV10 的 IMU 支持。系统允许外屏启动时可打开原版的平面入口。实验分支 `codex/cv10-pocket-renderer` 使用 Android 虚拟屏接收 Pocket XR 的左右眼画面，再由 Monado 送到 CV10。[Pocket XR 双目判定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/GlassesOptics.kt#L211-L262) · [空间模式前置条件](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L146-L171)
 
 Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
 
 另一次实验在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡录到了独立的 `LEFT EYE` 与 `RIGHT EYE` 帧。打开 Pocket XR **空间窗口 → 3D：窗口有真实的深度** 后，日志确认实际场景按左右眼各 1920×1080 渲染。没有应用面板、未打开启动器时，正常场景仍为黑底。该轮 Pocket XR 未获得 Shizuku 授权，也没有实际头部姿态输入。镜片双目、空间应用窗口和 3D 投屏仍待验证。
+
+后续用已有 ADB 授权启动同一原版测试卡，通过 Monado 的 OpenXR 合成送到 CV10。外屏截图有各自的左右眼标记，右镜拍到了正立的 `RIGHT EYE`。手机端一键启动需完成独立 Shizuku 授权后复测。左镜光学、实际头部姿态、空间应用窗口和 3D 投屏分别待验收。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md)
 
 ### Pocket XR 外显实验预览
 
@@ -61,7 +63,7 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 - **打开 Pocket XR 空间** 前先在 Pocket XR 设置启用 3D。Pocket XR 自己创建应用面板需要其独立的 Shizuku 授权。
 - **停止预览** 释放本次虚拟显示和 OpenXR 会话。
 
-Fold7 上使用独立诊断包，将本地白色顶部标记和红、蓝左右眼画面送入相同的 `SurfaceTexture` 与 OpenXR 渲染代码。3200×1600 外屏截图记录了两个眼区的独立图案，右镜头实拍确认 `LOCAL RIGHT` 正立、白块在上。上述 Pocket XR 虚拟屏输入和 Monado 镜片输出已经分别验证。原版 Pocket XR 经本分支直达镜片、真实头部姿态和 3D 投屏仍待联调。
+Fold7 上使用独立诊断包，将本地白色顶部标记和红、蓝左右眼画面送入相同的 `SurfaceTexture` 与 OpenXR 渲染代码。3200×1600 外屏截图记录了两个眼区的独立图案，右镜头实拍确认 `LOCAL RIGHT` 正立、白块在上。同一渲染路径随后接到了 ADB 启动的原版 Pocket XR 测试卡。手机端一键启动、真实头部姿态和 3D 投屏仍待联调。[验收记录](history/fold7-pocket-xr-display.md)
 
 ## 原厂手机线
 
