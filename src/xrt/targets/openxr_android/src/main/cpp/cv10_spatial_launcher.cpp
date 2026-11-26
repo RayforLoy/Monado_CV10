@@ -33,6 +33,7 @@ constexpr uint32_t panel_height = 720;
 constexpr uint32_t pocket_width = 3840;
 constexpr uint32_t pocket_height = 1080;
 constexpr float panel_distance = 1.45f;
+constexpr float pocket_distance = 1.0f;
 constexpr float panel_width_m = 1.62f;
 std::mutex session_mutex;
 
@@ -245,7 +246,9 @@ private:
 class Launcher
 {
 public:
-	explicit Launcher(JavaState &state, DisplayCapture &capture) : state(state), capture(capture) {}
+	Launcher(JavaState &state, DisplayCapture &capture, bool capture_world_anchored)
+	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored)
+	{}
 
 	~Launcher()
 	{
@@ -554,7 +557,7 @@ private:
 	}
 
 	void
-	update_anchor(XrTime time)
+	update_anchor(XrTime time, float distance)
 	{
 		const jint generation = state.recenter_generation();
 		if (anchor_valid && recent_generation == generation) {
@@ -580,11 +583,14 @@ private:
 		const XrVector3f origin = (head.locationFlags & XR_SPACE_LOCATION_POSITION_VALID_BIT) != 0
 		                              ? head.pose.position
 		                              : XrVector3f{};
-		anchor.position = {origin.x - panel_distance * std::sin(yaw) * std::cos(pitch),
-		                   origin.y + panel_distance * std::sin(pitch),
-		                   origin.z - panel_distance * std::cos(yaw) * std::cos(pitch)};
+		anchor.position = {origin.x - distance * std::sin(yaw) * std::cos(pitch),
+		                   origin.y + distance * std::sin(pitch),
+		                   origin.z - distance * std::cos(yaw) * std::cos(pitch)};
 		anchor_valid = true;
 		recent_generation = generation;
+		if (capture_world_anchored) {
+			__android_log_print(ANDROID_LOG_INFO, tag, "Anchored Pocket XR canvas (recenter %d)", generation);
+		}
 	}
 
 	void
@@ -665,24 +671,29 @@ private:
 		    reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quads[1]),
 		};
 		if (frame.shouldRender && capture && capture.update(transform_uniform)) {
-			draw_panel();
-			// The capture is either Pocket XR's stereo canvas or a side-by-side PC video.
-			constexpr int32_t eye_width = pocket_width / 2;
-			for (int eye = 0; eye < 2; ++eye) {
-				auto &quad = quads[eye];
-				quad.space = view_space;
-				quad.eyeVisibility = eye == 0 ? XR_EYE_VISIBILITY_LEFT : XR_EYE_VISIBILITY_RIGHT;
-				quad.subImage.swapchain = swapchain;
-				quad.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, pocket_height}};
-				quad.pose.orientation.w = 1.0f;
-				quad.pose.position.z = -1.0f;
-				// Pocket XR's uncalibrated 44.2 by 25.8 degree view at one meter.
-				quad.size = {0.812f, 0.458f};
+			if (capture_world_anchored) {
+				update_anchor(frame.predictedDisplayTime, pocket_distance);
 			}
-			end_info.layerCount = 2;
-			end_info.layers = layers;
+			if (!capture_world_anchored || anchor_valid) {
+				draw_panel();
+				// The capture is either Pocket XR's stereo canvas or a side-by-side PC video.
+				constexpr int32_t eye_width = pocket_width / 2;
+				const XrPosef view_pose = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -pocket_distance}};
+				for (int eye = 0; eye < 2; ++eye) {
+					auto &quad = quads[eye];
+					quad.space = capture_world_anchored ? local_space : view_space;
+					quad.eyeVisibility = eye == 0 ? XR_EYE_VISIBILITY_LEFT : XR_EYE_VISIBILITY_RIGHT;
+					quad.subImage.swapchain = swapchain;
+					quad.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, pocket_height}};
+					quad.pose = capture_world_anchored ? anchor : view_pose;
+					// Pocket XR's uncalibrated 44.2 by 25.8 degree view at one meter.
+					quad.size = {0.812f, 0.458f};
+				}
+				end_info.layerCount = 2;
+				end_info.layers = layers;
+			}
 		} else if (frame.shouldRender && !capture) {
-			update_anchor(frame.predictedDisplayTime);
+			update_anchor(frame.predictedDisplayTime, panel_distance);
 			if (anchor_valid) {
 				auto &quad = quads[0];
 				draw_panel();
@@ -701,6 +712,7 @@ private:
 
 	JavaState &state;
 	DisplayCapture &capture;
+	const bool capture_world_anchored;
 	XrInstance instance = XR_NULL_HANDLE;
 	XrSystemId system_id = XR_NULL_SYSTEM_ID;
 	XrSession session = XR_NULL_HANDLE;
@@ -731,14 +743,15 @@ run_launcher(JNIEnv *env,
              jobject application_context,
              jobject java_state,
              jobject java_capture,
-             jstring java_runtime_manifest)
+	             jstring java_runtime_manifest,
+	             bool capture_world_anchored)
 {
 	try {
 		// A display configuration change can start a new Activity before the old worker exits.
 		std::lock_guard<std::mutex> lock(session_mutex);
 		JavaState state(env, java_state);
 		DisplayCapture capture(env, java_capture);
-		Launcher launcher(state, capture);
+		Launcher launcher(state, capture, capture_world_anchored);
 		if (!state.should_stop()) {
 			std::string runtime_manifest;
 			if (java_runtime_manifest != nullptr) {
@@ -766,7 +779,7 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jobject java_state,
                                                                                   jstring java_runtime_manifest)
 {
-	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest);
+	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -776,7 +789,9 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jobject application_context,
                                                                            jobject java_state,
                                                                            jobject java_capture,
-                                                                           jstring java_runtime_manifest)
+                                                                           jstring java_runtime_manifest,
+                                                                           jboolean world_anchored)
 {
-	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest);
+	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
+	                    world_anchored == JNI_TRUE);
 }

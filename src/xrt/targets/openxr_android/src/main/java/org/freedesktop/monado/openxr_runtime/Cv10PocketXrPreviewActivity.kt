@@ -37,6 +37,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var controls: Button
     private lateinit var stop: Button
     private lateinit var headLink: CheckBox
+    private lateinit var worldAnchor: CheckBox
+    private lateinit var recenter: Button
     private var transport: Cv10PocketXrTransport? = null
     private var renderer: Cv10PocketXrRenderer? = null
     private var pendingPermission: Int? = null
@@ -119,9 +121,19 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             setText(R.string.cv10_pocket_head_link_opt_in)
             setOnClickListener { if (isChecked) requestHeadLink() }
         }
+        worldAnchor = CheckBox(this).apply {
+            setText(R.string.cv10_pocket_world_anchor)
+            setOnClickListener { if (isChecked) headLink.isChecked = false }
+        }
+        recenter = Button(this).apply {
+            setText(R.string.cv10_pocket_recenter)
+            setOnClickListener { renderer?.recenter() }
+        }
         panel.addView(status)
         panel.addView(headLink)
+        panel.addView(worldAnchor)
         panel.addView(open)
+        panel.addView(recenter)
         panel.addView(controls)
         panel.addView(pcSetup)
         panel.addView(pcScreen)
@@ -191,6 +203,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 pendingVpn = true
                 updateButtons()
                 startActivityForResult(consent, REQUEST_HEAD_LINK)
+            } else {
+                worldAnchor.isChecked = false
             }
         } catch (error: Exception) {
             Log.w(TAG, "Could not request the Pocket XR head link", error)
@@ -207,6 +221,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         if (requestCode != REQUEST_HEAD_LINK || !::headLink.isInitialized) return
         pendingVpn = false
         headLink.isChecked = resultCode == RESULT_OK
+        if (headLink.isChecked) worldAnchor.isChecked = false
         status.setText(if (headLink.isChecked) R.string.cv10_pocket_preview_intro else R.string.cv10_pocket_head_link_denied)
         updateButtons()
     }
@@ -250,6 +265,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         val nextRenderer = Cv10PocketXrRenderer(
             activity = this,
             captureWidth = if (mode == MODE_PC_SCREEN_SBS) PC_SCREEN_WIDTH else null,
+            worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS,
             onSurface = { surface ->
                 if (transport === nextTransport) {
                     nextTransport.start(surface) { result ->
@@ -318,11 +334,13 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private fun updateButtons() {
         val available = renderer == null && !stopping && pendingPermission == null && !pendingVpn
         headLink.isEnabled = available
+        worldAnchor.isEnabled = available
         open.isEnabled = available
         pcSetup.isEnabled = available
         pcScreen.isEnabled = available
         test.isEnabled = available
         controls.isEnabled = controlsAvailable
+        recenter.visibility = if (renderer?.worldAnchored == true) View.VISIBLE else View.GONE
         stop.isEnabled = renderer != null
     }
 

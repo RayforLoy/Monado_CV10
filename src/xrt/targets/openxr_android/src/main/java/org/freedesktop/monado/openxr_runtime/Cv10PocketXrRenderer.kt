@@ -13,6 +13,7 @@ import androidx.annotation.Keep
 internal class Cv10PocketXrRenderer(
     private val activity: Activity,
     private val captureWidth: Int? = null,
+    val worldAnchored: Boolean,
     private val onSurface: (Surface) -> Unit,
     private val onFirstFrame: () -> Unit,
     private val onFinished: (String?) -> Unit,
@@ -26,7 +27,7 @@ internal class Cv10PocketXrRenderer(
                 System.loadLibrary("cv10-spatial-launcher")
                 val context = activity.applicationContext
                 val manifest = Cv10BundledRuntime.manifestPath(context, "cv10-pocket-runtime.json")
-                nativeRun(activity, context, state, capture, manifest)
+                nativeRun(activity, context, state, capture, manifest, worldAnchored)
             } catch (error: LinkageError) {
                 Log.e(TAG, "OpenXR capture library unavailable", error)
                 error.message ?: error.toString()
@@ -39,6 +40,10 @@ internal class Cv10PocketXrRenderer(
         state.stop = true
     }
 
+    fun recenter() {
+        state.recenter()
+    }
+
     @Keep
     private external fun nativeRun(
         activity: Activity,
@@ -46,6 +51,7 @@ internal class Cv10PocketXrRenderer(
         state: SpatialLauncherState,
         capture: Capture,
         runtimeManifest: String?,
+        worldAnchored: Boolean,
     ): String?
 
     @Keep
