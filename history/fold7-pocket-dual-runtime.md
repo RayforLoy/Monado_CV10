@@ -94,4 +94,22 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 
 比较官方 1.6.28 与 1.6.31 APK，两版的 arm64 `libopenxr_monado.so` 都是 2,048,592 字节，SHA-256 均为 `d514e935c5f9123660b4c775dc13846ef979c54e3b71e5003bc28257f99e37ca`，ELF `DT_FLAGS_1` 均只有 `NOW`。两个 APK 的发布签名相同。Fold7 仍保留 1.6.28，1.6.31 的结论来自发布包静态比较。[Pocket XR 1.6.31 发布页](https://github.com/pocket-xr/pocket-xr/releases/tag/v1.6.31)
 
-按 Pocket XR 的原生构建说明，在 Monado `ee03722885e777462708841223b60affe6873ac2` 应用原版 1.6.31 的 `monado-pocketxr.patch` 后，验证了 [Android 链接修补](evidence/pocketxr-monado-android-nodelete.patch) 可叠加。它与 Monado CV10 已实测的 `4fe230f` 使用同一链接选项，让运行时代码在客户端线程清理期间维持映射。Pocket XR 版补丁仍需重建运行时并实测两次退出与重进。[Pocket XR 原生构建文档](https://github.com/pocket-xr/pocket-xr/blob/v1.6.31/docs/OPENXR.md#building-monado)
+## 源码版卸载修复对照
+
+在 Monado `ee03722885e777462708841223b60affe6873ac2` 依次应用 Pocket XR 1.6.31 源码中的 `app/src/main/cpp/monado/monado-pocketxr.patch` 和 [Android 链接修补](evidence/pocketxr-monado-android-nodelete.patch)。修补使用 Monado CV10 `4fe230f` 已实测的 `-z,nodelete`，在线程清理期间保留运行时的映射。以 Android NDK 26.3.11579264、CMake 3.22.1 和 Ninja 构建 `openxr_monado`，使用以下配置，另设 Eigen 路径并让 CMake 找到 `glslangValidator`。[Pocket XR 原生构建文档](https://github.com/pocket-xr/pocket-xr/blob/v1.6.31/docs/OPENXR.md#building-monado)
+
+```text
+-DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=26 -DANDROID_STL=c++_static
+-DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DXRT_FEATURE_SERVICE=ON
+-DXRT_ANDROID_PACKAGE=com.hayeco.flipspaces
+-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-z,max-page-size=16384
+-DGIT_DESC=v25.1.0-1070-gc865e3f57
+```
+
+初次构建使用默认 `ee03722`，成功绑定原版 Pocket XR 服务并取得 3840×1080 游戏面，但服务的版本比对拒绝了客户端。上游导出的补丁列出了发布库对应的 `c865e3f57`，补丁未修改 `ipc/shared`、`ipc/client` 或 `ipc/server` 的协议实现。上述 `GIT_DESC` 使用原版服务报出的客户端协议版本，Monado 的运行时版本检查保持启用。`llvm-readelf` 确认重建客户端的 `FLAGS_1` 为 `NOW NODELETE`，三个 ELF 加载段均为 `0x4000`。经 `llvm-strip --strip-unneeded` 的库 SHA-256 为 `bc344d1eace98fadcaff38e665c55ec11161f9c3b67fb5b65e528b0c68ddd153`。
+
+[探针清单](pocket-client-probe/AndroidManifest.xml)与[发现服务源码](pocket-client-probe/RuntimeDiscoveryService.java)向 Broker 公告诊断客户端。用 `javac --release 11` 和 Android 35 的 `android.jar` 编译服务，再用 `d8 --min-api 26` 将服务和 Pocket XR 1.6.31 `app/libs/monado/` 下两个 AAR 的 `classes.jar` 以及 `kotlin-stdlib-2.0.0.jar` 编入同一 `classes.dex`。用 `aapt2 link` 生成基础 APK，装入此 DEX 和 `lib/arm64-v8a/libopenxr_monado.so`，随后 `zipalign` 和 `apksigner`。探针没有自己的渲染服务，继续绑定手机上已安装且未修改的 Pocket XR 1.6.28 服务。正式 Pocket XR 入口仍经 Broker 选择原版运行时。
+
+2026-11-27 05:53（香港时间），同一台 Fold7 和 53 版原厂线。源码探针 APK SHA-256 为 `8fc0520c6113fe6c0f2ae43b1b8a6c7542f465fe00ef01f70c73b5b5ff4660e8`。外层 Monado 诊断 APK SHA-256 为 `8b28655c39a59a0fcfa89841a571519823640bdb9a136d76a9c16a2fc9549910`，沿用上一节的 ADB 显示传输，菜单临时识别此诊断包。两次从 Monado 点选未修改的 `hello_xr` 均进入 `FOCUSED`，右镜均拍到蓝色方块。游戏层帧编号分别为 14、85、152 和 20、86、153。两次返回都进入 `STOPPING` 并完成 `xrDestroyInstance`，两段崩溃日志为空。样例两次使用 PID 20809，外层 Monado 维持 PID 19201。结束后恢复稳定 Monado CV10 Broker、原预览 APK 和原电池设置，卸载探针，最低刷新率为 `null`。[卸载实测日志](evidence/fold7-pocket-nodelete.log) · [重进后的右镜实拍](evidence/fold7-pocket-nodelete-right.jpg)
+
+05:54 用同一菜单再做单变量对照。把官方 arm64 客户端复制到单独的诊断 APK，只把 ELF `DT_FLAGS_1` 在 `0x19ccc0` 的值由 `0x01` 改为 `0x09`，加入 `NODELETE`。该诊断 APK SHA-256 为 `c3e4bffb0b0eddb27c2e02720b72516685504637aa342c2c67210d1b4b71e9da`。两次右镜出画、两次正常销毁，重进继续使用 PID 23878。把应用直接放到诊断虚拟屏的早期轮次曾在 `FOCUSED` 后触发三星 Freecess，游戏层停在第 30 帧。菜单路径复测期间持续出帧。卸载修复覆盖线程清理，三星的冻结问题仍可能在其他启动路径出现。[对照日志](evidence/fold7-pocket-nodelete.log)

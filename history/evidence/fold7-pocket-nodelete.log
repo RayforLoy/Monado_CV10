@@ -1,0 +1,70 @@
+2026-11-27 HKT, Galaxy Z Fold7 (SM-F9660), Android 16, CV10 on C9.53.6 original cable + 5 V.
+HUAWEIAV03 mode 3200 x 1600 @ 90 Hz. Pocket XR 1.6.28 and Khronos hello_xr OpenGLES both unchanged.
+The Broker-selected diagnostic APK supplies the client library. Stock Pocket XR runs the render service.
+The outer preview routes the game window through the same ADB diagnostic display transport in both runs.
+
+Source-rebuilt client / NOW NODELETE
+11-27 05:52:59.064 19201 19201 I Cv10PocketXrPreview: First virtual display frame available on display 181
+11-27 05:53:05.693 19201 19201 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:53:05.693 19201 19201 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 182
+11-27 05:53:05.936 19634 19634 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 05:53:06.110 20809 20847 V hello_xr: [05:53:06.110][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 05:53:28.677 19201 19201 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:53:28.677 19201 19201 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 182
+11-27 05:53:28.783 19634 19634 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 05:53:28.964 20809 21694 V hello_xr: [05:53:28.964][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 05:53:06.222 20809 20847 V hello_xr: [05:53:06.222][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2818910944944
+11-27 05:53:06.110 20809 20847 V OpenXR-Loader: Verbose [GENERAL | xrCreateInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:53:10.124 20809 20847 V hello_xr: [05:53:10.124][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2822813175880
+11-27 05:53:10.124 20809 20847 V hello_xr: [05:53:10.124][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2822813432442
+11-27 05:53:10.633 20809 20847 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:53:10.633 20809 20847 I OpenXR-Loader: Info [GENERAL |  | OpenXR-Loader] : RuntimeInterface being destroyed.
+Sample PID after Back: 20809
+Dismissed the notification prompt without granting access
+Monado preview PID stayed 19201 with the app entry enabled
+11-27 05:53:29.029 20809 21694 V hello_xr: [05:53:29.029][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2820004743331
+11-27 05:53:28.964 20809 21694 V OpenXR-Loader: Verbose [GENERAL | xrCreateInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:53:32.971 20809 21694 V hello_xr: [05:53:32.971][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2823946387548
+11-27 05:53:32.971 20809 21694 V hello_xr: [05:53:32.971][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2823946640777
+11-27 05:53:33.481 20809 21694 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:53:33.481 20809 21694 I OpenXR-Loader: Info [GENERAL |  | OpenXR-Loader] : RuntimeInterface being destroyed.
+Sample PID after Back: 20809
+SurfaceFlinger game layer frame IDs: 14, 85, 152, 20, 86, 153
+Trial 1 crash entries: 0
+Trial 2 crash entries: 0
+
+Official client single-byte control / NOW to NOW NODELETE, ELF offset 0x19ccc0
+11-27 05:54:23.168 23222 23222 I Cv10PocketXrPreview: First virtual display frame available on display 183
+11-27 05:54:29.359 23222 23222 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:54:29.359 23222 23222 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 184
+11-27 05:54:29.651 23592 23592 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 05:54:29.838 23878 23928 V hello_xr: [05:54:29.838][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 05:54:51.682 23222 23222 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:54:51.682 23222 23222 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 184
+11-27 05:54:51.895 23592 23592 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 05:54:52.077 23878 24485 V hello_xr: [05:54:52.077][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 05:54:29.951 23878 23928 V hello_xr: [05:54:29.951][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2820289151922
+11-27 05:54:29.838 23878 23928 V OpenXR-Loader: Verbose [GENERAL | xrCreateInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:54:33.794 23878 23928 V hello_xr: [05:54:33.794][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2824131953744
+11-27 05:54:33.794 23878 23928 V hello_xr: [05:54:33.794][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2824132242494
+11-27 05:54:34.302 23878 23928 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:54:34.302 23878 23928 I OpenXR-Loader: Info [GENERAL |  | OpenXR-Loader] : RuntimeInterface being destroyed.
+Sample PID after Back: 23878
+Dismissed the notification prompt without granting access
+Monado preview PID stayed 23222 with the app entry enabled
+11-27 05:54:52.142 23878 24485 V hello_xr: [05:54:52.142][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2818323885255
+11-27 05:54:52.077 23878 24485 V OpenXR-Loader: Verbose [GENERAL | xrCreateInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:54:55.927 23878 24485 V hello_xr: [05:54:55.927][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2822109212285
+11-27 05:54:55.928 23878 24485 V hello_xr: [05:54:55.928][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2822110513900
+11-27 05:54:56.439 23878 24485 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:54:56.439 23878 24485 I OpenXR-Loader: Info [GENERAL |  | OpenXR-Loader] : RuntimeInterface being destroyed.
+Sample PID after Back: 23878
+SurfaceFlinger game layer frame IDs: 9, 80, 148, 7, 77, 146
+Trial 1 crash entries: 0
+Trial 2 crash entries: 0
+
+Both probes were removed after their respective runs. Final verification:
+Broker: org.cv10.monado.out_of_process
+Minimum refresh rate: null
+Stock Pocket XR RUN_ANY_IN_BACKGROUND: ignore
+No org.cv10.diagnostics.pocket_nodelete package installed

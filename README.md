@@ -75,6 +75,8 @@ Fold7 已验证预览内的显示服务能创建和释放受信任虚拟屏。�
 
 临时在 Broker 选用原版 **Pocket XR** 做诊断时，原版运行时接管 `hello_xr`，内置 Monado CV10 同时将游戏图层送到 CV10。将样例放到独立虚拟屏后，四轮在手机主屏打开 Pocket XR 触控板并连续出帧约九秒，CV10 右镜拍到蓝色方块。三星 Freecess 仍可能冻结原版进程。一次冻结后，在 Monado 点按 **打开手机控制**，三星解冻原版进程，同一游戏图层恢复出帧。样例在退出时仍可能于原版运行时卸载后崩溃。长时间运行、正常退出和从原版空间菜单点选应用仍待验证。[双运行时实测](history/fold7-pocket-dual-runtime.md)
 
+原版 Pocket XR 1.6.28 和 1.6.31 的 arm64 客户端运行时相同。使用从上游 Pocket XR 源码重建的卸载诊断客户端时，未修改的 Pocket XR 继续渲染，`hello_xr` 在同一个进程中两次正常退出和重进。日常选择原版 **Pocket XR** 时仍使用原版客户端。[卸载修复与构建记录](history/fold7-pocket-dual-runtime.md#源码版卸载修复对照)
+
 Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。整合预览 `6e536a4` 复测了内置 3D 菜单和原版测试卡。Android 在该设备上拒绝普通应用把原版空间入口启动到诊断虚拟屏。Fold7 的真实 CV10 IMU 通过回环诊断连续两次把约 1000 Hz 的样本送入电脑端原版 Pocket XR 解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后手机端原版连接、实物头动方向和 Shizuku 一键开流仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [实时 IMU 对照](history/fold7-pocket-xr-imu.md#fold7-实时-tcp-对照)
 
 ## 原厂手机线
