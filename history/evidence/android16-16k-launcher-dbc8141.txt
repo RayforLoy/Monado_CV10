@@ -1,0 +1,13 @@
+Android 16 Google APIs image, revision 7, API 36, PAGE_SIZE=16384, ABIs x86_64,arm64-v8a
+APK SHA-256 5d5b639bb81be1fdb3935d83ba87d61366af9e2ba56945cefbab1127708c918d
+APK v2 signature verified; zipalign -c -P 16 4 passed; 15 PT_LOAD segments in five arm64 ELFs aligned to 0x4000.
+Streamed install succeeded, primaryCpuAbi=arm64-v8a, secondaryCpuAbi=null.
+
+11-27 07:47:55.912 OpenXR-Loader PID 3380: RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file .../cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 07:47:56.235 monado.vk_check_required_extensions PID 2499: Missing required instance extensions
+11-27 07:47:56.519 Cv10SpatialLauncher PID 3380: xrGetSystem failed with OpenXR result -2
+11-27 07:48:08.976 OpenXR-Loader PID 3380: RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file .../cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 07:48:09.183 monado.vk_check_required_extensions PID 2499: Missing required instance extensions
+11-27 07:48:09.432 Cv10SpatialLauncher PID 3380: xrGetSystem failed with OpenXR result -2
+
+The second failure followed the Retry action. Cancel and Back returned to the 2D app list. The Open 3D Launcher button was present and the restricted-background notice was absent. No AndroidRuntime fatal exception was observed.
