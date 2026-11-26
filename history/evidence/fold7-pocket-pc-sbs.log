@@ -1,0 +1,14 @@
+Fold7 logcat (Hong Kong time)
+11-27 03:09:53.481 19496 19496 I Cv10PocketXrPreview: Public diagnostic display id=113
+11-27 03:09:53.495 19496 19789 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 03:09:53.829 19496 19496 I Cv10PocketXrPreview: First public diagnostic display frame
+11-27 03:09:53.916 19845 19845 I PcScreen6: decoding into this window
+11-27 03:09:56.243 19845 19919 I PcScreen6: connecting to <LAN host>, app Desktop, 1920x1080@120 (auto), 60 Mbps (auto), 0 other PC screens streaming, window 1920x1080, virtual display false, codec auto, formats 0x1101
+11-27 03:09:56.721 19845 19947 I PcScreen6: streaming
+
+Test Sunshine host
+[2026-11-27 03:09:56.998]: Info: CLIENT CONNECTED
+[2026-11-27 03:09:57.427]: Info: Desktop resolution [2560x1440]
+[2026-11-27 03:09:57.428]: Info: Requested frame rate [120/1 exactly 120 fps]
+[2026-11-27 03:09:57.428]: Info: Creating encoder [hevc_nvenc]
+[2026-11-27 03:09:57.471]: Info: NvEnc: created encoder v1301 HEVC P1 async two-pass rfi
