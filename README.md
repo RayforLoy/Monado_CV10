@@ -30,28 +30,28 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 离线应用启动器
 
-在 **Monado CV10 → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。两个入口均可离线使用，无需授予 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。3D 菜单通过 Broker 使用 Monado CV10，保持三星外接显示为 **已镜像**。
+此功能已在预览构建中验证。在 **Monado CV10 Preview → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。启动器读取本机安装列表，无需账户或 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。在 Broker 中选择 **Monado CV10 Preview**，保持三星外接显示为 **已镜像**。
 
 - 首次使用或重新插入眼镜后，可先从 Monado 菜单选择 **CV10 USB access**，允许访问 **HUAWEI GLASS HID**，再进入应用启动器。
 - 应用列表默认筛选声明了 OpenXR 沉浸式入口的应用，并直接启动该入口。另有一些应用从普通界面进入 XR，例如 PiliPlus，可关闭 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。
 - 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从手机左右边缘的系统手势区内侧向中间滑动可返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。项目持有的华为 VR 桌面材料为已打包 APK，未找到可复用的公开源码。
 
-若冷启动找不到运行时，可在启动提示中打开 Broker，确认运行时选择后返回，或选择 **重试**。
+若冷启动找不到运行时，可在启动提示中打开 Broker，确认运行时选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。
 
-Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条完整路径。直接点 2D 列表，以及打开 3D 菜单后用激光笔点按，都能启动未修改的 Khronos `hello_xr` OpenGLES 并进入 `FOCUSED`。两条路径均使用自己的预览运行时。SurfaceFlinger 外屏截图记录了左右眼画面，固定摄像头从右镜片拍到蓝方块、3D 菜单和激光指针。3D 路径验证使用源码 `4fe230f` 的 ARM64 预览包，SHA-256 为 `92dda4b0080e832d702a2704ab90efa08bb345b8e26e67a87b435f8156f30616`。
+Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条路径。先从 2D 列表启动未修改的 Khronos `hello_xr` OpenGLES，返回后从 3D 菜单重进，同一个应用进程两次达到 `FOCUSED`，外屏截图和右镜均有画面。结束样例进程后，3D 菜单也能启动新的样例进程并出图。运行时在 Android 12 或更新版本直接管理 CV10 的 Presentation，覆盖 3D 菜单关闭时眼镜失去画面的故障。[Fold7 验收记录](history/fold7-offline-launcher.md)
 
-同一预览包在 Fold7 注入触摸事件验证了左右内侧手势返回、底部上滑停留触发置中和轻触确认，也通过了 Android 返回键。激光笔俯仰修正和横向方向通过合成传感器样本复测，手持转动手机的复测待做。
+Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。激光笔俯仰修正和横向方向通过合成传感器样本复测，手持转动手机的复测待做。两个应用入口均在预览包未获得 Shizuku 权限时通过。无线调试使用同一 Wi-Fi，因此这轮保留了 Wi-Fi，关闭 Wi-Fi 的独立复测待做。
 
 ## Pocket XR 外屏兼容性
 
 安装原版 Pocket XR 后，在 Monado CV10 菜单打开 **Pocket XR 外显兼容性**。该页面显示 CV10 的活动时序，以及 Android 是否允许 Pocket XR 在外屏启动。Fold7 的 **设置 → 已连接的设备 → Samsung DeX → 连接的显示设备** 可切换 **已扩展** 和 **已镜像**。
 
-Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 3200×1600 画幅宽高比为 2:1，低于其 3.2 的双目判定阈值，该版本也没有 CV10 的 IMU 支持。允许外屏启动时可以试用原版的平面入口。空间投屏、双目光学和头部跟踪仍需要 Pocket XR 侧适配。[Pocket XR 双目判定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/GlassesOptics.kt#L211-L262) · [空间模式前置条件](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L146-L171)
+Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 3200×1600 画幅宽高比为 2:1，低于其 3.2 的双目判定阈值，该版本也没有 CV10 的 IMU 支持。系统允许外屏启动时可打开原版的平面入口。实验分支 `codex/cv10-pocket-renderer` 使用 Android 虚拟屏接收 Pocket XR 的左右眼画面，再由 Monado 送到 CV10。原版应用到镜片的完整路径仍待授权后验证。[Pocket XR 双目判定](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/GlassesOptics.kt#L211-L262) · [空间模式前置条件](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L146-L171)
 
 Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
 
-在 Fold7 上用 ADB 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，再启动未修改的 Pocket XR 1.6.28 `SpaceActivity`。其内置测试卡在虚拟屏上显示了独立的 `LEFT EYE` 与 `RIGHT EYE`。打开 **空间窗口 → 3D：窗口有真实的深度** 后，原版渲染日志记录左右眼各为 1920×1080。空场景录到黑底。该轮未授予 Pocket XR 自身的 Shizuku 权限，未接入 CV10 头部姿态。
+另一次实验在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡录到了独立的 `LEFT EYE` 与 `RIGHT EYE` 帧。打开 Pocket XR **空间窗口 → 3D：窗口有真实的深度** 后，日志确认实际场景按左右眼各 1920×1080 渲染。没有应用面板、未打开启动器时，正常场景仍为黑底。该轮 Pocket XR 未获得 Shizuku 授权，也没有实际头部姿态输入。镜片双目、空间应用窗口和 3D 投屏仍待验证。
 
 ### Pocket XR 外显实验预览
 
@@ -91,7 +91,7 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 .\gradlew.bat "-Pcv10Abi=arm64-v8a" "-Pcv10LauncherPreview=true" :src:xrt:targets:openxr_android:assembleOutOfProcessDebug
 ```
 
-预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。Fold7 的 Android 16 会为当前调试包显示 16 KB ELF 对齐提示，本次实测设备使用 4 KB 内存页，点 **确定** 后可继续。16 KB 内存页设备仍待验证。[Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
+预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。默认静态 C++ 标准库配置的 ARM64 APK 已通过所有 `PT_LOAD` 段的 16 KB 对齐检查及 `zipalign -c -P 16 -v 4`。使用 4 KB 内存页的 Fold7 在更新对齐包后未再显示兼容提示。16 KB 内存页设备仍待验证。[Fold7 验收记录](history/fold7-offline-launcher.md) · [Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
 
 历史 APK 和对应实验说明见 [apk/archive](apk/archive) 和 [history](history)。上游项目说明与许可证见 [README.upstream.md](README.upstream.md) 和 [LICENSE](LICENSE)。
 

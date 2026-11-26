@@ -401,9 +401,12 @@ compositor_request_display_refresh_rate(struct xrt_compositor *xc, float display
 		dlclose(android_handle);
 		return XRT_SUCCESS;
 	}
-	struct ANativeWindow *window = (struct ANativeWindow *)android_globals_get_window();
+	struct ANativeWindow *window = (struct ANativeWindow *)android_globals_acquire_window();
 	if (window == NULL || (set_frame_rate(window, display_refresh_rate_hz, 1) != 0)) {
 		U_LOG_E("set_frame_rate error");
+	}
+	if (window != NULL) {
+		ANativeWindow_release(window);
 	}
 	dlclose(android_handle);
 #else

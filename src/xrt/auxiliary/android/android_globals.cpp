@@ -9,7 +9,10 @@
 
 #include "android_globals.h"
 
+#include <android/native_window.h>
+#include <mutex>
 #include <stddef.h>
+#include <utility>
 #include <wrap/android.app.h>
 
 /*!
@@ -20,8 +23,10 @@ static struct
 	struct _JavaVM *vm = nullptr;
 	jni::Object activity = {};
 	jni::Object context = {};
-	struct _ANativeWindow *window = nullptr;
 } android_globals;
+
+static std::mutex window_mutex;
+static ANativeWindow *cached_window = nullptr;
 
 void
 android_globals_store_vm_and_activity(struct _JavaVM *vm, void *activity)
@@ -54,13 +59,39 @@ android_globals_is_instance_of_activity(struct _JavaVM *vm, void *obj)
 void
 android_globals_store_window(struct _ANativeWindow *window)
 {
-	android_globals.window = window;
+	ANativeWindow *previous;
+	{
+		std::lock_guard<std::mutex> lock(window_mutex);
+		previous = std::exchange(cached_window, reinterpret_cast<ANativeWindow *>(window));
+	}
+	if (previous != nullptr) {
+		ANativeWindow_release(previous);
+	}
 }
 
 struct _ANativeWindow *
-android_globals_get_window()
+android_globals_acquire_window()
 {
-	return android_globals.window;
+	std::lock_guard<std::mutex> lock(window_mutex);
+	if (cached_window != nullptr) {
+		ANativeWindow_acquire(cached_window);
+	}
+	return reinterpret_cast<struct _ANativeWindow *>(cached_window);
+}
+
+void
+android_globals_clear_window(struct _ANativeWindow *window)
+{
+	ANativeWindow *previous = nullptr;
+	{
+		std::lock_guard<std::mutex> lock(window_mutex);
+		if (cached_window == reinterpret_cast<ANativeWindow *>(window)) {
+			previous = std::exchange(cached_window, nullptr);
+		}
+	}
+	if (previous != nullptr) {
+		ANativeWindow_release(previous);
+	}
 }
 
 struct _JavaVM *

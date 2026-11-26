@@ -122,6 +122,11 @@ public class MonadoView extends SurfaceView
         return null;
     }
 
+    @Keep
+    public static boolean canPresentOnCv10(Context context) {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && findCv10(context) != null;
+    }
+
     // Accessed only on the UI thread. Overlapping sessions share the original window values.
     private static final WeakHashMap<Window, PrimaryVote> primaryVotes = new WeakHashMap<>();
 
@@ -161,12 +166,14 @@ public class MonadoView extends SurfaceView
         }
     }
 
-    private static void requestCv10PrimaryRate(Activity owner, Presentation presentation) {
+    /** Acquires a rate vote on the main thread. The returned action releases it on that thread. */
+    @Nullable
+    public static Runnable requestCv10PrimaryRate(Activity owner) {
         Window window = owner.getWindow();
         View content = window.findViewById(android.R.id.content);
-        if (content == null) return;
+        if (content == null) return null;
         Display primary = content.getDisplay();
-        if (primary == null || primary.getDisplayId() != Display.DEFAULT_DISPLAY) return;
+        if (primary == null || primary.getDisplayId() != Display.DEFAULT_DISPLAY) return null;
         PrimaryVote current = primaryVotes.get(window);
         if (current == null) {
             Display.Mode active = primary.getMode();
@@ -182,19 +189,20 @@ public class MonadoView extends SurfaceView
         } else {
             current.sessions++;
         }
-        presentation.setOnDismissListener(dialog -> {
+        return () -> {
             PrimaryVote vote = primaryVotes.get(window);
             if (vote != null && --vote.sessions == 0) {
                 primaryVotes.remove(window);
                 vote.restore(window, content);
             }
-        });
+        };
     }
 
     private static MonadoView attachCv10(Context owner, Display display, long pointer) {
         Context target = owner.createDisplayContext(display);
-        boolean applicationWindow = owner instanceof Activity;
-        if (!applicationWindow && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        final boolean activityOwner = owner instanceof Activity;
+        final boolean usePresentation = activityOwner || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S;
+        if (!usePresentation && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             target = target.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null);
         }
         final MonadoView view = pointer == 0 ? new MonadoView(target) : new MonadoView(target, pointer);
@@ -207,9 +215,10 @@ public class MonadoView extends SurfaceView
         }
         final int modeId = preferred == null ? 0 : preferred.getModeId();
         if (modeId != 0) view.getHolder().setFixedSize(3200, 1600);
+        String path = usePresentation ? "presentation" : "overlay";
         Log.i(TAG, "CV10 target id=" + display.getDisplayId() + " name=" + display.getName()
                 + " active=" + display.getMode() + " preferred=" + preferred
-                + " path=" + (applicationWindow ? "presentation" : "overlay"));
+                + " owner=" + (activityOwner ? "activity" : "runtime") + " path=" + path);
         new Handler(Looper.getMainLooper()).post(() -> {
             try {
                 if (!display.isValid()) return;
@@ -217,7 +226,7 @@ public class MonadoView extends SurfaceView
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
-                if (applicationWindow) {
+                if (usePresentation) {
                     Presentation dialog = new Presentation(owner, display);
                     Window window = dialog.getWindow();
                     window.addFlags(flags);
@@ -230,7 +239,10 @@ public class MonadoView extends SurfaceView
                     dialog.setContentView(view);
                     dialog.show();
                     view.presentation = dialog;
-                    requestCv10PrimaryRate((Activity) owner, dialog);
+                    if (activityOwner) {
+                        Runnable releaseVote = requestCv10PrimaryRate((Activity) owner);
+                        if (releaseVote != null) dialog.setOnDismissListener(ignored -> releaseVote.run());
+                    }
                 } else {
                     WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,

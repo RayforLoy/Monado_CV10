@@ -37,6 +37,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     private var visible = false
     private var closing = false
     private var startupFailed = false
+    private var startupPromptShown = false
     private var pendingLaunch: Cv10AppEntry? = null
     private var renderState: SpatialLauncherState? = null
     private var hitTargets = emptyList<HitTarget>()
@@ -96,12 +97,20 @@ class Cv10SpatialLauncherActivity : Activity() {
         super.onStop()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && visible && startupFailed && !startupPromptShown && !isFinishing) {
+            showStartupOptions()
+        }
+    }
+
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() = close()
 
     private fun startRenderer() {
         if (renderState != null || closing) return
         startupFailed = false
+        startupPromptShown = false
         val state =
             SpatialLauncherState {
                 runOnUiThread {
@@ -160,11 +169,12 @@ class Cv10SpatialLauncherActivity : Activity() {
             if (failure != null) Log.e(TAG, failure)
             startupFailed = true
             controls.setText(R.string.cv10_spatial_unavailable)
-            if (hasWindowFocus()) showStartupOptions()
+            if (hasWindowFocus() && !isFinishing) showStartupOptions()
         }
     }
 
     private fun showStartupOptions() {
+        startupPromptShown = true
         AlertDialog.Builder(this)
             .setMessage(R.string.cv10_spatial_unavailable)
             .setNegativeButton(android.R.string.cancel, null)

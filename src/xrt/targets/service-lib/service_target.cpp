@@ -227,6 +227,10 @@ Java_org_freedesktop_monado_ipc_MonadoImpl_nativeAppSurface(JNIEnv *env, jobject
 	jni::Object monadoImpl(thiz);
 
 	ANativeWindow *nativeWindow = ANativeWindow_fromSurface(env, surface);
+	if (nativeWindow == nullptr) {
+		U_LOG_W("Ignoring unavailable client ANativeWindow");
+		return;
+	}
 	android_globals_store_window((struct _ANativeWindow *)nativeWindow);
 	U_LOG_D("Stored ANativeWindow: %p", (void *)nativeWindow);
 }

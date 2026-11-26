@@ -69,11 +69,17 @@ void *
 android_globals_get_context(void);
 
 
+//! Take ownership of the supplied ANativeWindow reference.
 void
 android_globals_store_window(struct _ANativeWindow *window);
 
+//! Acquire an ANativeWindow reference. The caller releases it.
 struct _ANativeWindow *
-android_globals_get_window(void);
+android_globals_acquire_window(void);
+
+//! Release the cached reference only when it still refers to the supplied window.
+void
+android_globals_clear_window(struct _ANativeWindow *window);
 
 #ifdef __cplusplus
 }

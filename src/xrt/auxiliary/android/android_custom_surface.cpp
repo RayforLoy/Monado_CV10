@@ -247,10 +247,24 @@ android_custom_surface_get_display_metrics(struct _JavaVM *vm,
 }
 
 bool
-android_custom_surface_can_draw_overlays(struct _JavaVM *vm, void *context)
+android_custom_surface_can_create_window(struct _JavaVM *vm, void *context)
 {
 	jni::init(vm);
-	return Settings::canDrawOverlays(Context{(jobject)context});
+	Context ctx{(jobject)context};
+	if (Settings::canDrawOverlays(ctx)) {
+		return true;
+	}
+	try {
+		auto clazz = loadClassFromRuntimeApk((jobject)context, MonadoView::getFullyQualifiedTypeName());
+		if (!clazz.isNull()) {
+			jni::Class view_class((jclass)clazz.object().getHandle());
+			auto can_present = view_class.getStaticMethod("canPresentOnCv10", "(Landroid/content/Context;)Z");
+			return view_class.call<bool>(can_present, ctx.object());
+		}
+	} catch (std::exception const &e) {
+		U_LOG_E("Could not check for the CV10 presentation display: %s", e.what());
+	}
+	return false;
 }
 
 float

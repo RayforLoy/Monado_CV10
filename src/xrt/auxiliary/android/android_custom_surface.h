@@ -107,7 +107,7 @@ android_custom_surface_get_display_metrics(struct _JavaVM *vm,
                                            struct xrt_android_display_metrics *out_metrics);
 
 bool
-android_custom_surface_can_draw_overlays(struct _JavaVM *vm, void *context);
+android_custom_surface_can_create_window(struct _JavaVM *vm, void *context);
 
 float
 android_custom_surface_get_display_refresh_rate(struct _JavaVM *vm, void *context);
