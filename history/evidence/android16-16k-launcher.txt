@@ -1,0 +1,42 @@
+2026-11-27 Hong Kong time; Android 16 Google APIs page_size_16kb x86_64 image revision 7, Emulator 37.4.2.
+Official SDK system image SHA1 dd783282e84bf475a02eba6777c79fc5695e1583; host WSL/KVM, swiftshader with guest Vulkan virtualisation disabled.
+
+Before 6561af9 (627c32b):
+API 36, page size 16384, ABIs x86_64,arm64-v8a
+APK SHA-256 4447087444bee5dcea4fffd8c4db2873798a86b8759fc1add1f97c3cc33b9a55
+Performing Streamed Install
+Success
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+Starting: Intent { cmp=org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity }
+Status: ok
+11-27 06:44:07.125  4065  4087 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 06:44:07.447  2882  2882 D nativeloader: Load <installed preview>/lib/arm64/libmonado-service.so using class loader ns clns-9 (caller=<installed preview>/base.apk!classes4.dex): ok
+11-27 06:44:07.481  2882  4108 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 06:44:07.483  2882  4108 F libc    : D:/HUAWEI_CV10_EVO/.research/mcb/src/xrt/auxiliary/os/os_threading.h:138: void os_mutex_destroy(struct os_mutex *): assertion "om->initialized" failed
+11-27 06:44:07.822  4118  4118 F DEBUG   : Abort message: 'D:/HUAWEI_CV10_EVO/.research/mcb/src/xrt/auxiliary/os/os_threading.h:138: void os_mutex_destroy(struct os_mutex *): assertion "om->initialized" failed'
+11-27 06:44:07.875  4065  4065 E Cv10SpatialLauncher: xrCreateInstance failed with OpenXR result -51
+11-27 06:44:09.102  4174  4174 D nativeloader: Load <installed preview>/lib/arm64/libmonado-service.so using class loader ns clns-9 (caller=<installed preview>/base.apk!classes4.dex): ok
+11-27 06:44:09.121  4174  4194 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 06:44:09.122  4174  4194 F libc    : D:/HUAWEI_CV10_EVO/.research/mcb/src/xrt/auxiliary/os/os_threading.h:138: void os_mutex_destroy(struct os_mutex *): assertion "om->initialized" failed
+
+With 6561af9 (install, launch and tap Retry):
+API 36, page size 16384, ABIs x86_64,arm64-v8a
+APK SHA-256 c2b9f6017662de9766e06e027a32cf847a5050a73b941465385231c682160d9d
+Performing Streamed Install
+Success
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+Starting: Intent { cmp=org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity }
+Status: ok
+11-27 06:46:06.705  4722  4739 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 06:46:07.028  4548  4548 D nativeloader: Load <installed preview>/lib/arm64/libmonado-service.so using class loader ns clns-9 (caller=<installed preview>/base.apk!classes4.dex): ok
+11-27 06:46:07.057  4548  4750 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 06:46:07.214  4548  4758 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 06:46:07.332  4722  4722 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+11-27 06:46:52.427  4722  4868 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 06:46:52.613  4548  4870 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 06:46:52.749  4548  4875 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 06:46:52.870  4722  4722 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+Both attempts reused launcher PID 4722 and runtime service PID 4548.
+No Fatal signal or FATAL EXCEPTION after the update. The launcher presented Retry / Cancel / Open Runtime Broker.

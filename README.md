@@ -45,6 +45,8 @@ Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停�
 
 移除预览包的 `INTERNET` 权限且未授予 Shizuku 权限时，2D 和 3D 菜单都能启动原版 `hello_xr` 并在 CV10 出图。若遇到 `XR_ERROR_RUNTIME_UNAVAILABLE`，打开已选定运行时的 Broker，再返回菜单点选。关闭系统 Wi-Fi 的独立复测待做。[整合预览网络隔离实测](history/fold7-offline-launcher.md#整合预览在网络隔离下启动原版样例)
 
+ARM64 整合预览在 16 KiB 的 Android 16 模拟器验证了安装、OpenXR 原生库加载和 Vulkan 启动失败后的重试。相同安装包也在 4 KiB 的 Fold7 系统验证了 2D 和 3D 启动入口及镜片输出。[16 KiB 系统与 Fold7 回归](history/fold7-offline-launcher.md#16-kib-系统安装与启动失败回归)
+
 ## Pocket XR 外屏兼容性
 
 安装原版 Pocket XR 后，在 Monado CV10 菜单打开 **Pocket XR 外显兼容性**。该页面显示 CV10 的活动时序，以及 Android 是否允许 Pocket XR 在外屏启动。Fold7 的 **设置 → 已连接的设备 → Samsung DeX → 连接的显示设备** 可切换 **已扩展** 和 **已镜像**。

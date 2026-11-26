@@ -62,3 +62,13 @@
 同一台 Fold7、C9.53.6 原厂线和 5 V 供电，CV10 为 3200×1600、90 Hz。Broker 选 **Monado CV10 Preview**，预览没有 Shizuku 授权。从 2D 列表直开原版 `hello_xr`，以及底部上滑停留置中后从 3D 菜单点选样例，两次均进入 `FOCUSED`，右镜拍到蓝色方块。两次系统返回均进入 `STOPPING` 并完成 `xrDestroyInstance`。3D 菜单也拍到激光指针。完成后恢复稳定 **Monado CV10** Broker、原预览 APK，最低刷新率为 `null`。[回归日志](evidence/fold7-launcher-93133c7.log) · [3D 菜单右镜](evidence/fold7-launcher-93133c7-menu-right.jpg)
 
 06:37 以包含 Pocket XR VPN 停止修复的 `627c32bf60e1f736eeecd1bc3677f591cf63d6bf` 再测。ARM64 APK 的 SHA-256 为 `4447087444bee5dcea4fffd8c4db2873798a86b8759fc1add1f97c3cc33b9a55`。v2 签名、16 KiB ZIP 对齐及五个 ARM64 ELF 的 15 个 `PT_LOAD` 段通过检查。沿用同一台 Fold7 和接线，两种入口都启动原版 `hello_xr` 至 `FOCUSED`。右镜拍到 3D 菜单、激光指针和两轮蓝色方块。两轮返回都进入 `IDLE` 并完成 `xrDestroyInstance`。结束后恢复稳定 Broker 及测试前的预览 APK，电量 69%、最低刷新率 `null`。Wi-Fi 与 VPN、Shizuku 授权保持原值。[回归日志](evidence/fold7-launcher-627c32b.log) · [2D 直开样例右镜](evidence/fold7-launcher-627c32b-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-627c32b-menu-right.jpg) · [3D 点选样例右镜](evidence/fold7-launcher-627c32b-select-right.jpg)
+
+## 16 KiB 系统安装与启动失败回归
+
+06:43–06:47 香港时间。Android 16 Google APIs 16 KiB 系统镜像（API 36、x86_64、修订版 7）报告 `getconf PAGE_SIZE` 为 `16384`，并通过 ARM64 翻译层安装同一个 `627c32b` APK。2D 启动器打开，3D 入口成功加载 ARM64 的 OpenXR 运行时与 `libmonado-service.so`。测试配置缺少运行时所需的 Vulkan 实例扩展。初始化失败时，服务清理尚未初始化的 Vulkan 队列互斥锁，触发 `vk_deinit_mutex → os_mutex_destroy` 的断言并退出。
+
+`6561af9` 仅释放已初始化的队列互斥锁，并回收部分初始化失败时已经创建的锁。修复包在同一个 16 KiB 系统成功安装，原生运行时能够加载、创建实例。以相同 Vulkan 条件重新启动及选择 **重试**，两次都在 `xrGetSystem` 返回错误并显示可重试提示。启动器和运行时服务进程均存活。这轮模拟器验证覆盖安装、原生库加载和失败恢复，CV10 显示仍由 Fold7 实机回归覆盖。[16 KiB 加载与重试日志](evidence/android16-16k-launcher.txt)
+
+`6561af9` ARM64 APK SHA-256 为 `c2b9f6017662de9766e06e027a32cf847a5050a73b941465385231c682160d9d`。v2 签名、16 KiB ZIP 对齐和五个原生库的 15 个 ELF `PT_LOAD` 段通过检查。
+
+06:46–06:47 在 Fold7 安装同一 APK，系统页大小为 4096。沿用 C9.53.6 原厂线和 5 V 供电，从 2D 列表和 3D 菜单依次启动未修改的 `hello_xr`。两次均 `FOCUSED`，右镜对应蓝方块可见，按返回后进入 `IDLE` 并完成 `xrDestroyInstance`。恢复稳定 Broker 和原预览 APK，最低刷新率为 `null`，电量 70%。[Fold7 日志](evidence/fold7-launcher-6561af9.log) · [2D 直开样例右镜](evidence/fold7-launcher-6561af9-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-6561af9-menu-right.jpg) · [3D 点选样例右镜](evidence/fold7-launcher-6561af9-select-right.jpg)
