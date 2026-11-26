@@ -1,0 +1,118 @@
+diff --git a/src/xrt/drivers/android/cv10_device.c b/src/xrt/drivers/android/cv10_device.c
+index ea5354b..f559e9d 100644
+--- a/src/xrt/drivers/android/cv10_device.c
++++ b/src/xrt/drivers/android/cv10_device.c
+@@ -13,6 +13,9 @@
+ #include <jni.h>
+ #include <stdio.h>
+ #include <math.h>
++#include <stdlib.h>
++#include <android/log.h>
++#include <sys/system_properties.h>
+
+ struct cv10_device
+ {
+@@ -74,6 +77,8 @@ cv10_worker(void *ptr)
+ 	if (jni_error(env) || !reader) goto done;
+
+ 	int64_t previous = 0, offset = 0, last_mapped = 0, last_log = 0;
++	int64_t next_test_check = 0;
++	int test_step = 0;
+ 	unsigned long long sample_count = 0;
+ 	float peak_rad_s = 0;
+ 	while (os_thread_helper_is_running(&d->worker)) {
+@@ -108,6 +113,23 @@ cv10_worker(void *ptr)
+ 		m_imu_3dof_update(&d->fusion, sample_ns, &accel, &gyro);
+ 		struct xrt_space_relation rel = XRT_SPACE_RELATION_ZERO;
+ 		rel.pose.orientation = d->fusion.rot;
++		if (arrival >= next_test_check) {
++			char value[PROP_VALUE_MAX] = {0};
++			__system_property_get("debug.cv10.anchor_test", value);
++			const int next = atoi(value);
++			if (next != test_step)
++				__android_log_print(ANDROID_LOG_INFO, "Cv10AnchorInputDiag", "CV10 anchor diagnostic pose=%d", next);
++			test_step = next;
++			next_test_check = arrival + 25000000;
++		}
++		if (test_step == 1 || test_step == 2) {
++			const struct xrt_vec3 axis = test_step == 1 ? (struct xrt_vec3){0, 1, 0} :
++			                                                (struct xrt_vec3){1, 0, 0};
++			struct xrt_quat offset, rotated;
++			math_quat_from_angle_vector(0.17f, &axis, &offset);
++			math_quat_rotate(&offset, &rel.pose.orientation, &rotated);
++			rel.pose.orientation = rotated;
++		}
+ 		math_quat_rotate_vec3(&rel.pose.orientation, &gyro, &rel.angular_velocity);
+ 		rel.relation_flags = XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
+ 		                     XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT;
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+index eb1938a..4b22593 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+@@ -9,6 +9,8 @@ import android.content.Context
+ import android.content.Intent
+ import android.content.IntentFilter
+ import android.content.pm.PackageManager
++import android.hardware.display.DisplayManager
++import android.hardware.display.VirtualDisplay
+ import android.net.VpnService
+ import android.os.Bundle
+ import android.util.Log
+@@ -44,6 +46,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private var pendingPermission: Int? = null
+     private var stopping = false
+     private var pendingVpn = false
++    private var diagnosticDisplay: VirtualDisplay? = null
+     private var headLinkStarted = false
+     private var controlsAvailable = false
+     override var keepSessionWhilePaused = false
+@@ -229,11 +232,11 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private fun startPreview(mode: Int) {
+         if (renderer != null || stopping || pendingPermission != null || pendingVpn) return
+         try {
+-            if (!Shizuku.pingBinder()) {
++            if (mode != MODE_TEST_CARD && !Shizuku.pingBinder()) {
+                 status.setText(R.string.cv10_pocket_preview_needs_shizuku)
+                 return
+             }
+-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
++            if (mode != MODE_TEST_CARD && Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                 pendingPermission = mode
+                 updateButtons()
+                 Shizuku.requestPermission(REQUEST_DISPLAY_PERMISSION)
+@@ -268,9 +271,23 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+             worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS,
+             onSurface = { surface ->
+                 if (transport === nextTransport) {
+-                    nextTransport.start(surface) { result ->
+-                        if (transport === nextTransport) {
+-                            result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
++                    if (mode == MODE_TEST_CARD) {
++                        runCatching {
++                            val manager = getSystemService(DisplayManager::class.java)
++                            diagnosticDisplay = checkNotNull(manager.createVirtualDisplay(
++                                "CV10 Pocket XR Anchor Diagnostic", 3840, 1080, 240, surface,
++                                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or
++                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY,
++                            ))
++                            displayId = diagnosticDisplay?.display?.displayId
++                            Log.i(TAG, "Anchor diagnostic public display id=$displayId")
++                            updateStatus()
++                        }.onFailure(::showError)
++                    } else {
++                        nextTransport.start(surface) { result ->
++                            if (transport === nextTransport) {
++                                result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
++                            }
+                         }
+                     }
+                 }
+@@ -309,6 +326,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private fun stopPreview(message: String) {
+         val previousTransport = transport
+         val previousRenderer = renderer
++        diagnosticDisplay?.release()
++        diagnosticDisplay = null
+         transport = null
+         renderer = null
+         controlsAvailable = false

@@ -1,0 +1,8 @@
+mode,sample,left_x,left_y,left_pixels,right_x,right_y,right_pixels
+view-locked,01-centered,817.0,742.0,2398,750.0,742.0,2876
+view-locked,02-yaw,817.0,742.0,2398,750.0,742.0,2876
+view-locked,03-pitch,817.0,742.0,2398,750.0,742.0,2876
+world-anchored,01-centered,817,741,2337,750.0,742.0,2834
+world-anchored,02-yaw,981,741,2391,914,742,2943
+world-anchored,03-pitch,817,905,2357,750.0,905.0,2858
+world-anchored,04-recentered,818,741,2331,750.0,742.0,2858

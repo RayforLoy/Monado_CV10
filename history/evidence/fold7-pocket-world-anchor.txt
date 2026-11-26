@@ -1,0 +1,42 @@
+Follow view
+11-27 04:03:55.132   570   970 I MonadoCV10: CV10 valid IMU samples=1 deviceNs=12317955895700
+11-27 04:03:55.174   570   976 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 04:03:55.544   570   570 I Cv10PocketXrPreview: Anchor diagnostic public display id=117
+11-27 04:03:55.554   570   958 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:03:55.554   570   958 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 04:03:55.993   570   570 I Cv10PocketXrPreview: First virtual display frame available on display 117
+11-27 04:03:56.119  1018  1018 I FlipSpaces/Mode: test card display: 117 (CV10 Pocket XR Anchor Diagnostic), mode 322 3840x1080 60.00 Hz (supported: 322: 3840x1080 60.00 Hz), real size 3840x1080, rotation 0, cutout none, flags 0x0, state ON
+11-27 04:03:58.839   570   970 I Cv10AnchorInputDiag: CV10 anchor diagnostic pose=1
+11-27 04:04:01.835   570   970 I Cv10AnchorInputDiag: CV10 anchor diagnostic pose=2
+11-27 04:04:06.193   570   958 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:06.193   570   958 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 04:04:06.247   570   958 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:06.247   570   958 I Cv10SpatialLauncher: OpenXR session state 5
+
+Fixed in OpenXR local space
+11-27 04:04:07.616   570   970 I Cv10AnchorInputDiag: CV10 anchor diagnostic pose=0
+11-27 04:04:17.621  1813  2326 I MonadoCV10: CV10 valid IMU samples=1 deviceNs=12340438312431
+11-27 04:04:17.665  1813  2335 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 04:04:18.085  1813  1813 I Cv10PocketXrPreview: Anchor diagnostic public display id=118
+11-27 04:04:18.093  1813  2320 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:18.093  1813  2320 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 04:04:18.541  1813  2320 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 0)
+11-27 04:04:18.542  1813  1813 I Cv10PocketXrPreview: First virtual display frame available on display 118
+11-27 04:04:18.683  2431  2431 I FlipSpaces/Mode: test card display: 118 (CV10 Pocket XR Anchor Diagnostic), mode 323 3840x1080 60.00 Hz (supported: 323: 3840x1080 60.00 Hz), real size 3840x1080, rotation 0, cutout none, flags 0x0, state ON
+11-27 04:04:21.645  1813  2326 I Cv10AnchorInputDiag: CV10 anchor diagnostic pose=1
+11-27 04:04:24.779  1813  2326 I Cv10AnchorInputDiag: CV10 anchor diagnostic pose=2
+11-27 04:04:29.844  1813  2320 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:29.844  1813  2320 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 04:04:29.900  1813  2320 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:29.900  1813  2320 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 04:04:30.814  1813  2320 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 1)
+11-27 04:04:34.698  1813  2320 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:34.698  1813  2320 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 04:04:34.727  1813  2320 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 04:04:34.727  1813  2320 I Cv10SpatialLauncher: OpenXR session state 5
+
+Regular preview, retry after one Windows ADB server timeout
+11-27 04:07:31.546 27485  7893 V hello_xr: [04:07:31.546][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598463392 time=2525342647967
+11-27 04:07:26.727 27485  7893 V hello_xr: [04:07:26.727][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598463392 time=2520524293906
+Installed preview SHA-256: b1342958abb955c9a3a494455ebe99f75f8ec371ec93ec6966acac22a67f4a1e
+Broker selected Monado CV10; diagnostic property empty; min_refresh_rate=null; no crash buffer entries in the regular retry window.
