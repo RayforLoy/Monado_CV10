@@ -1,0 +1,42 @@
+Control (previous mapping)
+--------- beginning of main
+11-27 03:51:19.150 20163 20163 I Cv10LaserAxisDiag: Fold7 sample frozen rotation=1 headingAxis=0 headingSign=-1.0 forward=[-0.99435776, -0.002073531, -0.10605839]
+11-27 03:51:19.155 20163 20163 I Cv10LaserAxisDiag: Settled pose=0 aim=(0.0,0.0)
+11-27 03:51:22.436 20163 20163 I Cv10LaserAxisDiag: Settled pose=1 aim=(0.0,0.4981514)
+11-27 03:51:26.079 20163 20163 I Cv10LaserAxisDiag: Settled pose=2 aim=(-4.5614434E-10,-0.49843785)
+11-27 03:51:29.575 20163 20163 I Cv10LaserAxisDiag: Settled pose=3 aim=(0.38149884,-0.0064444193)
+11-27 03:51:33.047 20163 20163 I Cv10LaserAxisDiag: Settled pose=4 aim=(-0.38057977,-0.005255457)
+11-27 03:51:36.327 20163 20163 I Cv10LaserAxisDiag: Settled pose=1 aim=(-9.190204E-4,0.49878576)
+11-27 03:51:39.696 20163 20163 I Cv10LaserAxisDiag: Recenter at pose=1
+
+Fixed mapping
+--------- beginning of main
+11-27 03:52:44.928 25356 25356 I Cv10LaserAxisDiag: Fold7 sample frozen rotation=1 headingAxis=0 headingSign=-1.0 forward=[-0.99432975, -0.0020900178, -0.10632009]
+11-27 03:52:44.941 25356 25356 I Cv10LaserAxisDiag: Settled pose=0 aim=(0.0,-6.5192585E-9)
+11-27 03:52:47.770 25356 25356 I Cv10LaserAxisDiag: Settled pose=1 aim=(-4.5516887E-10,-0.4981514)
+11-27 03:52:50.772 25356 25356 I Cv10LaserAxisDiag: Settled pose=2 aim=(-4.56858E-10,0.49843788)
+11-27 03:52:53.709 25356 25356 I Cv10LaserAxisDiag: Settled pose=3 aim=(0.381488,0.0064572035)
+11-27 03:52:56.582 25356 25356 I Cv10LaserAxisDiag: Settled pose=4 aim=(-0.38056904,0.0052682543)
+11-27 03:52:59.455 25356 25356 I Cv10LaserAxisDiag: Settled pose=1 aim=(-9.189949E-4,-0.49878573)
+11-27 03:53:02.277 25356 25356 I Cv10LaserAxisDiag: Recenter at pose=1
+
+Regular preview (diagnostic input absent)
+11-27 03:54:18.789 27285 27323 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Entering loader trampoline
+11-27 03:54:18.789 27285 27323 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Entering loader terminator
+11-27 03:54:18.792 27285 27323 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+11-27 03:54:18.792 27285 27323 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : Destroying LoaderInstance = 0xb4000076b81cc530
+11-27 03:54:18.792 27285 27323 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 03:54:18.792 27285 27323 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 03:54:19.339 27485 27522 V hello_xr: [03:54:19.339][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2526521656924
+11-27 03:54:24.279 27485 27522 V hello_xr: [03:54:24.279][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2531461139214
+11-27 03:54:25.463 27485 27522 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Entering loader trampoline
+11-27 03:54:25.463 27485 27522 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Entering loader terminator
+11-27 03:54:25.465 27485 27522 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+11-27 03:54:25.465 27485 27522 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : Destroying LoaderInstance = 0xb4000076b8179cd0
+11-27 03:54:25.465 27485 27522 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 03:54:25.465 27485 27522 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 03:54:13.381 27285 27323 I Cv10SpatialLauncher: OpenXR session state 5
+
+Installed preview SHA-256: e08a76447ec20644de1340f1494ba0f18f6a01cd4eda7b32b2f6be7fdf9becf3
+Crash buffer entries after 03:54:07 HKT: 0
+Broker selected Monado CV10; min_refresh_rate=null; battery 65%.
