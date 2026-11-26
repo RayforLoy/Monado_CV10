@@ -32,9 +32,11 @@ import java.lang.reflect.Method;
 public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub {
     private static final String TAG = "Cv10PocketXrDisplay";
     private static final String SHELL_PACKAGE = "com.android.shell";
-    private static final ComponentName POCKET_XR = ComponentName.createRelative(
+    private static final ComponentName POCKET_SPACE = ComponentName.createRelative(
             "com.hayeco.flipspaces", ".spatial.SpaceActivity");
-    private static final int WIDTH = 3840;
+    public static final ComponentName POCKET_PC_SCREEN = ComponentName.createRelative(
+            "com.hayeco.flipspaces", ".pcscreen.PcScreenActivity");
+    private static final int SPACE_WIDTH = 3840;
     private static final int HEIGHT = 1080;
     private static final int DENSITY_DPI = 240;
     private static final int SYSTEM_USER = 0;
@@ -77,7 +79,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     }
 
     @Override
-    public synchronized int start(Surface surface, IBinder clientLife, boolean showTestCard)
+    public synchronized int start(Surface surface, IBinder clientLife, int mode)
             throws RemoteException {
         verifyCaller();
         if (surface == null) throw new IllegalArgumentException("Missing Pocket XR output Surface");
@@ -91,18 +93,23 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             if (clientLife == null || !surface.isValid()) {
                 throw new IllegalArgumentException("Invalid Pocket XR display lease or Surface");
             }
+            if (mode != MODE_SPACE && mode != MODE_TEST_CARD && mode != MODE_PC_SCREEN_SBS) {
+                throw new IllegalArgumentException("Unknown Pocket XR display mode");
+            }
+            int width = mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH;
             if (currentLease != null) throw new IllegalStateException("Pocket XR display is already running");
             lease = new Lease(clientLife, surface);
             clientLife.linkToDeath(lease, 0);
             currentLease = lease;
-            lease.display = createDisplay(surface);
+            lease.display = createDisplay(surface, width);
             int displayId = lease.display.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
             }
-            launchPocketXr(displayId, showTestCard);
+            launchPocketXr(displayId, mode);
             started = true;
-            Log.i(TAG, "Pocket XR start accepted on " + displayId + " (3840x1080, 240 dpi)");
+            Log.i(TAG, "Pocket XR mode " + mode + " start accepted on " + displayId
+                    + " (" + width + "x" + HEIGHT + ", " + DENSITY_DPI + " dpi)");
             return displayId;
         } catch (InvocationTargetException e) {
             throw platformFailure(e.getCause());
@@ -122,21 +129,22 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
 
     @RequiresApi(34)
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
-    private VirtualDisplay createDisplay(Surface surface) throws ReflectiveOperationException {
+    private VirtualDisplay createDisplay(Surface surface, int width) throws ReflectiveOperationException {
         // A normal package Context would pass Monado's package name with the shell UID.
         Constructor<DisplayManager> constructor = DisplayManager.class.getDeclaredConstructor(Context.class);
         constructor.setAccessible(true);
         DisplayManager manager = constructor.newInstance(new ShellDisplayContext(context));
         VirtualDisplay display = manager.createVirtualDisplay(
-                "Monado CV10 Pocket XR", WIDTH, HEIGHT, DENSITY_DPI, surface, FLAGS);
+                "Monado CV10 Pocket XR", width, HEIGHT, DENSITY_DPI, surface, FLAGS);
         if (display == null) throw new IllegalStateException("Android rejected the Pocket XR virtual display");
         return display;
     }
 
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
-    private void launchPocketXr(int displayId, boolean showTestCard) throws ReflectiveOperationException {
-        Intent intent = new Intent().setComponent(POCKET_XR).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (showTestCard) intent.putExtra("test_card", "eyes");
+    private void launchPocketXr(int displayId, int mode) throws ReflectiveOperationException {
+        ComponentName target = mode == MODE_PC_SCREEN_SBS ? POCKET_PC_SCREEN : POCKET_SPACE;
+        Intent intent = new Intent().setComponent(target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (mode == MODE_TEST_CARD) intent.putExtra("test_card", "eyes");
         Bundle options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle();
         Object manager = ActivityManager.class.getDeclaredMethod("getService").invoke(null);
         // The explicit shell package and absent app thread match a shell-originated launch.

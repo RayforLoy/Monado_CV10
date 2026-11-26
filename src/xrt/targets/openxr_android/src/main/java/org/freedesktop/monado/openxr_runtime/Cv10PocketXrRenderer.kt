@@ -12,6 +12,7 @@ import androidx.annotation.Keep
 /** Consumes a side-by-side virtual display in the same EGL context that submits OpenXR frames. */
 internal class Cv10PocketXrRenderer(
     private val activity: Activity,
+    private val captureWidth: Int? = null,
     private val onSurface: (Surface) -> Unit,
     private val onFirstFrame: () -> Unit,
     private val onFinished: (String?) -> Unit,
@@ -59,7 +60,7 @@ internal class Cv10PocketXrRenderer(
             try {
                 val current = SurfaceTexture(textureName)
                 texture = current
-                current.setDefaultBufferSize(width, height)
+                current.setDefaultBufferSize(captureWidth ?: width, height)
                 val output = Surface(current)
                 surface = output
                 activity.runOnUiThread { if (!state.stop && output.isValid) onSurface(output) }

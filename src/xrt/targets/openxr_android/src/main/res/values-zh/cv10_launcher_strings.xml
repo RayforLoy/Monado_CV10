@@ -10,6 +10,9 @@
     <string name="cv10_pocket_preview_title">Pocket XR 外显预览</string>
     <string name="cv10_pocket_preview_intro">先在 Runtime Broker 选择 Monado CV10 Preview，并允许访问 CV10 USB 设备。浏览双目空间时，从 Pocket XR 的「空间窗口」打开启动器，再选择「深度（3D 左右并排）」。</string>
     <string name="cv10_pocket_preview_open">打开 Pocket XR 空间</string>
+    <string name="cv10_pocket_pc_setup">在手机上设置电脑屏幕</string>
+    <string name="cv10_pocket_pc_sbs">电脑屏幕 3D（左右并排）</string>
+    <string name="cv10_pocket_pc_unavailable">请先安装支持电脑屏幕的 Pocket XR。</string>
     <string name="cv10_pocket_preview_test">显示左右眼测试卡</string>
     <string name="cv10_pocket_preview_stop">停止预览</string>
     <string name="cv10_pocket_preview_controls">打开手机控制</string>

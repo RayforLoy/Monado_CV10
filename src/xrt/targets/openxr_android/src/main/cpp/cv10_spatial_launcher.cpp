@@ -666,7 +666,7 @@ private:
 		};
 		if (frame.shouldRender && capture && capture.update(transform_uniform)) {
 			draw_panel();
-			// Pocket XR has already rendered each eye in head coordinates.
+			// The capture is either Pocket XR's stereo canvas or a side-by-side PC video.
 			constexpr int32_t eye_width = pocket_width / 2;
 			for (int eye = 0; eye < 2; ++eye) {
 				auto &quad = quads[eye];

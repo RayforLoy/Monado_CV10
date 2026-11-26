@@ -3,6 +3,7 @@
 package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -16,21 +17,29 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import org.freedesktop.monado.auxiliary.Cv10ExternalPresentation
+import org.freedesktop.monado.auxiliary.Cv10PocketXrDisplayService
+import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_PC_SCREEN_SBS
+import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_SPACE
+import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_TEST_CARD
+import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.PC_SCREEN_WIDTH
 import rikka.shizuku.Shizuku
 
 class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var status: TextView
     private lateinit var open: Button
+    private lateinit var pcSetup: Button
+    private lateinit var pcScreen: Button
     private lateinit var test: Button
     private lateinit var controls: Button
     private lateinit var stop: Button
     private lateinit var headLink: CheckBox
     private var transport: Cv10PocketXrTransport? = null
     private var renderer: Cv10PocketXrRenderer? = null
-    private var pendingPermission: Boolean? = null
+    private var pendingPermission: Int? = null
     private var stopping = false
     private var pendingVpn = false
     private var headLinkStarted = false
@@ -46,10 +55,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
 
     private val permissionListener = Shizuku.OnRequestPermissionResultListener { request, result ->
         if (request == REQUEST_DISPLAY_PERMISSION) {
-            val showTestCard = pendingPermission
+            val mode = pendingPermission
             pendingPermission = null
-            if (result == PackageManager.PERMISSION_GRANTED && showTestCard != null && !isFinishing) {
-                startPreview(showTestCard)
+            if (result == PackageManager.PERMISSION_GRANTED && mode != null && !isFinishing) {
+                startPreview(mode)
             } else {
                 status.setText(R.string.cv10_pocket_preview_shizuku_denied)
                 updateButtons()
@@ -77,11 +86,26 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         }
         open = Button(this).apply {
             setText(R.string.cv10_pocket_preview_open)
-            setOnClickListener { startPreview(false) }
+            setOnClickListener { startPreview(MODE_SPACE) }
+        }
+        pcSetup = Button(this).apply {
+            setText(R.string.cv10_pocket_pc_setup)
+            setOnClickListener {
+                try {
+                    startActivity(Intent().setComponent(Cv10PocketXrDisplayService.POCKET_PC_SCREEN))
+                } catch (error: ActivityNotFoundException) {
+                    Log.w(TAG, "Pocket XR PC Screen is unavailable", error)
+                    status.setText(R.string.cv10_pocket_pc_unavailable)
+                }
+            }
+        }
+        pcScreen = Button(this).apply {
+            setText(R.string.cv10_pocket_pc_sbs)
+            setOnClickListener { startPreview(MODE_PC_SCREEN_SBS) }
         }
         test = Button(this).apply {
             setText(R.string.cv10_pocket_preview_test)
-            setOnClickListener { startPreview(true) }
+            setOnClickListener { startPreview(MODE_TEST_CARD) }
         }
         controls = Button(this).apply {
             setText(R.string.cv10_pocket_preview_controls)
@@ -98,10 +122,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         panel.addView(status)
         panel.addView(headLink)
         panel.addView(open)
-        panel.addView(test)
         panel.addView(controls)
+        panel.addView(pcSetup)
+        panel.addView(pcScreen)
+        panel.addView(test)
         panel.addView(stop)
-        setContentView(panel)
+        setContentView(ScrollView(this).apply { addView(panel) })
         Shizuku.addRequestPermissionResultListener(permissionListener)
         val stopFilter = IntentFilter(Intent.ACTION_SCREEN_OFF).apply {
             addAction(Cv10PocketControlsService.STOP_ACTION)
@@ -185,7 +211,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         updateButtons()
     }
 
-    private fun startPreview(showTestCard: Boolean) {
+    private fun startPreview(mode: Int) {
         if (renderer != null || stopping || pendingPermission != null || pendingVpn) return
         try {
             if (!Shizuku.pingBinder()) {
@@ -193,7 +219,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 return
             }
             if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                pendingPermission = showTestCard
+                pendingPermission = mode
                 updateButtons()
                 Shizuku.requestPermission(REQUEST_DISPLAY_PERMISSION)
                 return
@@ -209,7 +235,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         var displayId: Int? = null
         var hasFrame = false
         lateinit var nextTransport: Cv10PocketXrTransport
-        nextTransport = Cv10PocketXrTransport(applicationContext, showTestCard = showTestCard, onInterrupted = { error ->
+        nextTransport = Cv10PocketXrTransport(applicationContext, mode = mode, onInterrupted = { error ->
             if (transport === nextTransport) showError(error)
         })
         fun updateStatus() {
@@ -217,12 +243,13 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             if (hasFrame && transport === nextTransport) {
                 status.text = getString(R.string.cv10_pocket_preview_receiving, id)
                 Log.i(TAG, "First virtual display frame available on display $id")
-                controlsAvailable = !showTestCard
+                controlsAvailable = mode == MODE_SPACE
                 updateButtons()
             }
         }
         val nextRenderer = Cv10PocketXrRenderer(
             activity = this,
+            captureWidth = if (mode == MODE_PC_SCREEN_SBS) PC_SCREEN_WIDTH else null,
             onSurface = { surface ->
                 if (transport === nextTransport) {
                     nextTransport.start(surface) { result ->
@@ -245,7 +272,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         )
         transport = nextTransport
         renderer = nextRenderer
-        if (!showTestCard && headLink.isChecked) {
+        if (mode == MODE_SPACE && headLink.isChecked) {
             try {
                 startForegroundService(Cv10PocketHeadLinkService.intent(this))
                 headLinkStarted = true
@@ -292,6 +319,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         val available = renderer == null && !stopping && pendingPermission == null && !pendingVpn
         headLink.isEnabled = available
         open.isEnabled = available
+        pcSetup.isEnabled = available
+        pcScreen.isEnabled = available
         test.isEnabled = available
         controls.isEnabled = controlsAvailable
         stop.isEnabled = renderer != null
