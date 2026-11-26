@@ -81,7 +81,7 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 .\gradlew.bat "-Pcv10Abi=arm64-v8a" "-Pcv10LauncherPreview=true" :src:xrt:targets:openxr_android:assembleOutOfProcessDebug
 ```
 
-预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。Fold7 的 Android 16 会为当前调试包显示 16 KB ELF 对齐提示，本次实测设备使用 4 KB 内存页，点 **确定** 后可继续。16 KB 内存页设备仍待验证。[Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
+预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。早期调试 APK 在使用 4 KB 内存页的 Fold7 上显示过 16 KB ELF 对齐提示。默认静态 C++ 标准库配置的新版 ARM64 APK 已通过所有 `PT_LOAD` 段的 16 KB 对齐检查及 `zipalign -c -P 16 -v 4`。16 KB 内存页设备仍待验证。[Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
 
 历史 APK 和对应实验说明见 [apk/archive](apk/archive) 和 [history](history)。上游项目说明与许可证见 [README.upstream.md](README.upstream.md) 和 [LICENSE](LICENSE)。
 
