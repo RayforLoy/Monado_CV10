@@ -6,4 +6,6 @@
 
 虚拟屏 94 的首帧由 Monado 的预览器接收，OpenXR 合成器在 CV10 显示 91 上输出了各自的 `LEFT EYE` 和 `RIGHT EYE`。CV10 两眼面板方向相反，SurfaceFlinger 的物理外屏截图保留面板方向。固定朝向右镜的摄像头拍到正立的 `RIGHT EYE`。[外屏双眼原图](evidence/fold7-pocket-xr-test-card-display.png) · [右镜实拍](evidence/fold7-pocket-xr-test-card-right.jpg)
 
-手机端一键启动需要预览包自己的 Shizuku 授权，Pocket XR 创建空间应用面板另需它自己的授权。左镜实拍、真实头部运动、应用入口、窗口与 3D 投屏待测。诊断退出后已移除临时虚拟屏，Broker 恢复稳定 Monado CV10，最低刷新率仍为 `null`。
+后续使用标准启动器预览包，在 2D 列表关闭 **仅显示 XR 应用**、搜索 Pocket XR 并点选。系统前台窗口为原版 `com.hayeco.flipspaces.TrackpadActivity`，手机显示触控板。该路径未新增 Shizuku 授权。
+
+手机端一键启动外显需要预览包自己的 Shizuku 授权，Pocket XR 创建空间应用面板另需它自己的授权。左镜实拍、真实头部运动、从 Pocket XR 空间点选应用、窗口与 3D 投屏待测。诊断退出后已移除临时虚拟屏，Broker 恢复稳定 Monado CV10，最低刷新率仍为 `null`。
