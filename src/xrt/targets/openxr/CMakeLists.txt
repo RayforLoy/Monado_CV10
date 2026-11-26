@@ -34,3 +34,9 @@ monado_add_openxr_runtime(
 	SOURCES target.c
 	LINK_LIBRARIES ${_libs}
 	)
+
+if(ANDROID)
+	# The Khronos loader closes the runtime at xrDestroyInstance. Its calling
+	# thread can still have native thread-local destructors to run on exit.
+	target_link_options(${RUNTIME_TARGET} PRIVATE "LINKER:-z,nodelete")
+endif()
