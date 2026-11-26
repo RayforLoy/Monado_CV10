@@ -315,8 +315,13 @@ private:
 		check(xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", &function),
 		      "xrGetInstanceProcAddr(xrInitializeLoaderKHR)");
 		const auto initialize_loader = reinterpret_cast<PFN_xrInitializeLoaderKHR>(function);
-		// Start each session with the system-selected runtime, even after a fallback.
-		XrLoaderInitPropertyValueEXT runtime_property{"XR_RUNTIME_JSON", ""};
+		// Pocket XR may use the system Broker for its own OpenXR clients.
+		const bool pin_cv10_runtime = static_cast<bool>(capture);
+		if (pin_cv10_runtime && runtime_manifest.empty()) {
+			throw std::runtime_error("Cannot prepare the bundled Monado CV10 runtime for Pocket XR");
+		}
+		XrLoaderInitPropertyValueEXT runtime_property{"XR_RUNTIME_JSON",
+		                                             pin_cv10_runtime ? runtime_manifest.c_str() : ""};
 		XrLoaderInitInfoPropertiesEXT loader_properties{XR_TYPE_LOADER_INIT_INFO_PROPERTIES_EXT};
 		loader_properties.propertyValueCount = 1;
 		loader_properties.propertyValues = &runtime_property;
@@ -340,7 +345,7 @@ private:
 		instance_info.enabledExtensionCount = 2;
 		instance_info.enabledExtensionNames = extensions;
 		XrResult result = xrCreateInstance(&instance_info, &instance);
-		if (result == XR_ERROR_RUNTIME_UNAVAILABLE && !runtime_manifest.empty()) {
+		if (!pin_cv10_runtime && result == XR_ERROR_RUNTIME_UNAVAILABLE && !runtime_manifest.empty()) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR runtime unavailable, trying bundled Monado CV10");
 			runtime_property.value = runtime_manifest.c_str();
 			check(initialize_loader(loader_header), "xrInitializeLoaderKHR(bundled Monado CV10)");
@@ -350,7 +355,8 @@ private:
 
 		XrInstanceProperties properties{XR_TYPE_INSTANCE_PROPERTIES};
 		check(xrGetInstanceProperties(instance, &properties), "xrGetInstanceProperties");
-		__android_log_print(ANDROID_LOG_INFO, tag, "Using OpenXR runtime %s", properties.runtimeName);
+		__android_log_print(ANDROID_LOG_INFO, tag, "Using OpenXR runtime %s%s", properties.runtimeName,
+		                    pin_cv10_runtime ? " (bundled CV10 for Pocket XR display)" : "");
 
 		XrSystemGetInfo system_info{XR_TYPE_SYSTEM_GET_INFO};
 		system_info.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
