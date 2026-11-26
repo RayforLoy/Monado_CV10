@@ -1,0 +1,9 @@
+11-27 02:40:48.942 27407 27725 E OpenXR-Loader: Error [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeManifestFile::FindManifestFiles - failed to determine active runtime file path for this environment
+11-27 02:40:48.943 27407 27725 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeManifestFile::FindManifestFiles - using environment variable override runtime file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-pocket-runtime.json
+11-27 02:40:49.573 27407 27725 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb'
+11-27 02:40:49.764 27407 27725 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 02:40:49.780 27407 27407 I Cv10PocketXrPreview: Public diagnostic display id=103
+11-27 02:40:49.795 27407 27407 I Cv10PocketXrPreview: Pocket entry .spatial.SpaceActivity exported=true permission=android.permission.INTERACT_ACROSS_USERS_FULL granted=false displayAllowed=false
+11-27 02:40:49.797 27407 27407 I Cv10PocketXrPreview: Pocket entry .MainActivity exported=true permission=null granted=true displayAllowed=false
+11-27 02:40:49.799 27407 27407 I Cv10PocketXrPreview: Pocket entry .TrackpadActivity exported=false permission=null granted=true displayAllowed=false
+11-27 02:40:50.020 27407 27407 I Cv10PocketXrPreview: First public diagnostic display frame

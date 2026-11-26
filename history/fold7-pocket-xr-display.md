@@ -15,3 +15,23 @@
 以该模式重进，物理外屏两眼区都有各自的启动器画面，右镜拍到正立的菜单、工具按钮和应用图标。用虚拟屏的键盘输入搜索并选择 **Hello XR (OpenGL ES)**，原版关闭菜单并为 `org.khronos.openxr.hello_xr.opengles` 显示双目占位窗口。窗口提示 Pocket XR 的 Shizuku 权限未授予，与日志的 `NO_PERMISSION`、实际面板帧复制计数为 0 一致。[双目菜单](evidence/fold7-pocket-xr-launcher-display.png) · [右镜实拍](evidence/fold7-pocket-xr-launcher-right.jpg) · [点选后的双目占位窗口](evidence/fold7-pocket-xr-launcher-selection.png) · [筛选日志](evidence/fold7-pocket-xr-launcher.log)
 
 手机端一键启动外显要使用预览包自己的 Shizuku 授权，Pocket XR 创建空间应用面板还需要它自己的授权。真实应用画面、3D 视频投屏、实时头部跟踪和左镜实拍待测。
+
+## 整合预览复测
+
+2026-11-27 02:40 香港时间，同一台 Fold7 和接线。ARM64 整合预览来自 `6e536a4`，包含内置 2D、3D 启动器及 Pocket XR 外显和头踪实验。正式预览包 SHA-256 为 `94fc866acb33f0def30ec4d3f03ffd11a09e918e44b30604635ea850c110f21c`。签名与 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 `PT_LOAD` 段均对齐到 16 KiB。本机页大小为 4 KiB。内置 3D 菜单进入 `XR_SESSION_STATE_FOCUSED`，右镜拍到应用卡片和手机指针。[内置 3D 菜单右镜实拍](evidence/fold7-pocket-integrated-menu-right.jpg)
+
+光学诊断包来自同一提交加 [诊断补丁](pocket-display-entry-diagnostic.patch)，SHA-256 为 `faa80bd4e7e59e4c7bff85f39c02f23d1d675d047015a23a73a8b0d62794c169`。在同一源码上应用补丁，使用与正式预览相同的 Gradle 构建选项，选择 **显示左右眼测试卡**。这次先记录到系统 Broker 查询失败，随后使用预览包附带的 Monado 运行时进入 `FOCUSED`。诊断创建公共自有内容虚拟屏 103，由已授权的 ADB 在该屏启动原版 `com.hayeco.flipspaces/.spatial.SpaceActivity`，设置 `test_card=eyes`，随后收到首帧。CV10 的两个眼区显示各自的眼别标记，右镜拍到正立的 `RIGHT EYE`。左镜仍待拍摄。[双眼外屏截图](evidence/fold7-pocket-integrated-card-display.png) · [右镜实拍](evidence/fold7-pocket-integrated-card-right.jpg) · [筛选日志](evidence/fold7-pocket-integrated-entry-policy.log)
+
+预览包调用 Android 的 `isActivityStartAllowedOnDisplay` 检查了对该虚拟屏的启动权限。三项入口均返回 `false`。
+
+| 原版入口 | 清单与 Fold7 实测 |
+| --- | --- |
+| `.spatial.SpaceActivity` | 已导出，要求 `android.permission.INTERACT_ACROSS_USERS_FULL`，普通预览包没有这项权限 |
+| `.MainActivity` | 已导出，无组件权限要求。可从手机端启动，系统拒绝在诊断虚拟屏启动 |
+| `.TrackpadActivity` | 未导出，由 Pocket XR 在手机端自行打开 |
+
+02:44，在同一诊断包重开原版空间和双目菜单。原版报告左右各 1920×1080，右镜拍到菜单。用原版菜单选择 `hello_xr` 后，双眼显示提示需要授权的占位窗口。Shizuku 服务在运行，Pocket XR 报告 `NO_PERMISSION`，实际应用面板帧复制计数为 0。[原版菜单右镜实拍](evidence/fold7-pocket-integrated-stock-menu-right.jpg) · [点选结果](evidence/fold7-pocket-integrated-selection.png) · [筛选日志](evidence/fold7-pocket-integrated-selection.log)
+
+手机端一键打开原版外显走预览包自己的 Shizuku 服务。在原版空间中投射实际应用面板还需要 Pocket XR 自己的 Shizuku 授权。上述复测沿用已有 ADB 授权。[原版清单](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/AndroidManifest.xml) · [Android 显示启动权限检查](https://developer.android.com/reference/android/app/ActivityManager#isActivityStartAllowedOnDisplay(android.content.Context,%20int,%20android.content.Intent))
+
+原版 `SpaceRenderer` 的普通应用面板可以按眼裁分左右并排纹理，内置 PC Screen 的实时解码支路则把整帧送给每只眼。由此可知，兼容层搬运双目画布本身不会把 PC Screen 的普通输入变成左右眼不同的画面。普通面板的 3D 视频和 PC Screen 串流需分别验收。[Pocket XR 1.6.28 面板绘制](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/app/src/main/kotlin/com/hayeco/flipspaces/spatial/SpaceRenderer.kt#L4659-L4693)

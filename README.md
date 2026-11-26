@@ -64,7 +64,7 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 - **通过 Android 本机 VPN 接入头部追踪（实验）** 可在打开空间前选用。勾选后由 Android 询问 VPN 授权。打开空间时，预览只为原版 Pocket XR 宣告本机 `169.254.2.1/32`，将 CV10 的 HID 样本和控制心跳送到该地址的两个 TCP 端口。预览退出时关闭连接。
 - **停止预览** 释放本次虚拟显示和 OpenXR 会话。
 
-Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。电脑端用 Fold7 静止样本验证了实验 TCP 服务和原版解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后的实时连接、头动方向、手机端一键启动和 3D 视频投屏仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [IMU 采集、TCP 回放与权限检查](history/fold7-pocket-xr-imu.md)
+Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。整合预览 `6e536a4` 复测了内置 3D 菜单和原版测试卡。Android 在该设备上拒绝普通应用把原版空间入口启动到诊断虚拟屏。电脑端用 Fold7 静止样本验证了实验 TCP 服务和原版解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后的实时连接、头动方向、手机端一键启动和 3D 视频投屏仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [IMU 采集、TCP 回放与权限检查](history/fold7-pocket-xr-imu.md)
 
 ## 原厂手机线
 
