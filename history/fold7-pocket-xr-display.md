@@ -65,3 +65,13 @@
 两轮都通过 Pocket XR 的原版菜单搜索并打开系统应用。用 SwiftShader 时，**Clock** 和 **Settings** 各自进入由 Pocket XR 建立的 1786×976 虚拟屏，直接抓取这些屏幕可见应用已正常更新，双目输出却仍显示各自的启动图标。换成 ANGLE（`-gpu swangle`）后，从原版菜单重新打开 **Clock**，在时钟所在虚拟屏触发秒表，双目输出先后显示 6.78 秒和 10.20 秒，日志也记录到连续复制新帧。在原版手机界面关闭面板后，`Pocket XR: Clock` 从系统显示列表消失。[06.78 秒双目原图](evidence/android16-pocket-app-panel-sbs-1.png) · [10.20 秒双目原图](evidence/android16-pocket-app-panel-sbs-2.png) · [两种图形后端日志与截图摘要](evidence/android16-pocket-app-panel.txt)
 
 该轮验证了原版空间内从菜单启动应用、实时渲染双目面板和关闭清理。秒表按键用 ADB 触发，Fold7、Monado 外显转接及 CV10 镜片未参与本轮。
+
+## Android 16 模拟器 Shizuku 显示传输
+
+07:04 至 07:07（香港时间），在同一隔离模拟器关闭系统模拟外屏。用 [Android 探针](pocket-transport-probe/TransportProbeActivity.kt) 与 `e8bd3e0` 的 `Cv10PocketXrTransport`、`Cv10PocketXrDisplayService` 和 AIDL 编译 APK。授予该探针自己的 Shizuku 权限，由它绑定 UserService 并接收虚拟屏像素。最终测试 APK SHA-256 为 `fbd897557adfb3b2c15be9fa296cd58159c824343b0dcb9895dbe74b39a00f47`。
+
+- 测试卡和空间模式均把原版 `SpaceActivity` 启动到 3840×1080 的 Shell 虚拟屏，探针收到画面。测试卡的 `LEFT EYE` 和 `RIGHT EYE` 方向正常。在同一探针进程内停止后重开可用。[空间测试卡](evidence/android16-pocket-transport-card.png)
+- 电脑屏幕模式把原版 `.pcscreen.PcScreenActivity` 启动到 1920×1080 虚拟屏，探针收到画面。截图为原版内置测试卡，实时 PC 串流另见 [Fold7 的 Half SBS 实测](fold7-pocket-pc-sbs.md)。[电脑屏幕测试卡](evidence/android16-pocket-transport-pc.png)
+- 空间仍在运行时，探针创建并关闭 OpenXR 客户端虚拟屏，随后可再次创建。强制停止探针后，空间和客户端虚拟屏都从系统显示列表消失。[传输日志](evidence/android16-pocket-transport.txt)
+
+用 [构建脚本](pocket-transport-probe/build.py) 可在已有 Android 构建缓存的电脑上复现。在仓库根目录运行 `python history/pocket-transport-probe/build.py --sdk <Android SDK> --jdk <JDK 17> --output <APK>`。重建的 `classes.dex` 和最终验证包逐字节一致。探针使用 `ImageReader` 接收显示传输的画面。Fold7 上仍需串联预览 APK、已授权的 Shizuku、OpenXR 合成器和 CV10。

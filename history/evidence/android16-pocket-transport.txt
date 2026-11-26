@@ -1,0 +1,23 @@
+Android 16 x86_64 emulator, 4096-byte pages, ARM translation, ANGLE.
+Guest Wi-Fi and mobile data off. System overlay removed. Shizuku shell uid 2000.
+Pocket XR 1.6.28 original APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Transport sources from e8bd3e0 with the standalone ImageReader probe, no OpenXR compositor.
+Final probe APK SHA-256 fbd897557adfb3b2c15be9fa296cd58159c824343b0dcb9895dbe74b39a00f47
+Rebuilt classes.dex SHA-256 79de6286e8f5921b7f1ebb79875a683ee0b58744ea8975cd9cc85f14e6dba845 (byte-for-byte match)
+
+11-27 07:06:31.857 5665 5674 I Cv10PocketXrDisplay: Pocket XR mode 2 start accepted on 8 (1920x1080, 240 dpi)
+11-27 07:06:32.273 5580 5580 I Cv10TransportProbe: Received 1920x1080 output frames
+ActivityManager on display #8: top resumed com.hayeco.flipspaces/.pcscreen.PcScreenActivity
+11-27 07:06:56.752 5580 5580 I Cv10TransportProbe: Transport closed
+11-27 07:06:57.412 5665 5674 I Cv10PocketXrDisplay: Pocket XR mode 1 start accepted on 9 (3840x1080, 240 dpi)
+11-27 07:06:58.316 5580 5580 I Cv10TransportProbe: Received 3840x1080 output frames
+11-27 07:06:59.316 5580 5580 I Cv10TransportProbe: Transport closed
+11-27 07:07:00.195 5665 5674 I Cv10PocketXrDisplay: Pocket XR mode 0 start accepted on 10 (3840x1080, 240 dpi)
+11-27 07:07:01.331 5580 5580 I Cv10TransportProbe: Received 3840x1080 output frames
+11-27 07:07:03.687 5665 5674 I Cv10PocketXrDisplay: OpenXR client display ready: 11
+SurfaceFlinger after client stop: primary and Monado CV10 Pocket XR, no OpenXR Client display.
+11-27 07:07:05.495 5665 5674 I Cv10PocketXrDisplay: OpenXR client display ready: 12
+SurfaceFlinger after force-stopping the probe: only primary.
+
+android16-pocket-transport-card.png from the first test card round SHA-256 ff643099b88a77ecece44f57413a6a39e929a23d5b5a7260fdd92f4307cdb98c
+android16-pocket-transport-pc.png from display #8 SHA-256 b5eb5ed2082f5ef5abc8bb78b9e810183fe238dd4354013e45e752f92ebcad86
