@@ -1,0 +1,15 @@
+variant,sample,left_x,left_y,left_count,right_x,right_y,right_count
+control,center,820.0,800.0,102,779.0,800.0,98
+control,raise,820,949,107,779.0,949.0,110
+control,lower,820,649,107,779.0,650.0,104
+control,right,1024,798,145,983,798,145
+control,left,617.0,798.0,114,575,798,105
+control,raised-again,820.0,949.0,106,779,949,113
+control,recenter,820,800,101,779.0,799.5,100
+fixed,center,820.0,799.5,106,779,799,97
+fixed,raise,820.0,650.0,108,779.0,650.0,108
+fixed,lower,821.0,950.0,106,779.0,950.0,106
+fixed,right,1025,801,145,983,801,145
+fixed,left,617.0,801.0,108,575,801,107
+fixed,raised-again,820,650,111,779,650,107
+fixed,recenter,820.0,799.5,108,779,799,105

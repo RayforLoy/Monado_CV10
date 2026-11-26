@@ -1,0 +1,122 @@
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10LaserInput.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10LaserInput.kt
+index 685f633..0974d22 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10LaserInput.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10LaserInput.kt
+@@ -7,6 +7,7 @@ import android.hardware.SensorEvent
+ import android.hardware.SensorEventListener
+ import android.hardware.SensorManager
+ import android.os.Build
++import android.util.Log
+ import android.view.HapticFeedbackConstants
+ import android.view.MotionEvent
+ import android.view.Surface
+@@ -15,7 +16,9 @@ import android.view.ViewConfiguration
+ import android.view.WindowInsets
+ import kotlin.math.abs
+ import kotlin.math.atan2
++import kotlin.math.cos
+ import kotlin.math.hypot
++import kotlin.math.sin
+ import kotlin.math.sqrt
+
+ /** Turns the foreground phone into a pointer. Aim is in [-1, 1], with right and down positive. */
+@@ -43,6 +46,10 @@ internal class Cv10LaserInput(
+     private var displayRotation = Surface.ROTATION_0
+     private var aimX = 0f
+     private var aimY = 0f
++    private var diagnosticPose = -1
++    private var diagnosticLogged = false
++    private val diagnosticBase = FloatArray(9)
++    private val diagnosticRight = FloatArray(3)
+
+     private enum class Zone { POINTER, LEFT, RIGHT, RECENTER, SYSTEM }
+
+@@ -81,6 +88,7 @@ internal class Cv10LaserInput(
+
+     fun recenter() {
+         if (hasSample) calibrate()
++        if (diagnosticPose >= 0) Log.i("Cv10LaserAxisDiag", "Recenter at pose=$diagnosticPose")
+         updateAim(0f, 0f)
+         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+         onRecenter()
+@@ -91,6 +99,7 @@ internal class Cv10LaserInput(
+     override fun onSensorChanged(event: SensorEvent) {
+         if (!running) return
+         SensorManager.getRotationMatrixFromVector(sample, event.values)
++        applyDiagnosticPose()
+         if (!hasSample || displayRotation != (view.display?.rotation ?: Surface.ROTATION_0)) {
+             hasSample = true
+             calibrate()
+@@ -107,6 +116,48 @@ internal class Cv10LaserInput(
+         val targetX = (atan2(horizontal, depth) / 0.52f).coerceIn(-1f, 1f)
+         val targetY = (atan2(vertical, hypot(horizontal, depth)) / 0.40f).coerceIn(-1f, 1f)
+         updateAim(aimX + (targetX - aimX) * 0.35f, aimY + (targetY - aimY) * 0.35f)
++        if (diagnosticPose >= 0 && !diagnosticLogged && hypot(targetX - aimX, targetY - aimY) < 0.002f) {
++            diagnosticLogged = true
++            Log.i("Cv10LaserAxisDiag", "Settled pose=$diagnosticPose aim=($aimX,$aimY)")
++        }
++    }
++
++    fun selectDiagnosticPose(pose: Int): Boolean {
++        if (!running || !hasSample || pose !in 0..4) return false
++        if (pose == 0) {
++            sample.copyInto(diagnosticBase)
++            recenter()
++            right.copyInto(diagnosticRight)
++            Log.i("Cv10LaserAxisDiag", "Fold7 sample frozen rotation=$displayRotation headingAxis=$headingAxis headingSign=$headingSign forward=${forward.contentToString()}")
++        }
++        diagnosticPose = pose
++        diagnosticLogged = false
++        return true
++    }
++
++    private fun applyDiagnosticPose() {
++        if (diagnosticPose < 0) return
++        val pitch = diagnosticPose == 1 || diagnosticPose == 2
++        val angle = when (diagnosticPose) {
++            1, 4 -> 0.20f
++            2, 3 -> -0.20f
++            else -> 0f
++        }
++        // Apply Rodrigues rotation in world coordinates to each device-frame basis vector.
++        val ax = if (pitch) diagnosticRight[0] else 0f
++        val ay = if (pitch) diagnosticRight[1] else 0f
++        val az = if (pitch) 0f else 1f
++        val c = cos(angle)
++        val s = sin(angle)
++        for (i in 0..2) {
++            val x = diagnosticBase[i]
++            val y = diagnosticBase[i + 3]
++            val z = diagnosticBase[i + 6]
++            val along = (ax * x + ay * y + az * z) * (1 - c)
++            sample[i] = x * c + (ay * z - az * y) * s + ax * along
++            sample[i + 3] = y * c + (az * x - ax * z) * s + ay * along
++            sample[i + 6] = z * c + (ax * y - ay * x) * s + az * along
++        }
+     }
+
+     private fun calibrate() {
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10SpatialLauncherActivity.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10SpatialLauncherActivity.kt
+index dd8bb0a..2104170 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10SpatialLauncherActivity.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10SpatialLauncherActivity.kt
+@@ -19,6 +19,7 @@ import android.text.TextPaint
+ import android.text.TextUtils
+ import android.util.Log
+ import android.view.Gravity
++import android.view.KeyEvent
+ import android.view.View
+ import android.view.WindowManager
+ import android.widget.TextView
+@@ -107,6 +108,11 @@ class Cv10SpatialLauncherActivity : Activity() {
+     @Suppress("OVERRIDE_DEPRECATION")
+     override fun onBackPressed() = close()
+
++    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
++        if (input.selectDiagnosticPose(keyCode - KeyEvent.KEYCODE_0)) return true
++        return super.onKeyDown(keyCode, event)
++    }
++
+     private fun startRenderer() {
+         if (renderState != null || closing) return
+         startupFailed = false
