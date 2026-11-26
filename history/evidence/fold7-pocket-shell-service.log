@@ -1,0 +1,23 @@
+Preview-owned instance rejected shell UID 2000
+Accepted mode 0 on display 123
+Wrong token left display 123 active
+Captured 3840x1080 to /data/local/tmp/cv10-pocket-shell-space.png
+Correct token released display 123
+Preview-owned instance rejected shell UID 2000
+Accepted mode 1 on display 124
+Wrong token left display 124 active
+Captured 3840x1080 to /data/local/tmp/cv10-pocket-shell-card.png
+Correct token released display 124
+Preview-owned instance rejected shell UID 2000
+Accepted mode 2 on display 125
+Wrong token left display 125 active
+Correct token released display 125
+No frame followed the accepted launch within 5500 ms
+
+11-27 04:15:22.114  2961  3042 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.hayeco.flipspaces/.spatial.SpaceActivity} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+11-27 04:15:22.114 11157 11157 I Cv10PocketXrDisplay: Pocket XR mode 0 start accepted on 123 (3840x1080, 240 dpi)
+11-27 04:15:24.787  2961  5404 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.hayeco.flipspaces/.spatial.SpaceActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+11-27 04:15:24.787 11996 11996 I Cv10PocketXrDisplay: Pocket XR mode 1 start accepted on 124 (3840x1080, 240 dpi)
+11-27 04:15:27.361  2961  8660 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.hayeco.flipspaces/.pcscreen.PcScreenActivity} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+11-27 04:15:27.361 12163 12163 I Cv10PocketXrDisplay: Pocket XR mode 2 start accepted on 125 (1920x1080, 240 dpi)
+11-27 04:15:27.467 12183 12219 I PcScreen: finder: looking for PCs

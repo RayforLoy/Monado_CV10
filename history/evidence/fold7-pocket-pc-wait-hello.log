@@ -1,0 +1,4 @@
+11-27 04:18:35.944 14607 14630 V hello_xr: [04:18:35.944][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520610093958
+11-27 04:18:41.502 14607 14630 V hello_xr: [04:18:41.502][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2526168347186
+11-27 04:18:42.908 14607 14630 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 04:18:42.908 14607 14630 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
