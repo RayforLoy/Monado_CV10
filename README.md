@@ -51,9 +51,9 @@ Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 32
 
 Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
 
-另一次实验在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡录到了独立的 `LEFT EYE` 与 `RIGHT EYE` 帧。打开 Pocket XR **空间窗口 → 3D：窗口有真实的深度** 后，日志确认实际场景按左右眼各 1920×1080 渲染。没有应用面板、未打开启动器时，正常场景仍为黑底。该轮 Pocket XR 未获得 Shizuku 授权，也没有实际头部姿态输入。
+外显诊断在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由已授权的 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡在 CV10 两个眼区显示各自的标记，右镜拍到正立的 `RIGHT EYE`。在原版启动器使用 **深度（3D 左右并排）** 后，实测菜单左右眼各 1920×1080，右镜拍到完整菜单。点选 `hello_xr` 后出现提示缺少 Shizuku 授权的双目占位窗口。
 
-后续用已有 ADB 授权启动同一原版测试卡，通过 Monado 的 OpenXR 合成送到 CV10。外屏截图有各自的左右眼标记，右镜拍到了正立的 `RIGHT EYE`。从 Monado 2D 启动器取消 **仅显示 XR 应用**，也可打开原版 Pocket XR 的手机触控板。手机端一键启动外显需完成独立 Shizuku 授权后复测。左镜光学、实际头部姿态、空间应用窗口和 3D 投屏分别待验收。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md)
+从 Monado 2D 启动器取消 **仅显示 XR 应用**，可打开原版 Pocket XR 的手机触控板。手机端一键启动外显需要预览包自己的 Shizuku 授权，创建和投射应用面板还需要原版 Pocket XR 的 Shizuku 授权。实时头踪、左镜实拍和 3D 视频投屏仍待实机验收。[Pocket XR 外显记录](history/fold7-pocket-xr-display.md)
 
 ## 原厂手机线
 

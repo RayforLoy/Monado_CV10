@@ -1,0 +1,8 @@
+11-27 01:49:05.879 32406 32406 I FlipSpaces/Mode: view switched to 3D side by side (the launcher's 3D / 2D button); remembered for the next plug-in
+11-27 01:49:47.015 10770 10770 I Cv10PocketXrPreview: Public diagnostic display id=102
+11-27 01:49:47.675 32406 32406 I FlipSpaces/PanelHost: state Off -> Unavailable(NO_PERMISSION): Shizuku 正在运行，但尚未允许 Pocket XR (generation 0)
+11-27 01:49:47.735 32406 20689 I FlipSpaces/Space: viewport 3840x1080, display 3840x1080: side by side 3D, one half per eye (eyes 63 mm apart), each eye 1920x1080 at 44.2 by 25.8 degrees (glasses optics 51 degrees diagonal on 1920x1200 panels (44.2 by 28.5 degrees)); per-row pose on for side by side, the footprint filter (four taps) per panel pixel
+11-27 01:49:47.737 32406 20689 I FlipSpaces/Space: viewport 3840x1080, display 3840x1080: side by side 3D, one half per eye (eyes 63 mm apart), each eye 1920x1080 at 44.2 by 25.8 degrees (glasses optics 51 degrees diagonal on 1920x1200 panels (44.2 by 28.5 degrees)); per-row pose on for side by side, the footprint filter (four taps) per panel pixel
+11-27 01:49:54.421 32406 20689 I FlipSpaces/Space: launcher opened: 28 pages (the home tray and 27 of All apps), 393 apps, 4 pinned; panel 1450 x 950 dp, 1.007 x 0.660 m (53.4 x 36.5 degrees) at 1.00 m, yaw 0.0, pitch -5.0
+11-27 01:49:55.352 10770 10770 I Cv10PocketXrPreview: First public diagnostic display frame
+11-27 01:50:00.437 32406 20689 I FlipSpaces/Space: launcher: Hello XR (OpenGL ES) (org.khronos.openxr.hello_xr.opengles) launched into a window where the launcher was, yaw 0.0, pitch -5.0
