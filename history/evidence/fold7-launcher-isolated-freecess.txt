@@ -1,0 +1,15 @@
+Fold7, 2026-11-27 Hong Kong time. System log and scoped runtime / hello_xr ANR excerpts.
+
+11-27 02:14:24.357  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [8529] reason: Bg-buff
+11-27 02:19:43.002  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [13680] reason: Bg-buff
+11-27 02:20:23.937  2961  8660 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [13680] reason: ServiceANR
+
+02:19 hello_xr ANR rendering thread, PID 13916 (selected frames):
+  native: #00 pc 000d6ec8  /apex/com.android.runtime/lib64/bionic/libc.so (__recvmsg+8)
+  native: #02 pc 0026e500  /data/app/~~2P5QDtC_I23v6OEuz7XBHA==/org.cv10.monado.out_of_process.launcher_preview-746WFfnlpMdiFbmtca6P9Q==/lib/arm64/libopenxr_monado.so (ipc_receive+168)
+  native: #03 pc 00233130  /data/app/~~2P5QDtC_I23v6OEuz7XBHA==/org.cv10.monado.out_of_process.launcher_preview-746WFfnlpMdiFbmtca6P9Q==/lib/arm64/libopenxr_monado.so (ipc_call_compositor_wait_woke+208)
+  native: #10 pc 001b3498  /data/app/~~2P5QDtC_I23v6OEuz7XBHA==/org.cv10.monado.out_of_process.launcher_preview-746WFfnlpMdiFbmtca6P9Q==/lib/arm64/libopenxr_monado.so (oxr_xrWaitFrame+644)
+  native: #11 pc 0007e630  /data/app/~~jG8GIQMwEhEGhCNItMFz0g==/org.khronos.openxr.hello_xr.opengles-6zf2ubUkLLOdup3-5Ry0jQ==/base.apk (offset 159000) (xrWaitFrame+92)
+
+First CV10 USB worker entry after the runtime process was unfrozen:
+11-27 02:20:23.939 13680 13955 I monado.cv10_worker:  INFO [cv10_worker] CV10 USB pose samples=709 q_xyzw=(-0.0000,-0.0001,0.0000,1.0000) gyro_rad_s=(-0.000,0.001,0.001) peak_rad_s=0.006

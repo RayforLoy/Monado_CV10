@@ -14,3 +14,22 @@
 俯仰方向修正已用合成姿态样本复测，左右方向仍符合预期。本轮使用固定右镜摄像头，未手动转动手机或眼镜。左镜光学、手机实物 pitch/yaw、关 Wi-Fi、16 KB 页设备和用户实际拔插需各自复测。无线 ADB 使用同一 Wi-Fi，本轮保留网络。复测后 Broker 恢复手机原有的 Monado CV10 v0.1.2，系统最低刷新率为 `null`，CV10 保持 3200×1600、90 Hz。
 
 原版 Pocket XR 1.6.28 的内置测试卡随后经 ADB 诊断入口与 Monado 原生合成送到 CV10。手机端一键启动需要预览包自己的 Shizuku 授权，创建 Pocket XR 应用面板还需要 Pocket XR 自己的授权。[外显截图和镜片实拍](fold7-pocket-xr-display.md)
+
+## Fold7 应用网络隔离对照
+
+同一台 Fold7、线材与显示模式。为保留供电监测和 ADB 采集，手机 Wi-Fi 保持开启。本轮测试通过从预览应用的最终清单移除 `android.permission.INTERNET` 来隔离应用的 IP 套接字。正常对照包和隔离包均从 `ba431c9` 构建，解包后唯一不同的 ZIP 成员是 `AndroidManifest.xml`。原版 `hello_xr` APK 的 SHA-256 与上文相同，清单也未申请 `INTERNET`。
+
+| 构建 | SHA-256 |
+| --- | --- |
+| 普通对照 | `280aa6e72624d7c7dc371ec264814c62949f1abd2ec139c9101cffea72409ba9` |
+| 移除 `INTERNET` 的诊断包 | `2820dcb39252208ad179e93583bc9d43d77901534d5157e0c65966b375f91aa9` |
+
+使用临时 ADB 反向端口把手机本机回环地址接到 Windows 回环监听。普通预览 UID 可连接 IPv4 和 IPv6，隔离预览 UID 对两种地址均在创建套接字时返回 `Operation not permitted`。启动器测试前移除了反向端口。隔离包签名校验通过，五个 ELF 的 15 个 `PT_LOAD` 段均为 `0x4000` 对齐。
+
+- 隔离包的 3D 菜单进入 `FOCUSED`，外显截图有两只眼的菜单，右镜拍到本地应用卡片和激光指针。[双目外屏截图](evidence/fold7-launcher-isolated-menu-display.png) · [右镜实拍](evidence/fold7-launcher-isolated-menu-right.jpg)
+- 02:09 和 02:14 两次从隔离包的 2D 菜单点选原版 `hello_xr`，应用进入 `FOCUSED`，物理外屏截图与右镜均为黑色。按返回后发生输入 ANR，首次 ANR 把样例渲染线程定位到 `xrWaitFrame → ipc_call_compositor_wait_woke → recvmsg`。此时客户端等待的是运行时的本地 IPC 响应。
+- 冷启动配对期间，普通对照也曾无法从 2D 或 3D 菜单引导样例进入 OpenXR。该失败发生在加载器查找 Broker Provider 时，返回 `XR_ERROR_RUNTIME_UNAVAILABLE`。隔离包的 3D 菜单能出图，点选原版样例后也观察到相同的 Broker 查找失败。
+- 先打开 Broker 再返回 2D 列表并点击 `hello_xr`。02:19:18 普通对照、02:19:42 隔离包先后进入 `FOCUSED`，均留下双目外屏截图和右镜蓝方块。普通对照按返回键后进入 `STOPPING` 并完成 `xrDestroyInstance`。[隔离包双目外屏截图](evidence/fold7-launcher-isolated-hello-display.png) · [隔离包右镜实拍](evidence/fold7-launcher-isolated-hello-right.jpg)
+- 02:14:24.357 和 02:19:43.002，三星 `FreecessController` 均记录以 `Bg-buff` 原因冻结预览运行时。第二次冻结时外屏已出图。02:19 的样例按返回后再现 `xrWaitFrame` 等待本地 IPC 的调用栈。02:20:23.937 运行时解除冻结，随即恢复 USB 读数和帧处理。[冻结与 ANR 日志摘录](evidence/fold7-launcher-isolated-freecess.txt)
+
+本轮保留 Wi-Fi 以维持无线 ADB。隔离包仅用于应用层对照。恢复时 Broker 选回稳定运行时，系统最低刷新率为 `null`，临时日志级别和 ADB 反向端口均已清理。
