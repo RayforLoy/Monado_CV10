@@ -115,3 +115,13 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 05:54 用同一菜单再做单变量对照。把官方 arm64 客户端复制到单独的诊断 APK，只把 ELF `DT_FLAGS_1` 在 `0x19ccc0` 的值由 `0x01` 改为 `0x09`，加入 `NODELETE`。该诊断 APK SHA-256 为 `c3e4bffb0b0eddb27c2e02720b72516685504637aa342c2c67210d1b4b71e9da`。两次右镜出画、两次正常销毁，重进继续使用 PID 23878。把应用直接放到诊断虚拟屏的早期轮次曾在 `FOCUSED` 后触发三星 Freecess，游戏层停在第 30 帧。菜单路径复测期间持续出帧。卸载修复覆盖线程清理，三星的冻结问题仍可能在其他启动路径出现。[对照日志](evidence/fold7-pocket-nodelete.log)
 
 05:57 至 06:02 用源码版探针运行原版 `hello_xr` 约五分钟，结束前右镜仍有蓝色方块，样例始终使用 PID 27725。运行约 49 秒时，Android 主屏与另一逻辑屏发生旋转。样例销毁旧 OpenXR 实例，约 1.43 秒后自动重建并重新进入 `FOCUSED`。此后间隔约 30 秒读取的游戏图层编号持续增加。结束时，发往原游戏虚拟屏 186 的返回键因没有焦点而被 Android 丢弃。清理日志显示样例当时的焦点窗口在手机主屏 0，脚本随后强制停止了样例。这轮证实旋转后恢复和长时出画，旋转后仍需按实际焦点验证最终退出。[五分钟日志](evidence/fold7-pocket-nodelete-soak.log) · [结束前右镜实拍](evidence/fold7-pocket-nodelete-soak-right.jpg)
+
+## 从 Monado 菜单使用修复客户端
+
+源码 `5b5efa7` 新增 Broker 条目 **Pocket XR (Monado CV10)**，包名为 `org.cv10.monado.pocket_client`。它只提供 OpenXR 客户端，连接仍由原版 Pocket XR APK 提供的渲染服务。Monado 预览验证两份包的签名相同，并识别已核对的官方 Pocket XR 1.6.28 与 1.6.31。两版官方 APK 的 arm64 服务库 SHA-256 均为 `5e188a0b5bab412da2ec59000fce98ef85ca6f0cd884120192279b53040f2a41`。Fold7 本轮使用原版 1.6.28。[客户端构建步骤](../src/xrt/targets/pocket_client_android/README.md)
+
+2026-11-27 06:12（香港时间），同一台 Fold7、CV10 和 C9.53.6 原厂供电线。使用 ADB 诊断显示传输，预览按正式的 Broker 条目、签名和版本判断放行。在 Monado 菜单点选原版 `hello_xr` 两次，均进入 `FOCUSED`，渲染服务两次提供 3840×1080 游戏面，右镜也两次出画。两次返回均完成 `xrDestroyInstance`，同一 PID 9303 重进且无崩溃。预览的 Shizuku 一键开启仍需获得它自己的授权后串联验收。[APK 摘要和会话日志](evidence/fold7-pocket-client-companion.log) · [第二次右镜实拍](evidence/fold7-pocket-client-companion-right.jpg)
+
+06:14 用 ADB 将样例任务从虚拟屏 192 移至主屏 0，复现此前长测观察到的显示旋转、会话重建和焦点迁移。同一 PID 12975 约 0.8 秒内恢复 `FOCUSED`，右镜重新出画。按 `dumpsys window displays` 确认焦点后把返回键发给主屏 0，样例正常进入 `STOPPING` 并销毁第二个实例。此轮验证了焦点移到主屏后的退出，自发迁移的触发条件仍需查明。[焦点和销毁日志](evidence/fold7-pocket-client-companion.log#L38)
+
+06:14 至 06:15 切回普通预览 APK `5b5efa7`，SHA-256 为 `73ff89d035379109d8dd8ba956ca385bd4d893f8b36d74319be5d165c393201d`。在 Broker 选择 **Monado CV10 Preview**，未使用 Shizuku。2D 菜单直接启动原版 `hello_xr`，3D 启动器经底部上滑停留和点按也启动了同一样例。右镜拍到 3D 菜单和两次样例出画，样例两次进入 `FOCUSED`，返回后均完成 `xrDestroyInstance`。复测后恢复稳定版 Broker 和试验前安装的预览包。[会话日志](evidence/fold7-pocket-client-companion.log#L51)

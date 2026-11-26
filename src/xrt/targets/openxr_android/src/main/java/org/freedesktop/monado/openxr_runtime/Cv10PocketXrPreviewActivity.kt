@@ -259,6 +259,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         } catch (_: PackageManager.NameNotFoundException) {
             return false
         }
+        // Official 1.6.28 and 1.6.31 ship byte-identical arm64 Monado services.
         return (version == 214L || version == 217L) && manager.hasSigningCertificate(
             pocketPackage,
             Base64.decode(POCKET_RELEASE_SIGNER, Base64.DEFAULT),

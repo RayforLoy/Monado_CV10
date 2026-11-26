@@ -1,0 +1,60 @@
+2026-11-27 HKT, Fold7 SM-F9660, CV10 C9.53.6 original powered cable, 3200 x 1600 @ 90 Hz.
+Monado CV10 preview and client built from 5b5efa7. The optional client was selected in OpenXR Runtime Broker.
+Official Pocket XR 1.6.28 and Khronos hello_xr OpenGLES APKs unchanged.
+The preview used the ADB diagnostic display transport and its normal client admission check.
+Client APK 043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a
+Normal preview APK 73ff89d035379109d8dd8ba956ca385bd4d893f8b36d74319be5d165c393201d
+Diagnostic preview APK 9b4a4214ad2515346eb2a44186d84cc15d6623000d3b2c88a72f7523d62d7bb5
+All three APKs verified with signer 68365fa0904432aaa86a8904c691f9e6487414dc959786d72831a083b9f23fca and zipalign -P 16.
+
+11-27 06:12:05.803  8737  8737 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 06:12:05.804  8737  8737 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 190
+11-27 06:12:06.091  9012  9012 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 06:12:06.277  9303  9348 V hello_xr: [06:12:06.277][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 06:12:28.651  8737  8737 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 06:12:28.652  8737  8737 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 190
+11-27 06:12:28.904  9012  9012 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 06:12:29.073  9303  9905 V hello_xr: [06:12:29.073][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 06:12:06.374  9303  9348 V hello_xr: [06:12:06.374][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2820236185686
+11-27 06:12:06.277  9303  9348 V OpenXR-Loader: Verbose [GENERAL | xrCreateInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:12:10.266  9303  9348 V hello_xr: [06:12:10.266][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2824128548810
+11-27 06:12:10.266  9303  9348 V hello_xr: [06:12:10.266][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2824128728029
+11-27 06:12:10.775  9303  9348 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:12:10.775  9303  9348 I OpenXR-Loader: Info [GENERAL |  | OpenXR-Loader] : RuntimeInterface being destroyed.
+Sample PID after Back: 9303
+Dismissed the notification prompt without granting access
+Monado preview PID stayed 8737 with the app entry enabled
+11-27 06:12:29.155  9303  9905 V hello_xr: [06:12:29.155][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598463392 time=2819734380848
+11-27 06:12:29.073  9303  9905 V OpenXR-Loader: Verbose [GENERAL | xrCreateInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:12:32.909  9303  9905 V hello_xr: [06:12:32.909][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598463392 time=2823489011992
+11-27 06:12:32.910  9303  9905 V hello_xr: [06:12:32.910][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598463392 time=2823489349440
+11-27 06:12:33.419  9303  9905 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:12:33.419  9303  9905 I OpenXR-Loader: Info [GENERAL |  | OpenXR-Loader] : RuntimeInterface being destroyed.
+Sample PID after Back: 9303
+SurfaceFlinger game layer frame IDs: 12, 83, 151, 9, 76, 144
+Trial 1 crash entries: 0
+Trial 2 crash entries: 0
+
+06:14 Controlled display migration from the trusted game display to the phone display.
+Read the root task ID from cmd activity stack list, verified it was the sample, then ran cmd activity display move-stack <task> 0.
+Sample focus before the display change: 192. Sample root task: 33515.
+Sample focus after the display change: 0. PID before: 12975. PID now: 12975.
+11-27 06:14:00.442  2961  8455 I WindowManager: Display id=1 rotation changed to 3 from 0, lastOrientation=-1 userRotationMode=0 userRotation=0 lastSensorRotation=-1
+11-27 06:14:00.443  2961  8455 I WindowManager: Display id=0 rotation changed to 1 from 0, lastOrientation=0 userRotationMode=1 userRotation=0 lastSensorRotation=-1
+11-27 06:14:00.448 12975 13008 V hello_xr: [06:14:00.448][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2823822659077
+11-27 06:14:00.954 12975 13008 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:14:01.248 12975 13363 V hello_xr: [06:14:01.248][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598463392 time=2818484759510
+11-27 06:14:04.184 12975 13363 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Back targeted display 0 after dumpsys window displays confirmed the sample was focused there.
+After Back the sample window no longer held focus. The sample process remained alive (12975).
+
+06:14 to 06:15 Regular 2D and 3D menu regression on normal preview 5b5efa7, selecting Monado CV10 Preview in the Broker.
+11-27 06:14:51.584 14730 14753 V hello_xr: [06:14:51.584][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520526870521
+11-27 06:14:57.211 14730 14753 V hello_xr: [06:14:57.211][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2526153949112
+11-27 06:14:58.490 14730 14753 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:15:05.599 15036 15074 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 06:15:11.165 15036 15074 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 06:15:11.844 15195 15219 V hello_xr: [06:15:11.844][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2526845862809
+11-27 06:15:16.873 15195 15219 V hello_xr: [06:15:16.873][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2531874551714
+11-27 06:15:18.073 15195 15219 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Restored stable Broker. Refresh: null. Rotation: lock 0. RUN_ANY_IN_BACKGROUND: ignore. Test client removed.
