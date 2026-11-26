@@ -17,18 +17,27 @@ import java.nio.charset.StandardCharsets;
 final class Cv10PanelWake {
     private static final String TAG = "MonadoCV10";
     private int requestedId = -1;
+    private volatile long generation;
+    private final Object pcuiLock = new Object();
 
-    synchronized void request(UsbManager usb, UsbDevice glass) {
+    synchronized void request(UsbManager usb, UsbDevice glass, boolean openedSensors) {
         if (glass.getVendorId() != 0x12d1 || glass.getProductId() != 0x107e
-                || requestedId == glass.getDeviceId() || !usb.hasPermission(glass)) return;
+                || !usb.hasPermission(glass)) return;
+        // Android can reuse the same bus address after the headset re-enumerates.
+        // A newly opened HID stream needs panel initialization even with the same device ID.
+        if (!openedSensors && requestedId == glass.getDeviceId()) return;
         requestedId = glass.getDeviceId();
+        final long attachment = ++generation;
         new Thread(() -> {
             for (int attempt = 0; attempt < 2; attempt++) {
                 try {
-                    UsbDevice attached = usb.getDeviceList().get(glass.getDeviceName());
-                    if (attached == null || attached.getDeviceId() != glass.getDeviceId()
-                            || !usb.hasPermission(attached)) return;
-                    wake(usb, attached);
+                    synchronized (pcuiLock) {
+                        UsbDevice attached = usb.getDeviceList().get(glass.getDeviceName());
+                        if (attachment != generation || attached == null
+                                || attached.getDeviceId() != glass.getDeviceId()
+                                || !usb.hasPermission(attached)) return;
+                        wake(usb, attached);
+                    }
                     return;
                 } catch (IOException error) {
                     Log.w(TAG, "CV10 PCUI attempt " + (attempt + 1) + ": " + error.getMessage());
@@ -71,6 +80,7 @@ final class Cv10PanelWake {
                         Log.w(TAG, "PCUI identity did not confirm CV10");
                         return;
                     }
+                    selectMobileSource(port, in, out);
                     String reply = query(port, in, out, "AT^SWITCHSCREEN=1");
                     if (!hasLine(reply, "OK")) throw new IOException("panel command rejected");
                     Log.i(TAG, "CV10 PCUI AT^SWITCHSCREEN=1 OK");
@@ -83,6 +93,28 @@ final class Cv10PanelWake {
             }
         }
         Log.w(TAG, "CV10 PCUI runtime interface or endpoints missing");
+    }
+
+    private static void selectMobileSource(UsbDeviceConnection port, UsbEndpoint in, UsbEndpoint out) {
+        try {
+            String info = query(port, in, out, "AT^CABLEINFO?");
+            for (String line : info.split("[\\r\\n]+")) {
+                String entry = line.trim();
+                if (!entry.matches("\\^CABLEINFO=1[0-9A-Fa-f]{8}[0-9]{3}[+-][0-9]{3}")) continue;
+                Log.i(TAG, "CV10 original cable, version field " + entry.substring(12, 20));
+                String source = query(port, in, out, "AT^GETSOURCE?");
+                if (hasLine(source, "^SOURCE TYPE(0:phone, 1:PC):1")) {
+                    if (hasLine(query(port, in, out, "AT^SETSOURCE=0"), "OK")) {
+                        String confirmed = query(port, in, out, "AT^GETSOURCE?");
+                        Log.i(TAG, "CV10 original cable phone source confirmed=" +
+                                hasLine(confirmed, "^SOURCE TYPE(0:phone, 1:PC):0"));
+                    }
+                }
+                return;
+            }
+        } catch (IOException e) {
+            Log.d(TAG, "Cable/source query unavailable: " + e.getMessage());
+        }
     }
 
     private static boolean hasLine(String reply, String expected) {

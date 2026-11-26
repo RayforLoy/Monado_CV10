@@ -6,14 +6,20 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 从 [Releases](https://github.com/RayforLoy/Monado_CV10/releases) 下载与系统 ABI 匹配的 APK。用 `adb shell getprop ro.product.cpu.abilist` 查看支持的 ABI，用 `adb install -r <APK>` 安装。Android 11 为 API 30，项目最低为 API 26。覆盖更新需要相同签名。实际 VR 功能还取决于 USB 主机、外接显示器、Broker 和 Vulkan 驱动。历史 Fold7 镜片、3DoF 和刷新率复测见 [验收记录](history/README.md)。
 
-| 系统 ABI | v0.1.2 历史 APK |
+| 系统 ABI | v0.1.3 APK |
 | --- | --- |
-| 64 位 ARM Android，含骁龙、天玑、麒麟的 64 位系统 | [arm64-v8a](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.2/Monado-CV10-0.1.2-arm64-v8a.apk) |
-| 32 位 ARM Android | [armeabi-v7a](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.2/Monado-CV10-0.1.2-armeabi-v7a.apk) |
-| 64 位 x86 Android | [x86_64](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.2/Monado-CV10-0.1.2-x86_64.apk) |
-| 32 位 x86 Android | [x86](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.2/Monado-CV10-0.1.2-x86.apk) |
+| 64 位 ARM Android，含骁龙、天玑、麒麟的 64 位系统 | [arm64-v8a](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.3/Monado-CV10-0.1.3-arm64-v8a.apk) |
+| 32 位 ARM Android | [armeabi-v7a](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.3/Monado-CV10-0.1.3-armeabi-v7a.apk) |
 
-下载后可用 `Get-FileHash <APK> -Algorithm SHA256` 与[发行文件校验清单](apk/v0.1.2/SHA256SUMS.txt)对照。v0.1.2 与之前的 Shizuku 重连版使用相同签名，版本号从 1 升为 102。
+用 `Get-FileHash <APK> -Algorithm SHA256` 核对下载文件。v0.1.3 沿用 v0.1.2 的签名，Android 版本代码从 102 升至 103。下载页列有每个 APK 的 SHA-256。[v0.1.3 发布页](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.3)
+
+历史 x86 和 x86_64 安装包与对应校验和可在 v0.1.2 发布页获取。[v0.1.2 发布页](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.2)
+
+## 原厂手机线
+
+连接原厂手机线及辅助供电，在 OpenXR Runtime Broker 中选择 **Monado CV10**。从普通入口打开 Monado CV10 和 OpenXR 应用，允许眼镜的 USB 访问并佩戴眼镜。运行时识别到原厂线且当前来源为 PC 时，会请求切换到手机来源。获取 HID 后会请求启用佩戴传感器。拔插后重新获取 HID 时，即使 Android 复用了设备 ID，运行时也会重新发送开屏指令。
+
+用户在 Galaxy Z Fold7（SM-F9660）上两次复测确认出图，使用的是已配置为 2 A 的原厂手机线和外接 5 V 供电。一次记录在重插手机端后等 35 秒，再从普通入口打开 Monado CV10 和 `hello_xr`。右镜显示蓝色立方体，外屏模式为 3200×1600 @ 90 Hz，图层每秒约有 89.96 个不同呈现时间戳。硬件验证使用的 ARM64 候选 APK SHA-256 为 `989c7b43ecd369ed5aa49776542db4511e02ac0d0257395d9c4fd40fdf9f26c5`。
 
 ## 从完整源码构建
 

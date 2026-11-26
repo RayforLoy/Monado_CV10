@@ -20,7 +20,7 @@ public final class Cv10UsbReader {
     private UsbInterface iface;
     private UsbRequest request;
     private ByteBuffer packet;
-    private boolean queued, enabled;
+    private boolean queued, enabled, proximityEnabled;
     private int askedId = -1;
     private long nextOpen, deadline, frames;
 
@@ -29,9 +29,15 @@ public final class Cv10UsbReader {
         manager = context.getSystemService(UsbManager.class);
     }
 
-    private int setSensor(int id) {
-        byte[] b = {(byte) id, 2, 0, 0, 0};
+    private int setSensor(int id, int sensor) {
+        byte[] b = {(byte) id, (byte) sensor, 0, 0, 0};
         return port.controlTransfer(0x21, 9, 0x300|id, iface.getId(), b, b.length, 500);
+    }
+
+    private int proximityState() {
+        byte[] value = new byte[1];
+        int n = port.controlTransfer(0xa1, 1, 0x304, iface.getId(), value, 1, 300);
+        return n == 1 ? value[0] & 0xff : -1;
     }
 
     private boolean open() {
@@ -45,7 +51,16 @@ public final class Cv10UsbReader {
             }
             return false;
         }
-        panel.request(manager, glass);
+        boolean opened = false;
+        try {
+            opened = openSensors(glass);
+            return opened;
+        } finally {
+            panel.request(manager, glass, opened);
+        }
+    }
+
+    private boolean openSensors(UsbDevice glass) {
         for (int i=0; i<glass.getInterfaceCount(); i++) {
             UsbInterface hid=glass.getInterface(i);
             if (hid.getId()!=3 || hid.getAlternateSetting()!=0 || hid.getInterfaceClass()!=3 ||
@@ -61,8 +76,11 @@ public final class Cv10UsbReader {
                 request=new UsbRequest();
                 if (!request.initialize(port,ep)) { close(); return false; }
                 packet=ByteBuffer.allocateDirect(ep.getMaxPacketSize()).order(ByteOrder.LITTLE_ENDIAN);
-                enabled=setSensor(5)==5;
+                enabled=setSensor(5, 2)==5;
                 if (!enabled) { close(); return false; }
+                // CV10's wear sensor gates the backlight independently of the DP signal and IMU.
+                proximityEnabled = setSensor(5, 4) == 5;
+                Log.i(TAG, "CV10 proximity enabled=" + proximityEnabled + ", state=" + proximityState());
                 frames=0;
                 deadline=SystemClock.elapsedRealtime()+5000;
                 Log.i(TAG,"CV10 IMU enabled, interrupt IN 0x84");
@@ -123,10 +141,13 @@ public final class Cv10UsbReader {
         queued=false;
         if (request!=null) { request.close(); request=null; }
         if (port!=null) {
-            try { if (enabled) Log.i(TAG,"CV10 IMU disable bytes="+setSensor(6)); }
+            try {
+                if (proximityEnabled) setSensor(6, 4);
+                if (enabled) Log.i(TAG,"CV10 IMU disable bytes="+setSensor(6, 2));
+            }
             finally {
                 try { if (iface!=null) port.releaseInterface(iface); }
-                finally { port.close(); port=null; iface=null; enabled=false; }
+                finally { port.close(); port=null; iface=null; enabled=false; proximityEnabled=false; }
             }
         }
     }
