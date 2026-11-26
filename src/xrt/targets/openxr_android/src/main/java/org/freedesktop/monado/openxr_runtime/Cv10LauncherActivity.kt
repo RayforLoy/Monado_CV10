@@ -3,8 +3,13 @@
 package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
+import android.app.ActivityManager
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
@@ -12,6 +17,7 @@ import android.widget.CheckBox
 import android.widget.ListView
 import android.widget.SearchView
 import android.widget.TextView
+import android.widget.Toast
 
 class Cv10LauncherActivity : Activity() {
     private lateinit var search: SearchView
@@ -24,6 +30,14 @@ class Cv10LauncherActivity : Activity() {
         setContentView(R.layout.activity_cv10_launcher)
         findViewById<View>(R.id.cv10_launch_spatial).setOnClickListener {
             startActivity(Intent(this, Cv10SpatialLauncherActivity::class.java))
+        }
+        findViewById<View>(R.id.cv10_background_restricted).setOnClickListener {
+            val settings = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
+            try {
+                startActivity(settings)
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(this, R.string.cv10_app_settings_unavailable, Toast.LENGTH_SHORT).show()
+            }
         }
         search = findViewById(R.id.cv10_app_search)
         xrOnly = findViewById(R.id.cv10_xr_only)
@@ -59,6 +73,10 @@ class Cv10LauncherActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        val backgroundRestricted = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
+            getSystemService(ActivityManager::class.java)?.isBackgroundRestricted == true
+        findViewById<View>(R.id.cv10_background_restricted).visibility =
+            if (backgroundRestricted) View.VISIBLE else View.GONE
         apps = Cv10AppCatalog.load(this)
         filterApps()
     }

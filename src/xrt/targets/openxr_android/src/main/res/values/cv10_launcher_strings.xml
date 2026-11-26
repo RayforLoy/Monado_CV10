@@ -3,6 +3,8 @@
 <resources>
     <string name="cv10_app_launcher_title">Apps</string>
     <string name="cv10_open_spatial_launcher">Open 3D launcher</string>
+    <string name="cv10_background_restricted">Background restrictions may freeze 3D app switching. Open app settings</string>
+    <string name="cv10_app_settings_unavailable">Open this app’s information page in Android settings.</string>
     <string name="cv10_search_apps">Search installed apps</string>
     <string name="cv10_xr_apps_only">XR apps only</string>
     <string name="cv10_no_matching_apps">No matching apps. Turn off the XR filter or change the search.</string>
