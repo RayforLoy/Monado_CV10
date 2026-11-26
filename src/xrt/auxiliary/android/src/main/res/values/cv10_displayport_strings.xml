@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_dp_title">CV10 DisplayPort status</string>
+    <string name="cv10_dp_reading">Reading the DisplayPort link…</string>
+    <string name="cv10_dp_trained">The negotiated DP lane count is %1$d. The reading comes from DPCD on %2$s.</string>
+    <string name="cv10_dp_pin_assignment">The negotiated lane count is unavailable. Type-C pin assignment %1$s allocates %2$d lanes to DP and is an indirect clue.</string>
+    <string name="cv10_dp_unreadable">The negotiated DP lane count is unavailable.</string>
+    <string name="cv10_dp_display_mode">Android sees CV10 in %1$d × %2$d at %3$s Hz.</string>
+    <string name="cv10_dp_display_unavailable">Android currently has no CV10 external display.</string>
+    <string name="cv10_dp_flicker_report">Community members have suggested a link between two-lane configurations and flicker. The cause is unverified.</string>
+    <string name="cv10_dp_warn_trained">CV10 negotiated two DP lanes. The link to flicker is unverified.</string>
+    <string name="cv10_dp_warn_pin_assignment">CV10 Type-C assignment allocates two DP lanes. The trained lane count is unknown.</string>
+</resources>

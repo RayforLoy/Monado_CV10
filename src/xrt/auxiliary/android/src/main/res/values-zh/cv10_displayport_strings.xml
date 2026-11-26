@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_dp_title">CV10 DisplayPort 状态</string>
+    <string name="cv10_dp_reading">正在读取 DisplayPort 链路…</string>
+    <string name="cv10_dp_trained">DP 链路已协商 %1$d 条通道。读数来自 %2$s 的 DPCD。</string>
+    <string name="cv10_dp_pin_assignment">实际协商的通道数不可读取。Type-C 引脚分配 %1$s 为 DP 预留 %2$d 条通道，可作为间接线索。</string>
+    <string name="cv10_dp_unreadable">无法读取实际协商的 DP 通道数。</string>
+    <string name="cv10_dp_display_mode">Android 识别到 CV10，当前显示模式为 %1$d × %2$d，刷新率为 %3$s Hz。</string>
+    <string name="cv10_dp_display_unavailable">Android 尚未识别到 CV10 外接显示器。</string>
+    <string name="cv10_dp_flicker_report">有群友怀疑双通道配置与闪屏有关，因果关系待验证。</string>
+    <string name="cv10_dp_warn_trained">CV10 已协商两条 DP 通道。闪屏关联待验证。</string>
+    <string name="cv10_dp_warn_pin_assignment">CV10 的 Type-C 配置预留两条 DP 通道。实际通道数未知。</string>
+</resources>

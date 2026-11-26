@@ -1,7 +1,7 @@
 param([Parameter(Mandatory)][string]$OutputDir)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$apks = @('arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86')
+$apks = @('arm64-v8a', 'armeabi-v7a')
 $bt = Join-Path $env:ANDROID_HOME 'build-tools/36.0.0'
 $key = Join-Path $env:USERPROFILE '.android/debug.keystore'
 if (!(Test-Path $key)) { throw "Missing local Android development signing key: $key" }

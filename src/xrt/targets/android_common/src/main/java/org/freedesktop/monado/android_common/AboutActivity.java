@@ -16,6 +16,7 @@ import android.content.pm.PackageManager;
 import rikka.shizuku.Shizuku;
 import android.os.Bundle;
 import android.widget.Toast;
+import org.freedesktop.monado.auxiliary.Cv10DisplayPortDiagnostics;
 import org.freedesktop.monado.auxiliary.Cv10RefreshLease;
 import android.text.method.LinkMovementMethod;
 import android.view.Menu;
@@ -41,6 +42,7 @@ public class AboutActivity extends AppCompatActivity {
     private static final int CV10_REFRESH = 0x43563131;
 
     private static final int CV10_DISABLE = 0x43563132;
+    private static final int CV10_DP_STATUS = 0x43563133;
     private final Shizuku.OnBinderReceivedListener binderReady = this::invalidateOptionsMenu;
     private final Shizuku.OnBinderDeadListener binderLost = this::invalidateOptionsMenu;
 
@@ -190,6 +192,8 @@ public class AboutActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(Menu.NONE, CV10_USB_ACCESS, Menu.NONE, "CV10 USB access");
+        menu.add(Menu.NONE, CV10_DP_STATUS, Menu.NONE,
+                org.freedesktop.monado.auxiliary.R.string.cv10_dp_title);
         if (Cv10RefreshLease.supportedPhone(this)) {
             boolean enabled = refreshPrefs().getBoolean(Cv10RefreshLease.ENABLED, false);
             if (!enabled) menu.add(Menu.NONE, CV10_REFRESH, Menu.NONE, "开启独立 120 Hz");
@@ -206,6 +210,10 @@ public class AboutActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == CV10_DP_STATUS) {
+            Cv10DisplayPortDiagnostics.showStatus(this);
+            return true;
+        }
         if (item.getItemId() == CV10_DISABLE) {
             refreshPrefs().edit().putBoolean(Cv10RefreshLease.ENABLED, false).apply();
             invalidateOptionsMenu();

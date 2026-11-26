@@ -111,10 +111,13 @@ public class MonadoView extends SurfaceView
     }
 
     @Nullable
-    private static Display findCv10(Context context) {
+    static Display findCv10(Context context) {
         DisplayManager manager = context.getSystemService(DisplayManager.class);
         for (Display display : manager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
-            if (display.isValid() && "HUAWEIAV03".equalsIgnoreCase(display.getName().trim())) return display;
+            if (display.isValid()
+                    && Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(display.getName().trim())) {
+                return display;
+            }
         }
         return null;
     }
@@ -239,6 +242,7 @@ public class MonadoView extends SurfaceView
                     view.getContext().getSystemService(WindowManager.class).addView(view, lp);
                 }
                 new SystemUiController(view).hide();
+                Cv10DisplayPortDiagnostics.warnIfTwoLanes(owner, display);
             } catch (WindowManager.InvalidDisplayException | WindowManager.BadTokenException
                     | SecurityException error) {
                 Log.e(TAG, "CV10 window unavailable on display " + display.getDisplayId(), error);
