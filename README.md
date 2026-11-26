@@ -24,7 +24,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 3. 从手机桌面启动 `hello_xr` 或已适配的 OpenXR 应用。系统询问是否允许 **Monado CV10** 访问 **HUAWEI GLASS HID** 时，点 **确定**。需要主动请求时，可用 Monado 菜单中的 **CV10 USB access**。
 4. 佩戴眼镜。`hello_xr` 正常运行时左右镜片各有一个蓝色方块，测试结束后按返回键退出。
 
-如果点开样例后停在启动画面，先确认 Broker 中 **Monado CV10** 仍已勾选，再重复第 2、3 步。Loader 查不到活动运行时，或三星的 `MARs` 后台管理拒绝 `bindService` 时，都可能出现 `XR_ERROR_RUNTIME_UNAVAILABLE`。
+如果点开样例后停在启动画面，先打开 Broker 确认 **Monado CV10** 仍已勾选，返回后再试第 2、3 步。Loader 查不到活动运行时，或三星的 `MARs` 后台管理拒绝 `bindService` 时，都可能出现 `XR_ERROR_RUNTIME_UNAVAILABLE`。
 
 需要让 Fold7 主屏独立跑 120 Hz 时，在启动 OpenXR 应用前启动 Shizuku，确认已授权 Monado CV10，然后在 Monado 菜单选择 **开启独立 120 Hz**。
 
@@ -37,11 +37,11 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从手机左右边缘的系统手势区内侧向中间滑动可返回。从系统手势条上方开始向上滑，停留约 350 毫秒，可将菜单和激光指向一起置中。系统返回与 Home 手势仍可用。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。项目持有的华为 VR 桌面材料为已打包 APK，未找到可复用的公开源码。
 
-若冷启动找不到运行时，可在启动提示中打开 Broker，确认运行时选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。
+内置 3D 菜单优先使用 Broker 选中的运行时。系统 Loader 报告运行时不可用时，菜单会用预览包自带的 Monado CV10 再试一次。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
 
 Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条路径。先从 2D 列表启动未修改的 Khronos `hello_xr` OpenGLES，返回后从 3D 菜单重进，同一个应用进程两次达到 `FOCUSED`，外屏截图和右镜均有画面。结束样例进程后，3D 菜单也能启动新的样例进程并出图。运行时在 Android 12 或更新版本直接管理 CV10 的 Presentation，覆盖 3D 菜单关闭时眼镜失去画面的故障。[Fold7 验收记录](history/fold7-offline-launcher.md)
 
-Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。激光笔俯仰修正和横向方向通过合成传感器样本复测，手持转动手机的复测待做。两个应用入口均在预览包未获得 Shizuku 权限时通过。无线调试使用同一 Wi-Fi，因此这轮保留了 Wi-Fi，关闭 Wi-Fi 的独立复测待做。
+Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。激光笔俯仰修正和横向方向通过合成传感器样本复测，手持转动手机的复测待做。两个应用入口均在预览包未获得 Shizuku 权限时通过。移除预览包的 `INTERNET` 权限后，3D 菜单和从 2D 列表启动的原版 `hello_xr` 均在 CV10 显示。诊断期间也复现了三星 Freecess 冻结运行时导致的黑屏或退出无响应。关闭系统 Wi-Fi 的独立复测待做。[应用网络隔离对照](history/fold7-offline-launcher.md#fold7-应用网络隔离对照)
 
 ## Pocket XR 外屏兼容性
 

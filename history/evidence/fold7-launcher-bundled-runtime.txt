@@ -1,0 +1,12 @@
+Fold7, 2026-11-27 Hong Kong time. Selected OpenXR loader and 3D client logs.
+
+Initial menu through the system Broker:
+11-27 02:32:50.907 23508 23558 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb'
+11-27 02:32:51.036 23508 23558 I Cv10SpatialLauncher: OpenXR session state 5
+
+Menu reopen, bundled runtime fallback after Provider lookup failure:
+11-27 02:33:05.375 23508 24024 E ActivityThread: Failed to find provider info for org.khronos.openxr.runtime_broker
+11-27 02:33:05.376 23508 24024 I Cv10SpatialLauncher: OpenXR runtime unavailable, trying bundled Monado CV10
+11-27 02:33:05.376 23508 24024 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeManifestFile::FindManifestFiles - using environment variable override runtime file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json
+11-27 02:33:05.885 23508 24024 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb'
+11-27 02:33:05.998 23508 24024 I Cv10SpatialLauncher: OpenXR session state 5

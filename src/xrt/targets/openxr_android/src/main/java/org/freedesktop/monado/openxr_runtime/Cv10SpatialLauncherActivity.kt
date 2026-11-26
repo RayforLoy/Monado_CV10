@@ -135,7 +135,8 @@ class Cv10SpatialLauncherActivity : Activity() {
                     val failure =
                         try {
                             System.loadLibrary("cv10-spatial-launcher")
-                            nativeRun(applicationContext, state)
+                            val manifest = Cv10BundledRuntime.manifestPath(applicationContext, "cv10-spatial-runtime.json")
+                            nativeRun(applicationContext, state, manifest)
                         } catch (error: LinkageError) {
                             Log.e(TAG, "OpenXR launcher native library unavailable", error)
                             error.message ?: error.toString()
@@ -312,7 +313,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 
     @Keep
-    private external fun nativeRun(context: Context, state: SpatialLauncherState): String?
+    private external fun nativeRun(context: Context, state: SpatialLauncherState, runtimeManifest: String?): String?
 
     private data class HitTarget(val bounds: RectF, val action: () -> Unit)
 

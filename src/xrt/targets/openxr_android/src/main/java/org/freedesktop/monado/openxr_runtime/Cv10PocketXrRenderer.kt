@@ -23,7 +23,9 @@ internal class Cv10PocketXrRenderer(
         Thread({
             val failure = try {
                 System.loadLibrary("cv10-spatial-launcher")
-                nativeRun(activity, activity.applicationContext, state, capture)
+                val context = activity.applicationContext
+                val manifest = Cv10BundledRuntime.manifestPath(context, "cv10-pocket-runtime.json")
+                nativeRun(activity, context, state, capture, manifest)
             } catch (error: LinkageError) {
                 Log.e(TAG, "OpenXR capture library unavailable", error)
                 error.message ?: error.toString()
@@ -37,7 +39,13 @@ internal class Cv10PocketXrRenderer(
     }
 
     @Keep
-    private external fun nativeRun(activity: Activity, context: Context, state: SpatialLauncherState, capture: Capture): String?
+    private external fun nativeRun(
+        activity: Activity,
+        context: Context,
+        state: SpatialLauncherState,
+        capture: Capture,
+        runtimeManifest: String?,
+    ): String?
 
     @Keep
     private inner class Capture {
