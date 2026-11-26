@@ -1,0 +1,33 @@
+API 36, page size 16384, ABIs x86_64,arm64-v8a
+APK SHA-256 31777c5b42b83d3e5d8eea727802d0981b079710717b8192d38199bbcb42859b
+Performing Streamed Install
+Success
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+Starting: Intent { cmp=org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity }
+Status: ok
+LaunchState: COLD
+Activity: org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity
+TotalTime: 778
+WaitTime: 781
+Complete
+UI hierchary dumped to: /sdcard/cv10-16k-ui.xml
+The OpenXR launcher could not start. Connect the CV10, allow USB access, and confirm Monado CV10 is selected in the runtime broker.
+RETRY
+CANCEL
+OPEN RUNTIME BROKER
+Retry presented a second recovery dialog. Cancel then Back returned to the 2D list.
+11-27 07:16:25.239  3472  3489 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 07:16:25.553  3287  3287 D nativeloader: Load <APK library path>/lib/arm64/libmonado-service.so using class loader ns clns-9 (caller=/data/app/~~DW-MK4vQQxGinXrtLqZVAQ==/org.cv10.monado.out_of_process.launcher_preview-fWJ7PiM6IJzzoTKBJ3Q8EQ==/base.apk!classes4.dex): ok
+11-27 07:16:25.584  3287  3512 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:16:25.674  3287  3512 E monado.ipc_server_init_system_if_available_locked: ERROR [ipc_server_init_system_if_available_locked] xrt_instance_create_system failed: XRT_ERROR_VULKAN [src/xrt/ipc/server/ipc_server_process.c:855]
+11-27 07:16:25.740  3287  3520 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:16:25.838  3287  3520 E monado.ipc_server_init_system_if_available_locked: ERROR [ipc_server_init_system_if_available_locked] xrt_instance_create_system failed: XRT_ERROR_VULKAN [src/xrt/ipc/server/ipc_server_process.c:855]
+11-27 07:16:25.860  3472  3472 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+11-27 07:17:06.944  3472  3634 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 07:17:07.130  3287  3636 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:17:07.213  3287  3636 E monado.ipc_server_init_system_if_available_locked: ERROR [ipc_server_init_system_if_available_locked] xrt_instance_create_system failed: XRT_ERROR_VULKAN [src/xrt/ipc/server/ipc_server_process.c:855]
+11-27 07:17:07.269  3287  3641 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:17:07.370  3287  3641 E monado.ipc_server_init_system_if_available_locked: ERROR [ipc_server_init_system_if_available_locked] xrt_instance_create_system failed: XRT_ERROR_VULKAN [src/xrt/ipc/server/ipc_server_process.c:855]
+11-27 07:17:07.385  3472  3472 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+No fatal crash in the guest crash buffer

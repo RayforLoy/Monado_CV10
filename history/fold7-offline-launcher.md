@@ -34,6 +34,12 @@
 
 本轮保留 Wi-Fi 以维持无线 ADB。隔离包仅用于应用层对照。恢复时 Broker 选回稳定运行时，系统最低刷新率为 `null`，临时日志级别和 ADB 反向端口均已清理。
 
+### 独立预览的网络隔离复测
+
+2026-11-27 07:53 香港时间开始。使用 `dbc8141` 的启动器代码，在诊断分支 `ecab336` 上从合并清单移除 `INTERNET`。ARM64 APK SHA-256 为 `b8c7f725abe8da04535f7858c0d1c2997b9244f6e18f3ed29c064c292a8679df`，通过 v2 签名校验、16 KiB ZIP 对齐及 ARM64 ELF 校验。原版 `hello_xr` 在 Fold7 上的已安装 APK 摘要为 `29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962`，同样无 `INTERNET`。预览包未获得 Shizuku 授权。预览进程尝试创建 IPv4、IPv6 套接字，均返回 `Operation not permitted`。已在启动测试前撤销临时回环端口。
+
+预览包的 `RUN_ANY_IN_BACKGROUND` 临时设为 `default`。2D 列表直启和 3D 菜单点选的原版 `hello_xr` 在同一 PID 25558 两次进入 `FOCUSED`，分别按返回并成功销毁实例。3D 点选第 2、7、14、24 秒均有外屏呈现记录，第 24 秒图层每秒有 60.32 次不同的呈现时间戳，右镜拍到蓝块。CV10 保持 3200×1600、90 Hz。Fold7 系统 Wi-Fi 供 ADB 使用，系统内的 Shizuku 服务仍在运行。复测后恢复预览包原先的后台策略、原 APK 和稳定版 Broker。[日志摘录](evidence/fold7-launcher-ecab336-no-internet.txt) · [3D 点选第 24 秒右镜](evidence/fold7-launcher-ecab336-3d-24s-right.jpg)
+
 ## 3D 菜单的运行时回退
 
 预览包从 `f17ea5f` 的运行时代码构建，ARM64 APK SHA-256 为 `e2c7269e342bcef451e2472e683381c74fbb3d15f325fe8c7e857342fefd763e`。签名和 ZIP 对齐检查通过，五个 ARM64 ELF 的 15 个 `PT_LOAD` 段为 `0x4000` 对齐。该包保留标准 `INTERNET` 声明，本轮沿用上文接线，保持系统 Wi-Fi 开启。
@@ -72,3 +78,28 @@
 `6561af9` ARM64 APK SHA-256 为 `c2b9f6017662de9766e06e027a32cf847a5050a73b941465385231c682160d9d`。v2 签名、16 KiB ZIP 对齐和五个原生库的 15 个 ELF `PT_LOAD` 段通过检查。
 
 06:46–06:47 在 Fold7 安装同一 APK，系统页大小为 4096。沿用 C9.53.6 原厂线和 5 V 供电，从 2D 列表和 3D 菜单依次启动未修改的 `hello_xr`。两次均 `FOCUSED`，右镜对应蓝方块可见，按返回后进入 `IDLE` 并完成 `xrDestroyInstance`。恢复稳定 Broker 和原预览 APK，最低刷新率为 `null`，电量 70%。[Fold7 日志](evidence/fold7-launcher-6561af9.log) · [2D 直开样例右镜](evidence/fold7-launcher-6561af9-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-6561af9-menu-right.jpg) · [3D 点选样例右镜](evidence/fold7-launcher-6561af9-select-right.jpg)
+
+## 独立启动器的 16 KiB 与 Fold7 回归
+
+2026-11-27 07:16–07:18 香港时间。独立启动器分支从 `76ad245b5113a6a347593d6e6ba78d630f0c026d` 构建，使用 `-Pcv10LauncherPreview=true -Pcv10Abi=arm64-v8a`。APK SHA-256 为 `31777c5b42b83d3e5d8eea727802d0981b079710717b8192d38199bbcb42859b`，v2 签名、`zipalign -c -P 16 4` 及五个 ARM64 ELF 的 15 个 `PT_LOAD` 段通过检查。调试证书与本页首轮使用的证书相同。
+
+- Android 16 Google APIs 16 KiB 镜像（API 36、x86_64、修订版 7）实测 `PAGE_SIZE=16384`。APK 经 ARM64 转译安装并加载内置 OpenXR 运行时。模拟器缺少所需的 Vulkan 实例扩展，首次启动和点击 **重试** 均返回 `xrGetSystem` 错误并出现恢复提示，两个进程继续运行。取消提示后按返回可回到 2D 列表。[16 KiB 安装和恢复日志](evidence/android16-16k-launcher-76ad245.txt)
+- Fold7（SM-F9660）实测 `PAGE_SIZE=4096`，沿用 C9.53.6 原厂线和 5 V 供电。CV10 保持 3200×1600、90 Hz。由 2D 列表直开原版 `hello_xr`，返回后进入 3D 菜单，底部上滑停留置中并点选同一应用。样例在同一 PID 30745 两次进入 `FOCUSED`、两次正常销毁实例。外屏截图显示双目方块，固定摄像头三次拍到右镜输出。结束后恢复稳定 Broker 和原预览 APK。Wi-Fi 保持开启，最低刷新率为 `null`，未新增 Shizuku 或 VPN 授权。[日志](evidence/fold7-launcher-76ad245.log) · [2D 直启右镜](evidence/fold7-launcher-76ad245-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-76ad245-menu-right.jpg) · [3D 点选右镜](evidence/fold7-launcher-76ad245-select-right.jpg) · [双目外屏](evidence/fold7-launcher-76ad245-select-display.png)
+
+## Fold7 的 3D 点选与后台冻结对照
+
+2026-11-27 香港时间。沿用同一台 Fold7、原厂线、供电及原版 `hello_xr`。经手机菜单打开 2D 列表后等待 40 秒，避免 ADB 启动产生的临时豁免覆盖 2D 直启。先在 2D 列表直启并退出样例，再从 3D 菜单点选同一个样例。记录 `FOCUSED`、SurfaceFlinger 呈现计数、右镜画面及返回后的 `xrDestroyInstance`。前三轮预览包的 `RUN_ANY_IN_BACKGROUND` 为 `ignore`。
+
+- 基线 `76ad245` 经 2D 直启后持续出帧至第 78 秒，外屏图层约 60 次不同的呈现时间戳每秒，CV10 面板模式为 90 Hz。3D 点选于 07:28:46.252 进入 `FOCUSED`，Freecess 随后以 `Bg-buff` 冻结预览包的两个进程。第 2 秒右镜为黑色，`ActivityDestroyTimeout` 约十秒后解冻并恢复出图，样例可退出。[第 2 秒右镜](evidence/fold7-launcher-76ad245-handoff-black-right.jpg) · [第 38 秒右镜](evidence/fold7-launcher-76ad245-handoff-recovered-right.jpg)
+- 对照 `2f52e97` 让 3D 菜单返回选中的应用，由重新获得焦点的 2D 列表发起启动。2D 直启仍可持续出帧并退出。3D 点选后右镜第 2 秒已出蓝块，Freecess 随后再次冻结。第 2、7、14、38、78 秒的外屏截图摘要完全相同，图层无呈现时间戳，按返回键后未进入 `IDLE`。该 APK SHA-256 为 `96677e959c8d1ad8a38ec2afcec479fe1f9504d24131da05f9badfc16521877b`。实验改动保留在诊断分支。[日志摘录](evidence/fold7-launcher-handoff-freecess.txt) · [同包的 Android 16 16 KiB 安装和 Vulkan 失败恢复](evidence/android16-16k-launcher-2f52e97.txt)
+- 对照 `3cfbf5b` 在 2D 列表获得焦点后延时 2.6 秒，运行时确实执行 `onShutdown`、`onDestroy`，下一个应用触发新的 `onBind`。本轮 3D 点选仍触发 `Bg-buff`，右镜为黑，返回未进入 `IDLE`。本轮 2D 直启能退出，但在创建外显目标约两秒后，日志记录原生端释放外显视图，所采镜片为黑。APK SHA-256 为 `98a076a4fe9f29e7fb12c7b28e4c4de687fbbddbbca5cf807f6ae3d58f6e3ec9`，实验改动保留在诊断分支。[日志摘录](evidence/fold7-launcher-handoff-freecess.txt)
+- 07:42–07:43，使用同一个基线 `76ad245` APK，将预览包的 `RUN_ANY_IN_BACKGROUND` 临时由 `ignore` 改为 `default`。2D 直启及 3D 点选均在 PID 15493 进入 `FOCUSED` 并正常退出。3D 点选第 2、7、14、24 秒的外屏有新呈现时间戳，期间未观察到该包被 Freecess 冻结。[日志摘录](evidence/fold7-launcher-handoff-freecess.txt)
+- 07:46–07:49，预览包 `dbc8141` 复测。受限提示可以打开本包应用详情。临时恢复默认 AppOp 后，Fold7 的 Android API 仍报告后台受限，提示仍显示。2D 直启及 3D 点选两轮都在 PID 20996 进入 `FOCUSED` 并正常销毁实例。第二轮第 2、7、14、38、78 秒的图层持续呈现，第 78 秒测得每秒 60.32 次不同的呈现时间戳，CV10 面板仍为 90 Hz。右镜第 2 秒和第 78 秒都拍到蓝块。该包 SHA-256 为 `5d5b639bb81be1fdb3935d83ba87d61366af9e2ba56945cefbab1127708c918d`，v2 签名、16 KiB ZIP 对齐及 15 个 ARM64 `PT_LOAD` 段检查通过。同包在 16 KiB Android 16 模拟器完成安装、运行时加载和 Vulkan 失败后的重试及退出。[日志摘录](evidence/fold7-launcher-handoff-freecess.txt) · [第 2 秒右镜](evidence/fold7-launcher-dbc8141-handoff-2s-right.jpg) · [第 78 秒右镜](evidence/fold7-launcher-dbc8141-handoff-78s-right.jpg) · [16 KiB 验证](evidence/android16-16k-launcher-dbc8141.txt)
+
+复测使用的临时后台 AppOp 调整仅涉及预览包。复测完毕后恢复预览包原先的 `ignore` 设置、稳定版 Broker 和原预览 APK。系统最低刷新率为 `null`，无线 ADB 在线。
+
+## 华为 VR 桌面的源码与许可
+
+用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。
+
+在华为开源发布中心、VR Engine 开发者资料以及按包名检索的公开结果中，未找到可 fork 的桌面应用源码或整包授权。项目的离线 3D 菜单按 Monado 的 Boost Software License 1.0 发布。它读取 Android 本地应用列表，并通过 OpenXR 渲染卡片和激光指针。交互参考华为公开操作指南。[华为开源发布中心](https://consumer.huawei.com/en/opensource/) · [VR Engine](https://developer.huawei.com/consumer/cn/vr) · [手机操控模式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)

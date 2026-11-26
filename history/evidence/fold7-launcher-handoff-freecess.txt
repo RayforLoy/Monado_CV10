@@ -1,0 +1,79 @@
+Fold7 SM-F9660 / CV10 HUAWEIAV03 3200x1600 @90 Hz / 2026-11-27 HKT
+Stock hello_xr OpenGLES SHA256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+
+76ad245 SHA256 31777c5b42b83d3e5d8eea727802d0981b079710717b8192d38199bbcb42859b
+07:27:18.699 ActivityManager: Background started FGS: Allowed [callingPackage: org.cv10.monado.out_of_process.launcher_preview; uidState: TOP; code:PROC_STATE_TOP; tempAllowListReason:<null>]
+07:27:19.188 hello_xr PID 4747: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (2D direct)
+07:28:40 SurfaceFlinger layer 1084194: 127 distinct presents, 60.32/s, latest=2209349077554778
+07:28:41.818 OpenXR-Loader PID 4747: xrDestroyInstance Completed loader trampoline
+07:28:45.882 OpenXR-Loader PID 5878: xrDestroyInstance Completed loader trampoline (3D picker)
+07:28:46.252 hello_xr PID 4747: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (3D selection)
+07:28:46.487 FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5878, 4102] reason: Bg-buff
+07:28:56.653 FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5878, 4102] reason: ActivityDestroyTimeout
+07:29:04 SurfaceFlinger layer 1084308: 127 distinct presents, 58.47/s, latest=2209373874485603
+07:30:02 SurfaceFlinger layer 1084308: 127 distinct presents, 60.32/s, latest=2209431699953862
+07:30:08.744 OpenXR-Loader PID 4747: xrDestroyInstance Completed loader trampoline
+Right lens at 2s: black. Right lens at 38s: blue cube.
+
+2f52e97 SHA256 96677e959c8d1ad8a38ec2afcec479fe1f9504d24131da05f9badfc16521877b
+07:32:24.644 ActivityManager: Background started FGS: Allowed [callingPackage: org.cv10.monado.out_of_process.launcher_preview; uidState: TOP; code:PROC_STATE_TOP; tempAllowListReason:<null>]
+07:32:24.983 hello_xr PID 8330: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (2D direct)
+07:33:48.055 OpenXR-Loader PID 8330: xrDestroyInstance Completed loader trampoline
+07:33:52.093 OpenXR-Loader PID 8820: xrDestroyInstance Completed loader trampoline (3D picker)
+07:33:52.100 ActivityTaskManager: onTop=true Cv10LauncherActivity
+07:33:52.440 ActivityTaskManager: onTop=false Cv10LauncherActivity
+07:33:52.452 FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [7835, 8820] reason: Bg-buff
+07:33:52.742 hello_xr PID 8330: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (3D selection)
+07:33:52.977 FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [7835, 8820] reason: Bg-buff
+07:33:53.697 FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [7835, 8820] reason: Bg-buff
+At 2s, 7s, 14s, 38s and 78s, SurfaceFlinger layer 1084705 reported no present timestamps.
+External display capture SHA256 at all five samples: 712739118bde34ddd58536e8fe41986ed82d46672092bd637384c5b6355ab087
+Right lens at 2s: blue cube. No hello_xr XR_SESSION_STATE_IDLE observed after Back at 07:35:13.
+
+3cfbf5b SHA256 98a076a4fe9f29e7fb12c7b28e4c4de687fbbddbbca5cf807f6ae3d58f6e3ec9
+07:40:02.558 hello_xr PID 12672: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (2D direct)
+07:40:02.681 MonadoView PID 12253: CV10 target id=91 name=HUAWEIAV03 active=3200x1600@90 owner=runtime path=presentation
+07:40:04.682 MonadoView PID 12253: This should not have happened: Discarding by native code, but not marked as used!
+07:40:04.682 MonadoView PID 12253: Start removing view from window
+07:40:20.965 OpenXR-Loader PID 12672: xrDestroyInstance Completed loader trampoline
+07:40:24.138 Cv10SpatialLauncher PID 13000: OpenXR session state 5
+07:40:24.871 MonadoService PID 12253: onUnbind (3D picker)
+07:40:26.371 MonadoService PID 12253: onShutdown
+07:40:26.372 MonadoService PID 12253: onDestroy
+07:40:28.052 MonadoService PID 12253: onBind (selected app)
+07:40:28.169 FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [12253, 13000] reason: Bg-buff
+07:40:28.962 hello_xr PID 12672: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (3D selection)
+07:40:29.133 FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [12253, 13000] reason: Bg-buff
+Right lens samples at 2s, 7s, 14s, and 24s after 3D selection: black. The sampled 2D launch also showed a black lens.
+No hello_xr XR_SESSION_STATE_IDLE observed after Back at 07:40:55.
+
+76ad245, same APK and phone, preview package RUN_ANY_IN_BACKGROUND changed from ignore to default for this run.
+07:42:46.129 hello_xr PID 15493: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (2D direct)
+07:43:05.917 OpenXR-Loader PID 15493: xrDestroyInstance Completed loader trampoline
+07:43:09.918 Cv10SpatialLauncher PID 15817: OpenXR session state 5
+07:43:10.962 OpenXR-Loader PID 15817: xrDestroyInstance Completed loader trampoline (3D picker)
+07:43:11.244 MonadoService PID 15196: onRebind (selected app)
+07:43:11.443 hello_xr PID 15493: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (3D selection)
+07:43:38.538 hello_xr PID 15493: XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE
+07:43:40.305 OpenXR-Loader PID 15493: xrDestroyInstance Completed loader trampoline
+The external display capture changed and SurfaceFlinger reported present timestamps at 2s, 7s, 14s and 24s after 3D selection. No Freecess freeze of the preview package was observed in this run. RUN_ANY_IN_BACKGROUND returned to ignore.
+
+dbc8141 SHA256 5d5b639bb81be1fdb3935d83ba87d61366af9e2ba56945cefbab1127708c918d
+With RUN_ANY_IN_BACKGROUND=ignore, the launcher displayed its background restriction notice. The button opened com.android.settings/.applications.InstalledAppDetails. With the preview AppOp set to default, the Fold7 still displayed the notice after the package was restarted.
+07:47:31.912 hello_xr PID 20996: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (2D direct)
+07:47:50.469 OpenXR-Loader PID 20996: xrDestroyInstance Completed loader trampoline
+07:47:54.551 Cv10SpatialLauncher PID 21535: OpenXR session state 5
+07:47:55.528 OpenXR-Loader PID 21535: xrDestroyInstance Completed loader trampoline (3D picker)
+07:47:55.790 MonadoService PID 20454: onRebind (selected app)
+07:47:55.963 hello_xr PID 20996: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (3D selection)
+07:47:56.160 MonadoView PID 20454: CV10 target id=91 name=HUAWEIAV03 active=3200x1600@90 owner=runtime path=presentation
+SurfaceFlinger after 3D selection, distinct present count, rate per second, latest timestamp in ns:
+2s   124  60.32  2210507257885691
+7s   127  60.32  2210512281225585
+14s  127  60.31  2210519244571832
+38s  127  60.32  2210543200816927
+78s  127  60.32  2210583254624152
+07:49:17.072 hello_xr PID 20996: XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE
+07:49:18.551 OpenXR-Loader PID 20996: xrDestroyInstance Completed loader trampoline
+Right lens showed the blue cube at 2s and 78s. No Freecess freeze of the preview package was observed during the two sessions.
+After restoration: stable Monado CV10 selected, preview APK SHA256 8d1bbb5bc75e24e8d225872e0def4ecbc5768ad0cd849c5d21e00af50c4713db, preview RUN_ANY_IN_BACKGROUND=ignore, wifi_on=1, min_refresh_rate=null.

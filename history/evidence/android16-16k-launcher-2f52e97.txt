@@ -1,0 +1,23 @@
+API 36, page size 16384, ABIs x86_64,arm64-v8a
+APK SHA-256 96677e959c8d1ad8a38ec2afcec479fe1f9504d24131da05f9badfc16521877b
+Performing Streamed Install
+Success
+    primaryCpuAbi=arm64-v8a
+    secondaryCpuAbi=null
+Starting: Intent { cmp=org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity }
+Status: ok
+LaunchState: COLD
+Activity: org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity
+TotalTime: 827
+WaitTime: 828
+Complete
+UI hierchary dumped to: /sdcard/cv10-16k-ui.xml
+11-27 07:32:12.503  3249  3282 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 07:32:12.812  3103  3294 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:32:12.969  3103  3302 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:32:13.086  3249  3249 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+11-27 07:32:15.128  3249  3316 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 07:32:15.314  3103  3334 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:32:15.451  3103  3352 E monado.vk_check_required_extensions: ERROR [vk_check_required_extensions] Missing required instance extensions:
+11-27 07:32:15.567  3249  3249 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+Cancel then Back returned to 2D. No fatal crash.

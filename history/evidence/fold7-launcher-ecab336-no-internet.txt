@@ -1,0 +1,24 @@
+2026-11-27 HKT / Fold7 SM-F9660 / CV10 HUAWEIAV03 3200x1600 @90 Hz / original C9.53.6 cable and 5 V supply
+ARM64 diagnostic APK ecab336, SHA256 b8c7f725abe8da04535f7858c0d1c2997b9244f6e18f3ed29c064c292a8679df
+Stock hello_xr OpenGLES, installed APK SHA256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Neither app manifest requests INTERNET. Preview app has no Shizuku grant. Preview APK v2 signature and 16 KiB ZIP and ELF checks passed.
+Preview IPv4 exit=1 nc: socket 1 6: Operation not permitted
+Preview IPv6 exit=1 nc: socket 1 6: Operation not permitted
+The temporary ADB reverse loopback mapping was removed before launching the test sessions.
+
+11-27 07:54:38.646 hello_xr PID 25558: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (2D direct)
+11-27 07:54:55.814 hello_xr PID 25558: XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE
+11-27 07:54:57.267 OpenXR-Loader PID 25558: xrDestroyInstance Completed loader trampoline
+11-27 07:55:01.256 Cv10SpatialLauncher PID 25922: OpenXR session state 5
+11-27 07:55:02.113 OpenXR-Loader PID 25922: xrDestroyInstance Completed loader trampoline (3D picker)
+11-27 07:55:02.561 hello_xr PID 25558: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED (3D selection)
+SurfaceFlinger after 3D selection, distinct present count, rate per second, latest timestamp in ns:
+2s   109  57.14  2210933618961413
+7s   127  60.32  2210938758210891
+14s  127  60.32  2210945853834481
+24s  127  60.32  2210955784581822
+11-27 07:55:29.488 hello_xr PID 25558: XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE
+11-27 07:55:31.047 OpenXR-Loader PID 25558: xrDestroyInstance Completed loader trampoline
+Right lens showed the blue cube at 2s and 24s after 3D selection. The external display image checksum changed between the samples.
+Preview RUN_ANY_IN_BACKGROUND: ignore before, default during, ignore after the test. System Wi-Fi was used for ADB, and shizuku_server was running.
+Stable Monado CV10 reselected in the broker and original preview APK reinstalled after the test. min_refresh_rate=null.
