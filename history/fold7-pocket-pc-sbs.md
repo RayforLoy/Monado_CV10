@@ -11,4 +11,6 @@
 
 在实验分支提交 `4e85e3e6d7e8c22cb2a026badd7a743212101d3d`，预览使用 Shizuku 创建同尺寸显示屏，然后启动原版默认的 PC Screen 活动。使用 `-Pcv10LauncherPreview=true -Pcv10Abi=arm64-v8a` 构建。APK SHA-256 为 `a983600ad7683d0c9cbe53dec8aa8ee7889b495a5e854992cbe3d16b06648e85`，APK v2 签名、16 KiB ZIP 对齐和五个 ARM64 库的 15 个 `PT_LOAD` 段均通过检查。在 Fold7 安装了同一 APK，确认两个中文电脑屏幕入口可用。预览包未新增 Shizuku 授权，正式入口从配对到开流待验收。
 
+后来用 `42248dd` 预览的显示服务，在 Fold7 上创建受信任虚拟屏并从原版默认电脑屏幕接收同规格的 HEVC Half SBS 实时视频。默认槽的虚拟屏接收和释放通过，Monado 界面经 Shizuku 一键启动后的镜片输出仍待实测。[默认槽与受信任屏实测](fold7-pocket-shell-service.md)
+
 本次视频是已左右并排的 Half SBS 画面，兼容路径将两半分别放到头锁定平面。原版空间应用面板里的 3D 视频、Full SBS、其他主机软件以及实时头部姿态是独立的验收项。

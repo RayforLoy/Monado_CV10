@@ -35,8 +35,8 @@ public final class PocketShellProbe {
     }
 
     private static void run(String[] args) throws Exception {
-        if (args.length != 2 || Process.myUid() != 2000) {
-            throw new IllegalArgumentException("Usage as adb shell: PocketShellProbe MODE OUTPUT.png");
+        if (args.length < 2 || args.length > 3 || Process.myUid() != 2000) {
+            throw new IllegalArgumentException("Usage as adb shell: PocketShellProbe MODE OUTPUT.png [SECOND.png]");
         }
         int mode = Integer.parseInt(args[0]);
         if (mode < 0 || mode > 2) throw new IllegalArgumentException("Unknown Pocket XR mode");
@@ -72,6 +72,9 @@ public final class PocketShellProbe {
                 if (displays.getDisplay(id) == null) throw new AssertionError("Wrong token stopped the lease");
                 System.out.println("Wrong token left display " + id + " active");
                 captured = saveFrame(stream, args[1]);
+                if (captured && args.length == 3 && !saveFrame(stream, args[2])) {
+                    throw new IllegalStateException("Pocket XR did not render a second frame");
+                }
             } finally {
                 stop.invoke(service, lifetime);
             }

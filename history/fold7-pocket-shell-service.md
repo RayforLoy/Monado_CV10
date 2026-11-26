@@ -19,6 +19,8 @@
 
 提交 `42248dd` 在电脑屏幕模式已建屏、尚未收到画面时，显示等待视频与去手机端配对的提示。该预览包 SHA-256 为 `ff752f8c919201f42402e3220ef77f256194a59aba1e59ba3cbfadf17471a887`，与上一个预览使用同一签名，16 KiB ZIP 对齐及五个 ARM64 库的 15 个 `PT_LOAD` 段通过检查。第一次启动复用了旧的 Hello XR 进程，未进入 `FOCUSED`。停止旧进程后从内置 2D 启动器冷启动，CV10 右镜拍到蓝色方块。系统返回键使会话进入 `STOPPING`，`xrDestroyInstance` 完成。测试保留新预览，Broker 恢复为稳定的 Monado CV10。[启动和退出日志](evidence/fold7-pocket-pc-wait-hello.log) · [右镜实拍](evidence/fold7-pocket-pc-wait-hello-right.jpg)
 
+2026-11-27 04:23（香港时间），在同一 Fold7 上用新预览和原版 Pocket XR 的默认电脑屏幕配对临时 Sunshine 2026.914.233613。用探针重新启动已配对的原版 `PcScreenActivity` 后，显示服务创建了 1920×1080、60 Hz 的受信任屏 126。第一张为原版的「正在启动 Desktop」界面，随后手机的 Qualcomm HEVC 解码器启动。第二张原始采样为 1920×1080，左蓝右红的 Half SBS 测试卡时钟为 00:50.11。原版请求 120 fps，虚拟屏报告 60 Hz，这轮没有测量视频或眼镜的实际帧率。正确令牌释放显示屏，原版默认槽的临时配对和主机地址已清空，临时 Sunshine 已停止。本轮在虚拟屏采样，先前 [右镜光学验证](fold7-pocket-pc-sbs.md) 使用第 6 槽和诊断显示屏。Monado 界面经 Shizuku 一键启动后的镜片输出仍待实测。[视频源帧](evidence/fold7-pocket-shell-pc-sbs.png) · [手机和主机日志](evidence/fold7-pocket-shell-pc-sbs.log)
+
 ## 复测
 
 用 JDK 17 和 Android SDK 构建探针。将 `$serial` 指向本机 Fold7，保持 Android 调试已经授权。探针需要安装 Monado 预览和原版 Pocket XR。
@@ -35,4 +37,4 @@ adb -s $serial pull /data/local/tmp/pocket-shell-card.png
 adb -s $serial shell rm -f /data/local/tmp/pocket-shell-probe.jar /data/local/tmp/pocket-shell-card.png
 ```
 
-把模式 `1` 改为 `0` 可测普通空间，改为 `2` 可测默认电脑屏幕。电脑屏幕收到视频后才会保存图像。
+把模式 `1` 改为 `0` 可测普通空间，改为 `2` 可测默认电脑屏幕。验证电脑屏幕时，先在手机上配对测试主机。可在命令尾再传一个 PNG 路径，让探针在同一显示租约内间隔约两秒再采一次，用于分辨启动界面和视频。
