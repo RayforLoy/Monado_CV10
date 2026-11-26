@@ -38,3 +38,39 @@ Broker 选中 **Pocket XR**。外层预览的 Loader 从自身缓存读取 `cv10
 | 默认屏的弹出视图 | 原版触控板仍在手机上，首个游戏缓冲区出现后 460 毫秒，Freecess 冻结 Pocket XR。三次读取同一 SurfaceView 的帧编号依次为 23、29、29。 | 按返回后未取得正常退出轨迹。原版服务在 `ServiceANR` 解冻后交还游戏层。 |
 
 `readelf -d` 显示原版 1.6.28 的 `libopenxr_monado.so` 未设 `NODELETE`，CV10 预览包含 `4fe230f` 的 `NODELETE` 修复。卸载后的崩溃时序与此前 CV10 的卸载问题一致。本轮原版崩溃缺少可用的符号化回溯，尚不能确认同一根因。两种窗口放置均无法消除 Freecess。结束后重新恢复稳定 Broker、原电池设置和生产预览，保留原有权限与接线。[前台与退出对照日志](evidence/fold7-pocket-stock-foreground.log)
+
+## 游戏虚拟屏与手机前台对照
+
+2026-11-27 05:09 至 05:22（香港时间）。沿用同一 Fold7、接线、原版 Pocket XR 和 `hello_xr`，Broker 选中 **Pocket XR**，测试期间原版的三星电池选项为 **优化**。外层用自身的 Monado CV10 运行时，原版空间仍在预览创建的 3840×1080 虚拟屏。单独调整的是样例 Activity 所在的 1280×720、60 Hz 游戏虚拟屏。
+
+先在原诊断包加入 `BIND_IMPORTANT`，仅向原版公开的运行时服务发起发现绑定。系统登记 `CR IMP`，原版回应空 Binder，未因此建立游戏图层。样例首个游戏缓冲区出现后 378 毫秒，三星仍冻结原版进程，随后也冻结外层预览。该绑定只用于对照。此诊断包和下表的原诊断包解包后只有 DEX 不同，SHA-256 为 `d6e45613012c0140d700b05141f7f30a4a4e7fb20c5268d8b0af3414b63fcb4d`。[服务绑定和冻结日志](evidence/fold7-pocket-bound-service.log) · [Android 绑定标志](https://developer.android.com/reference/android/content/Context#BIND_IMPORTANT)
+
+下表的 APK 都和 04:49 的原诊断包相同，SHA-256 为 `25e0f134f17f7127b780e25a2e2474a4acfaa2ec9766cb360c290ddada3d8a1c`。通过已授权的 ADB 在新屏上启动同一原版样例。记录 SurfaceFlinger 游戏图层的连续五次帧编号。
+
+| 游戏屏配置 | 手机主屏窗口 | Android 顶层焦点 | 原版游戏图层帧编号 |
+| --- | --- | --- | --- |
+| Shell 创建，受信任，独立焦点，禁止抢占顶层焦点 | Pocket XR 触控板 | 主屏 0，游戏在屏 146 内获得焦点 | 11、118、223、325、427 |
+| Shell 创建，受信任，普通焦点 | Pocket XR 触控板 | 游戏屏 149 | 13、117、216、322、427 |
+| Shell 创建，公开，普通焦点 | Pocket XR 触控板 | 主屏 0 | 12、113、220、324、430 |
+| Monado 诊断包创建，公开，普通焦点 | Pocket XR 触控板 | 主屏 0 | 15、119、224、321、421 |
+| Shell 创建，受信任，独立焦点，禁止抢占顶层焦点 | Monado 预览页 | 主屏 0，游戏在屏 157 内获得焦点 | 17、29、29、29、29 |
+
+五轮样例均进入 `FOCUSED`。手机主屏显示 Pocket XR 触控板的四轮在约九秒的观察窗内持续出帧。使用独立焦点屏的一轮，右镜录像可见蓝色立方体，物理外显录屏只留下空间占位画面。手机主屏显示 Monado 预览页的一轮，首帧后原版进程被 Freecess 冻结。创建方和显示焦点标志都无法单独解释该故障，早前原版触控板已打开时也曾冻结。持续出帧的轮次中，按返回后原版移除游戏图层。独立焦点轮中，加载器完成 `xrDestroyInstance` 并卸载原版运行时，6 毫秒后样例线程 `SIGSEGV`。[右镜画面](evidence/fold7-pocket-own-focus-right.jpg) · [显示与游戏层日志](evidence/fold7-pocket-own-focus.log)
+
+第六轮让 Monado 预览页保留在手机主屏，样例所在的屏 160 保持独立焦点。游戏图层的帧编号由 14 升至 27 后停住。点按 Monado 的 **打开手机控制**，手机主屏切换到原版 Pocket XR 触控板。同一游戏图层继续提交帧 58、125、196、270、344，样例进程和外层 OpenXR 会话均未重启。本轮的恢复依据是图层缓冲区与系统日志，右镜录像在点按前结束。退出后恢复稳定 Broker、原电池设置和生产预览，保留现有 Shizuku、VPN 和 Wi-Fi 状态。[显示与游戏层日志](evidence/fold7-pocket-own-focus.log)
+
+### 复测游戏虚拟屏
+
+在保持现有授权的设备上，将 [Java 探针](Cv10PocketFocusProbe.java) 编译为 DEX。它只运行在 ADB shell 下，定时或收到停止文件后释放虚拟屏。
+
+```powershell
+$platform = "$env:ANDROID_HOME/platforms/android-35/android.jar"
+$d8 = "$env:ANDROID_HOME/build-tools/36.0.0/d8.bat"
+javac --release 11 -cp $platform history/Cv10PocketFocusProbe.java
+& $d8 --min-api 34 --lib $platform --output cv10-pocket-focus-probe.jar history/Cv10PocketFocusProbe.class
+adb -s $serial push cv10-pocket-focus-probe.jar /data/local/tmp/cv10-pocket-focus-probe.jar
+adb -s $serial shell chmod 444 /data/local/tmp/cv10-pocket-focus-probe.jar
+adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_process / Cv10PocketFocusProbe /data/local/tmp/cv10-pocket-focus-probe.stop own-focus'
+```
+
+最后一个参数可设为 `trusted` 或 `public`。探针打印屏 ID，在另一终端用 `am start --display <ID>` 选择游戏所在的屏。先关闭游戏，再用 `touch /data/local/tmp/cv10-pocket-focus-probe.stop` 释放显示屏，最后删除临时 JAR 和停止文件。[Android 16 虚拟屏标志](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/core/java/android/hardware/display/DisplayManager.java)

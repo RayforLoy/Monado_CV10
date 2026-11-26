@@ -1,0 +1,126 @@
+=== shell trusted, own focus and no top-focus stealing ===
+CV10 requested flags 0x14409
+CV10 focus probe display id=146
+CV10 focus probe display released
+  mCurrentFocus=Window{d547c3 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity}
+  mCurrentFocus=Window{fe8c0f9 u0 Pocket XR trackpad keys}
+  mTopFocusedDisplayId=0
+game-surface-0.txt: visible reason= buffer=136957917134915 frame=11 contentDirty
+game-surface-1.txt: visible reason= buffer=136957917134914 frame=118 contentDirty
+game-surface-2.txt: visible reason= buffer=136957917134916 frame=223 contentDirty
+game-surface-3.txt: visible reason= buffer=136957917134913 frame=325 contentDirty
+game-surface-4.txt: visible reason= buffer=136957917134915 frame=427 contentDirty
+11-27 05:13:33.081 31583 31822 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:13:36.573 31583 31583 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:13:39.829 32238 32262 V hello_xr: [05:13:39.829][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819727701693
+11-27 05:13:40.053  2129  2365 I SurfaceFlinger: [19400ba SurfaceView[Pocket XR game]@0(BLAST)#1068493] setTransactionState with the first frame. bufferData(ID: 136957917134913, frameNumber: 1)
+11-27 05:13:48.940 32238 32262 V hello_xr: [05:13:48.940][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2828838348564
+11-27 05:13:49.449 32238 32262 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 05:13:49.449 32238 32262 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 05:13:49.451 31888 31888 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:13:49.455 32238 32262 F libc    : Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x758d553a48 in tid 32262 (Thread-7), pid 32238 (llo_xr.opengles)
+11-27 05:13:49.455 32238 32262 F libc    : Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x758d553a48 in tid 32262 (Thread-7), pid 32238 (llo_xr.opengles)
+
+=== shell trusted, standard focus ===
+CV10 requested flags 0x409
+CV10 focus probe display id=149
+CV10 focus probe display released
+  mCurrentFocus=Window{2bce742 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity}
+  mTopFocusedDisplayId=149
+game-surface-0.txt: visible reason= buffer=28123445854273 frame=13 contentDirty
+game-surface-1.txt: visible reason= buffer=28123445854274 frame=117 contentDirty
+game-surface-2.txt: visible reason= buffer=28123445854276 frame=216 contentDirty
+game-surface-3.txt: visible reason= buffer=28123445854274 frame=322 contentDirty
+game-surface-4.txt: visible reason= buffer=28123445854275 frame=427 contentDirty
+11-27 05:16:01.696  5998  6491 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:16:05.105  5998  5998 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:16:08.294  6845  6868 V hello_xr: [05:16:08.294][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819005234130
+11-27 05:16:08.428  2129  2365 I SurfaceFlinger: [af0ade5 SurfaceView[Pocket XR game]@0(BLAST)#1069439] setTransactionState with the first frame. bufferData(ID: 28123445854273, frameNumber: 1)
+11-27 05:16:17.486  6845  6868 V hello_xr: [05:16:17.486][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2828197230741
+11-27 05:16:17.998  6548  6548 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:16:18.000  6845  6868 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x758b553a48 in tid 6868 (Thread-7), pid 6845 (llo_xr.opengles)
+
+=== shell public, standard focus ===
+CV10 requested flags 0x9
+CV10 focus probe display id=152
+CV10 focus probe display released
+  mCurrentFocus=Window{38d097b u0 Pocket XR trackpad keys}
+  mTopFocusedDisplayId=0
+game-surface-0.txt: visible reason= buffer=43744241909828 frame=12 contentDirty
+game-surface-1.txt: visible reason= buffer=43744241909828 frame=113 contentDirty
+game-surface-2.txt: visible reason= buffer=43744241909825 frame=220 contentDirty
+game-surface-3.txt: visible reason= buffer=43744241909828 frame=324 contentDirty
+game-surface-4.txt: visible reason= buffer=43744241909826 frame=430 contentDirty
+11-27 05:17:16.346  9881 10127 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:17:19.916  9881  9881 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:17:23.221 10517 10538 V hello_xr: [05:17:23.221][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2818844339290
+11-27 05:17:23.439  2129  2895 I SurfaceFlinger: [49a63d6 SurfaceView[Pocket XR game]@0(BLAST)#1069999] setTransactionState with the first frame. bufferData(ID: 43744241909825, frameNumber: 1)
+11-27 05:17:32.417 10517 10538 V hello_xr: [05:17:32.417][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2828040297204
+11-27 05:17:32.929 10185 10185 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:17:32.931 10517 10538 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x7591352a48 in tid 10538 (Thread-7), pid 10517 (llo_xr.opengles)
+
+=== app public, standard focus ===
+  DisplayDeviceInfo{"CV10 OpenXR Client Diagnostic": uniqueId="virtual:org.cv10.monado.out_of_process.launcher_preview,10848,CV10 OpenXR Client Diagnostic,77", 1280 x 720, modeId 359, renderFrameRate 60.0, hasArrSupport false, frameRateCategoryRate null, supportedRefreshRates [], defaultModeId 359, userPreferredModeId -1, supportedModes [{id=359, parentModeId=-1, flags=, width=1280, height=720, fps=60.0, vsync=60.0, alternativeRefreshRates=[], supportedHdrTypes=[]}], colorMode 0, supportedColorModes [0], hdrCapabilities null, isForceSdr false, allmSupported false, gameContentTypeSupported false, density 240, 240.0 x 240.0 dpi, appVsyncOff 0, presDeadline 16666666, touch NONE, rotation 0, type VIRTUAL, deviceProductInfo null, state ON, committedState UNKNOWN, owner org.cv10.monado.out_of_process.launcher_preview (uid 10848), frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, brightnessDefault 0.0, brightnessDim -1.0, hdrSdrRatio NaN, FLAG_OWN_CONTENT_ONLY, installOrientation 0, displayShape DisplayShape{ spec=-1507169495 displayWidth=1280 displayHeight=720 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}}
+  mCurrentFocus=Window{7cac7dd u0 Pocket XR trackpad keys}
+  mTopFocusedDisplayId=0
+game-surface-0.txt: visible reason= buffer=52991306498115 frame=15 contentDirty
+game-surface-1.txt: visible reason= buffer=52991306498116 frame=119 contentDirty
+game-surface-2.txt: visible reason= buffer=52991306498115 frame=224 contentDirty
+game-surface-3.txt: visible reason= buffer=52991306498113 frame=321 contentDirty
+game-surface-4.txt: visible reason= buffer=52991306498113 frame=421 contentDirty
+11-27 05:18:35.357 12049 12275 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:18:39.027 12049 12049 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:18:41.721 12600 12618 V hello_xr: [05:18:41.721][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2818723874549
+11-27 05:18:41.902  2129  2364 I SurfaceFlinger: [bfd0d13 SurfaceView[Pocket XR game]@0(BLAST)#1070540] setTransactionState with the first frame. bufferData(ID: 52991306498113, frameNumber: 1)
+11-27 05:18:50.616 12600 12618 V hello_xr: [05:18:50.616][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2827619746264
+11-27 05:18:51.126 12338 12338 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:18:51.127 12600 12618 F libc    : Fatal signal 11 (SIGSEGV), code 2 (SEGV_ACCERR), fault addr 0x758d753a48 in tid 12618 (Thread-7), pid 12600 (llo_xr.opengles)
+
+=== shell trusted, preview stays on phone ===
+CV10 requested flags 0x14409
+CV10 focus probe display id=157
+CV10 focus probe display released
+  DisplayDeviceInfo{"CV10 OpenXR Client Diagnostic": uniqueId="virtual:org.cv10.monado.out_of_process.launcher_preview,10848,CV10 OpenXR Client Diagnostic,79", 1280 x 720, modeId 361, renderFrameRate 60.0, hasArrSupport false, frameRateCategoryRate null, supportedRefreshRates [], defaultModeId 361, userPreferredModeId -1, supportedModes [{id=361, parentModeId=-1, flags=, width=1280, height=720, fps=60.0, vsync=60.0, alternativeRefreshRates=[], supportedHdrTypes=[]}], colorMode 0, supportedColorModes [0], hdrCapabilities null, isForceSdr false, allmSupported false, gameContentTypeSupported false, density 240, 240.0 x 240.0 dpi, appVsyncOff 0, presDeadline 16666666, touch NONE, rotation 0, type VIRTUAL, deviceProductInfo null, state ON, committedState UNKNOWN, owner org.cv10.monado.out_of_process.launcher_preview (uid 10848), frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, brightnessDefault 0.0, brightnessDim -1.0, hdrSdrRatio NaN, FLAG_OWN_CONTENT_ONLY, installOrientation 0, displayShape DisplayShape{ spec=-1507169495 displayWidth=1280 displayHeight=720 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}}
+  DisplayDeviceInfo{"CV10 XR Own Focus Probe": uniqueId="virtual:com.android.shell,2000,CV10 XR Own Focus Probe,80", 1280 x 720, modeId 362, renderFrameRate 60.0, hasArrSupport false, frameRateCategoryRate null, supportedRefreshRates [], defaultModeId 362, userPreferredModeId -1, supportedModes [{id=362, parentModeId=-1, flags=, width=1280, height=720, fps=60.0, vsync=60.0, alternativeRefreshRates=[], supportedHdrTypes=[]}], colorMode 0, supportedColorModes [0], hdrCapabilities null, isForceSdr false, allmSupported false, gameContentTypeSupported false, density 240, 240.0 x 240.0 dpi, appVsyncOff 0, presDeadline 16666666, touch NONE, rotation 0, type VIRTUAL, deviceProductInfo null, state ON, committedState UNKNOWN, owner com.android.shell (uid 2000), frameRateOverride , brightnessMinimum 0.0, brightnessMaximum 1.0, brightnessDefault 0.0, brightnessDim -1.0, hdrSdrRatio NaN, FLAG_OWN_CONTENT_ONLY, FLAG_TRUSTED, FLAG_OWN_FOCUS, FLAG_STEAL_TOP_FOCUS_DISABLED, installOrientation 0, displayShape DisplayShape{ spec=-1507169495 displayWidth=1280 displayHeight=720 physicalPixelDisplaySizeRatio=1.0 rotation=0 offsetX=0 offsetY=0 scale=1.0}}
+  mCurrentFocus=Window{6f7a76d u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity}
+  mCurrentFocus=Window{745d557 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity}
+  mTopFocusedDisplayId=0
+game-surface-0.txt: visible reason= buffer=61542586384447 frame=17 contentDirty
+game-surface-1.txt: visible reason= buffer=61542586384448 frame=29
+game-surface-2.txt: visible reason= buffer=61542586384448 frame=29
+game-surface-3.txt: visible reason= buffer=61542586384448 frame=29
+game-surface-4.txt: visible reason= buffer=61542586384448 frame=29
+11-27 05:19:33.569 13998 14276 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:19:37.841 14476 14494 V hello_xr: [05:19:37.841][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2818801567205
+11-27 05:19:37.996  2129  2365 I SurfaceFlinger: [29c7177 SurfaceView[Pocket XR game]@0(BLAST)#1071030] setTransactionState with the first frame. bufferData(ID: 61542586384447, frameNumber: 1)
+11-27 05:19:38.461  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [14329] reason: Bg-buff
+11-27 05:20:21.684  2961  8455 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [14329] reason: ServiceANR
+11-27 05:20:21.720 14329 14329 I PocketXrOpenXr: the glasses are back with the Space: the game left
+
+=== shell trusted, open Pocket XR controls during the game ===
+CV10 requested flags 0x14409
+CV10 focus probe display id=160
+CV10 focus probe display released
+  mCurrentFocus=Window{25e6000 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity}
+  mCurrentFocus=Window{7510453 u0 Pocket XR trackpad keys}
+  mCurrentFocus=Window{d6c8045 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity}
+  mTopFocusedDisplayId=0
+game-surface-0.txt: visible reason= buffer=76884209565760 frame=14 contentDirty
+game-surface-1.txt: visible reason= buffer=76884209565761 frame=27
+game-surface-2.txt: visible reason= buffer=76884209565761 frame=27
+game-surface-3.txt: visible reason= buffer=76884209565761 frame=27
+game-surface-4.txt: visible reason= buffer=76884209565761 frame=27
+game-surface-5.txt: visible reason= buffer=76884209565760 frame=58 contentDirty
+game-surface-6.txt: visible reason= buffer=76884209565759 frame=125 contentDirty
+game-surface-7.txt: visible reason= buffer=76884209565761 frame=196 contentDirty
+game-surface-8.txt: visible reason= buffer=76884209565759 frame=270 contentDirty
+game-surface-9.txt: visible reason= buffer=76884209565761 frame=344 contentDirty
+11-27 05:21:09.867 17622 17852 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 05:21:14.507 18076 18096 V hello_xr: [05:21:14.507][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2819652728144
+11-27 05:21:14.648  2129  2895 I SurfaceFlinger: [9e3d17f SurfaceView[Pocket XR game]@0(BLAST)#1071526] setTransactionState with the first frame. bufferData(ID: 76884209565759, frameNumber: 1)
+11-27 05:21:15.087  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [17901] reason: Bg-buff
+11-27 05:21:25.863  2961  5254 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [17901] reason: activity
+11-27 05:21:25.874 17622 17622 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+11-27 05:21:32.312 18076 18096 V hello_xr: [05:21:32.312][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598486720 time=2837457701210
+11-27 05:21:32.824 17901 17901 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:21:32.826 18076 18096 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x758f152a48 in tid 18096 (Thread-7), pid 18076 (llo_xr.opengles)

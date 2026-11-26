@@ -1,0 +1,28 @@
+          ConnectionRecord{14369f9 u0 CR IMP com.hayeco.flipspaces/.openxr.OpenXrRuntimeService:@14908c0 flags=0x41}
+    Proc # 0: fg     F/A/TOP  LCMNFUATI  t: 0 24910:com.hayeco.flipspaces/u0a846 (top-activity)
+    Proc # 2: vis    F/S/FGS  ---NFUATI  t: 0 24619:org.cv10.monado.out_of_process.launcher_preview/u0a848 (fg-service-act)
+11-27 05:09:08.720  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: 1eeb11c org.khronos.openxr.runtime_broker/org.khronos.openxr.runtime_broker.MainActivity
+11-27 05:09:10.030  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: 1eeb11c org.khronos.openxr.runtime_broker/org.khronos.openxr.runtime_broker.MainActivity
+11-27 05:09:12.234  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: 1eeb11c org.khronos.openxr.runtime_broker/org.khronos.openxr.runtime_broker.MainActivity
+11-27 05:09:13.560  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: f8e51f6 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity
+11-27 05:09:14.954  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: f8e51f6 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity
+11-27 05:09:18.302  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: f8e51f6 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity
+11-27 05:09:18.336  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: a47523b org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity
+11-27 05:09:19.596  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: a47523b org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity
+11-27 05:09:23.907  2129  2903 D SurfaceFlinger: [input] setFocusedWindow: a47523b org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity
+11-27 05:09:24.834 24619 24619 I Cv10PocketBindingTest: Requested important Pocket XR discovery binding: true
+11-27 05:09:24.838 24619 24619 I Cv10PocketBindingTest: Pocket XR answered discovery without creating a game layer
+11-27 05:09:27.064  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [24619] reason: Bg-buff
+11-27 05:09:27.074  2961  5746 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [24619] reason: Binder(0)
+11-27 05:09:27.087  2129  4678 I SurfaceFlinger: [Pocket XR game$_24910#1067373] setTransactionState with the first frame. bufferData(ID: 106987635343367, frameNumber: 1)
+11-27 05:09:27.390 25182 25202 V hello_xr: [05:09:27.390][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819598167576
+11-27 05:09:27.539  2129  4678 I SurfaceFlinger: [1277081 SurfaceView[Pocket XR game]@0(BLAST)#1067376] setTransactionState with the first frame. bufferData(ID: 106987635343425, frameNumber: 1)
+11-27 05:09:27.578  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [24619] reason: Bg-buff
+11-27 05:09:27.586  2961  5746 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [24619] reason: Binder(0)
+11-27 05:09:27.917  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [24910] reason: Bg-buff
+11-27 05:09:28.088  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [24619] reason: Bg-buff
+11-27 05:09:35.741  2961  7392 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [24910] reason: CancelPolicy
+11-27 05:09:35.758  2961  5746 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [24619] reason: Binder(0)
+11-27 05:09:39.023 25182 25202 V hello_xr: [05:09:39.023][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_FOCUSED->XR_SESSION_STATE_VISIBLE session=-5476376638598498384 time=2831231291687
+11-27 05:09:39.537 24910 24910 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 05:09:39.539 25182 25202 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x758db53a48 in tid 25202 (Thread-6), pid 25182 (llo_xr.opengles)
