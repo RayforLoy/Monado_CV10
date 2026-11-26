@@ -8,7 +8,7 @@
     <string name="cv10_no_matching_apps">没有匹配的应用。可关闭 XR 筛选或修改搜索内容。</string>
     <string name="cv10_app_launch_failed">无法打开 %1$s</string>
     <string name="cv10_pocket_preview_title">Pocket XR 外显预览</string>
-    <string name="cv10_pocket_preview_intro">先在 Runtime Broker 选择 Monado CV10 Preview，并允许访问 CV10 USB 设备。浏览双目空间时，从 Pocket XR 的「空间窗口」打开启动器，再选择「深度（3D 左右并排）」。</string>
+    <string name="cv10_pocket_preview_intro">请允许访问 CV10 USB 设备。浏览双目空间时，从 Pocket XR 的「空间窗口」打开启动器，再选择「深度（3D 左右并排）」。</string>
     <string name="cv10_pocket_preview_open">打开 Pocket XR 空间</string>
     <string name="cv10_pocket_pc_setup">在手机上设置电脑屏幕</string>
     <string name="cv10_pocket_pc_sbs">电脑屏幕 3D（左右并排）</string>
@@ -17,6 +17,10 @@
     <string name="cv10_pocket_preview_test">显示左右眼测试卡</string>
     <string name="cv10_pocket_preview_stop">停止预览</string>
     <string name="cv10_pocket_preview_controls">打开手机控制</string>
+    <string name="cv10_pocket_open_xr_app">在 Pocket XR 中打开 OpenXR 应用</string>
+    <string name="cv10_pocket_no_xr_apps">当前未安装带有 OpenXR 入口的应用。</string>
+    <string name="cv10_pocket_choose_runtime">在 OpenXR Runtime Broker 中选择 Pocket XR，再从这里打开应用。</string>
+    <string name="cv10_pocket_client_display_failed">无法为 OpenXR 应用创建显示屏。</string>
     <string name="cv10_pocket_controls_notification">在手机上使用 Pocket XR 时，CV10 会继续显示预览。</string>
     <string name="cv10_pocket_controls_launch_failed">无法在手机上打开 Pocket XR。</string>
     <string name="cv10_pocket_preview_needs_shizuku">需要先启动 Shizuku 才能为 Pocket XR 创建虚拟显示屏。</string>

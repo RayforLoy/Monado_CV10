@@ -9,12 +9,17 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.UserHandle;
@@ -39,6 +44,8 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private static final int SPACE_WIDTH = 3840;
     private static final int HEIGHT = 1080;
     private static final int DENSITY_DPI = 240;
+    private static final int CLIENT_WIDTH = 1280;
+    private static final int CLIENT_HEIGHT = 720;
     private static final int SYSTEM_USER = 0;
 
     // DisplayManager's hidden flag values. These match scrcpy v5.0.1's Android 14+ new display
@@ -52,6 +59,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private static final int TOUCH_FEEDBACK_DISABLED = 1 << 13;
     private static final int OWN_FOCUS = 1 << 14;
     private static final int DEVICE_DISPLAY_GROUP = 1 << 15;
+    private static final int STEAL_TOP_FOCUS_DISABLED = 1 << 16;
     private static final int FLAGS = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
             | DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION
             | DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
@@ -98,10 +106,10 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             }
             int width = mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH;
             if (currentLease != null) throw new IllegalStateException("Pocket XR display is already running");
-            lease = new Lease(clientLife, surface);
+            lease = new Lease(clientLife, surface, mode);
             clientLife.linkToDeath(lease, 0);
             currentLease = lease;
-            lease.display = createDisplay(surface, width);
+            lease.display = createDisplay("Monado CV10 Pocket XR", surface, width, HEIGHT, FLAGS);
             int displayId = lease.display.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
@@ -129,15 +137,71 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
 
     @RequiresApi(34)
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
-    private VirtualDisplay createDisplay(Surface surface, int width) throws ReflectiveOperationException {
+    private VirtualDisplay createDisplay(String name, Surface surface, int width, int height, int flags)
+            throws ReflectiveOperationException {
         // A normal package Context would pass Monado's package name with the shell UID.
         Constructor<DisplayManager> constructor = DisplayManager.class.getDeclaredConstructor(Context.class);
         constructor.setAccessible(true);
         DisplayManager manager = constructor.newInstance(new ShellDisplayContext(context));
-        VirtualDisplay display = manager.createVirtualDisplay(
-                "Monado CV10 Pocket XR", width, HEIGHT, DENSITY_DPI, surface, FLAGS);
+        VirtualDisplay display = manager.createVirtualDisplay(name, width, height, DENSITY_DPI, surface, flags);
         if (display == null) throw new IllegalStateException("Android rejected the Pocket XR virtual display");
         return display;
+    }
+
+    @Override
+    public synchronized int openClientDisplay(IBinder clientLife) {
+        verifyCaller();
+        Lease lease = currentLease;
+        if (lease == null || !lease.clientLife.equals(clientLife) || lease.mode != MODE_SPACE) {
+            throw new IllegalStateException("The Pocket XR Space is not active for this caller");
+        }
+        long identity = Binder.clearCallingIdentity();
+        boolean opened = false;
+        try {
+            lease.releaseClientDisplay();
+            lease.clientReader = ImageReader.newInstance(CLIENT_WIDTH, CLIENT_HEIGHT, PixelFormat.RGBA_8888, 2);
+            lease.clientReader.setOnImageAvailableListener(reader -> {
+                // The game submits its XR images to Pocket XR. Discard its Android window buffers.
+                synchronized (Cv10PocketXrDisplayService.this) {
+                    if (lease.clientReader != reader) return;
+                    try (Image ignored = reader.acquireLatestImage()) {}
+                }
+            }, new Handler(Looper.getMainLooper()));
+            int flags = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC | DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+                    | TRUSTED | DESTROY_CONTENT_ON_REMOVAL;
+            if (Build.VERSION.SDK_INT >= 36) flags |= OWN_FOCUS | STEAL_TOP_FOCUS_DISABLED;
+            lease.clientDisplay = createDisplay("Monado CV10 OpenXR Client", lease.clientReader.getSurface(),
+                    CLIENT_WIDTH, CLIENT_HEIGHT, flags);
+            int displayId = lease.clientDisplay.getDisplay().getDisplayId();
+            if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
+                throw new IllegalStateException("The OpenXR client display was lost during startup");
+            }
+            opened = true;
+            Log.i(TAG, "OpenXR client display ready: " + displayId);
+            return displayId;
+        } catch (InvocationTargetException e) {
+            throw platformFailure(e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw platformFailure(e);
+        } finally {
+            try {
+                if (!opened) lease.releaseClientDisplay();
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+    }
+
+    @Override
+    public synchronized void closeClientDisplay(IBinder clientLife) {
+        verifyCaller();
+        if (currentLease == null || !currentLease.clientLife.equals(clientLife)) return;
+        long identity = Binder.clearCallingIdentity();
+        try {
+            currentLease.releaseClientDisplay();
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
     }
 
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
@@ -177,6 +241,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
         lease.clientLife.unlinkToDeath(lease, 0);
         long identity = Binder.clearCallingIdentity();
         try {
+            lease.releaseClientDisplay();
             if (lease.display != null) lease.display.release();
         } catch (RuntimeException e) {
             Log.w(TAG, "Pocket XR virtual display could not be released", e);
@@ -198,11 +263,29 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private final class Lease implements IBinder.DeathRecipient {
         final IBinder clientLife;
         final Surface surface;
+        final int mode;
         VirtualDisplay display;
+        VirtualDisplay clientDisplay;
+        ImageReader clientReader;
 
-        Lease(IBinder clientLife, Surface surface) {
+        Lease(IBinder clientLife, Surface surface, int mode) {
             this.clientLife = clientLife;
             this.surface = surface;
+            this.mode = mode;
+        }
+
+        void releaseClientDisplay() {
+            try {
+                if (clientDisplay != null) clientDisplay.release();
+            } catch (RuntimeException e) {
+                Log.w(TAG, "OpenXR client display could not be released", e);
+            } finally {
+                clientDisplay = null;
+                if (clientReader != null) {
+                    clientReader.close();
+                    clientReader = null;
+                }
+            }
         }
 
         @Override

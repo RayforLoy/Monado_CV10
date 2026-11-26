@@ -36,7 +36,7 @@ internal class Cv10PocketXrTransport(
             .tag("cv10_pocket_xr_display")
             .processNameSuffix("cv10_pocket_xr_display")
             .daemon(false)
-            .version(2)
+            .version(3)
     private var connection: ServiceConnection? = null
     private var remote: ICv10PocketXrDisplay? = null
     private var startupResult: ((Result<Int>) -> Unit)? = null
@@ -112,6 +112,29 @@ internal class Cv10PocketXrTransport(
         val callback = startupResult
         startupResult = null
         callback?.invoke(result)
+    }
+
+    fun openClientDisplay(onResult: (Result<Int>) -> Unit) {
+        val service = remote
+        if (closing || service == null) {
+            onResult(Result.failure(IllegalStateException("The Pocket XR display service is unavailable")))
+            return
+        }
+        worker.execute {
+            val result = runCatching { service.openClientDisplay(clientLife) }
+            main.post { if (!closing) onResult(result) }
+        }
+    }
+
+    fun closeClientDisplay() {
+        val service = remote ?: return
+        worker.execute {
+            try {
+                service.closeClientDisplay(clientLife)
+            } catch (error: Exception) {
+                Log.w(TAG, "Pocket XR client display release failed", error)
+            }
+        }
     }
 
     private fun fail(error: Throwable) {

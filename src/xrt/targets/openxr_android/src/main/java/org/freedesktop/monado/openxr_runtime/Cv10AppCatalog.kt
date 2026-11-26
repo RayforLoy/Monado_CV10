@@ -50,12 +50,12 @@ object Cv10AppCatalog {
             .associateBy { ComponentName(it.activityInfo.packageName, it.activityInfo.name) }
     }
 
-    fun launch(activity: Activity, entry: Cv10AppEntry): Boolean {
+    fun launch(activity: Activity, entry: Cv10AppEntry, displayId: Int = Display.DEFAULT_DISPLAY): Boolean {
         val intent = Intent(Intent.ACTION_MAIN)
             .addCategory(entry.category)
             .setComponent(entry.component)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-        val options = ActivityOptions.makeBasic().setLaunchDisplayId(Display.DEFAULT_DISPLAY)
+        val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
         try {
             activity.startActivity(intent, options.toBundle())
             return true

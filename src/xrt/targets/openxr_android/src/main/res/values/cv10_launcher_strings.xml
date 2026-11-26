@@ -8,7 +8,7 @@
     <string name="cv10_no_matching_apps">No matching apps. Turn off the XR filter or change the search.</string>
     <string name="cv10_app_launch_failed">Could not open %1$s</string>
     <string name="cv10_pocket_preview_title">Pocket XR display preview</string>
-    <string name="cv10_pocket_preview_intro">Select Monado CV10 Preview in Runtime Broker and allow access to the CV10 USB device. To see the Pocket XR Space in stereo, open its launcher from Spatial windows and select Depth (3D side by side).</string>
+    <string name="cv10_pocket_preview_intro">Allow access to the CV10 USB device. To see Pocket XR Space in stereo, open its launcher from Spatial windows and select Depth (3D side by side).</string>
     <string name="cv10_pocket_preview_open">Open Pocket XR Space</string>
     <string name="cv10_pocket_pc_setup">Set up PC Screen on phone</string>
     <string name="cv10_pocket_pc_sbs">PC Screen 3D (side by side)</string>
@@ -17,6 +17,10 @@
     <string name="cv10_pocket_preview_test">Show left and right test card</string>
     <string name="cv10_pocket_preview_stop">Stop preview</string>
     <string name="cv10_pocket_preview_controls">Open phone controls</string>
+    <string name="cv10_pocket_open_xr_app">Open OpenXR app in Pocket XR</string>
+    <string name="cv10_pocket_no_xr_apps">No OpenXR launcher activities are installed.</string>
+    <string name="cv10_pocket_choose_runtime">Select Pocket XR in OpenXR Runtime Broker before opening an app in Pocket XR.</string>
+    <string name="cv10_pocket_client_display_failed">Could not create the display for the OpenXR app.</string>
     <string name="cv10_pocket_controls_notification">The CV10 preview stays on while you use Pocket XR on the phone.</string>
     <string name="cv10_pocket_controls_launch_failed">Could not open Pocket XR on the phone.</string>
     <string name="cv10_pocket_preview_needs_shizuku">Start Shizuku to create a virtual display for Pocket XR.</string>

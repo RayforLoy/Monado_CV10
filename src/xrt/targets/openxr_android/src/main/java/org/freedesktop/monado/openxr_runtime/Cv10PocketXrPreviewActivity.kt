@@ -3,13 +3,16 @@
 package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -35,6 +38,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var pcScreen: Button
     private lateinit var test: Button
     private lateinit var controls: Button
+    private lateinit var openXrApp: Button
     private lateinit var stop: Button
     private lateinit var headLink: CheckBox
     private lateinit var worldAnchor: CheckBox
@@ -46,6 +50,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private var pendingVpn = false
     private var headLinkStarted = false
     private var controlsAvailable = false
+    private var openingClient = false
     override var keepSessionWhilePaused = false
         private set
 
@@ -113,6 +118,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             setText(R.string.cv10_pocket_preview_controls)
             setOnClickListener { openPhoneControls() }
         }
+        openXrApp = Button(this).apply {
+            setText(R.string.cv10_pocket_open_xr_app)
+            setOnClickListener { chooseOpenXrApp() }
+        }
         stop = Button(this).apply {
             setText(R.string.cv10_pocket_preview_stop)
             setOnClickListener { stopPreview(getString(R.string.cv10_pocket_preview_intro)) }
@@ -135,6 +144,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         panel.addView(open)
         panel.addView(recenter)
         panel.addView(controls)
+        panel.addView(openXrApp)
         panel.addView(pcSetup)
         panel.addView(pcScreen)
         panel.addView(test)
@@ -169,18 +179,77 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         super.onDestroy()
     }
 
-    private fun openPhoneControls() {
-        if (!controlsAvailable || keepSessionWhilePaused) return
+    private fun openPhoneControls(): Boolean {
+        if (!controlsAvailable || keepSessionWhilePaused) return false
         try {
             val launch = checkNotNull(packageManager.getLaunchIntentForPackage(Cv10PocketHeadLinkService.POCKET_PACKAGE))
             startForegroundService(Cv10PocketControlsService.intent(this))
             keepSessionWhilePaused = true
             startActivity(launch)
             Log.i(TAG, "Opened Pocket XR phone controls with the external session active")
+            return true
         } catch (error: RuntimeException) {
             leavePhoneControls()
             Log.w(TAG, "Could not open Pocket XR phone controls", error)
             status.setText(R.string.cv10_pocket_controls_launch_failed)
+            return false
+        }
+    }
+
+    private fun chooseOpenXrApp() {
+        val apps = Cv10AppCatalog.load(this).filter(Cv10AppEntry::isXr)
+        val dialog = AlertDialog.Builder(this).setTitle(R.string.cv10_pocket_open_xr_app)
+            .setNegativeButton(android.R.string.cancel, null)
+        if (apps.isEmpty()) {
+            dialog.setMessage(R.string.cv10_pocket_no_xr_apps)
+        } else {
+            dialog.setItems(apps.map { it.label }.toTypedArray()) { _, index -> openClientApp(apps[index]) }
+        }
+        dialog.show()
+    }
+
+    private fun openClientApp(entry: Cv10AppEntry) {
+        val session = transport ?: return
+        if (!controlsAvailable || openingClient) return
+        if (activeBrokerPackage() != Cv10PocketHeadLinkService.POCKET_PACKAGE) {
+            status.setText(R.string.cv10_pocket_choose_runtime)
+            return
+        }
+        openingClient = true
+        updateButtons()
+        session.openClientDisplay { result ->
+            if (transport !== session) return@openClientDisplay
+            openingClient = false
+            updateButtons()
+            result.onSuccess { displayId ->
+                if (!Cv10AppCatalog.launch(this, entry, displayId)) {
+                    session.closeClientDisplay()
+                    status.text = getString(R.string.cv10_app_launch_failed, entry.label)
+                } else if (!openPhoneControls()) {
+                    session.closeClientDisplay()
+                } else {
+                    Log.i(TAG, "Requested Pocket XR client ${entry.component.flattenToShortString()} on display $displayId")
+                }
+            }.onFailure { error ->
+                Log.w(TAG, "Could not create the Pocket XR client display", error)
+                status.setText(R.string.cv10_pocket_client_display_failed)
+            }
+        }
+    }
+
+    private fun activeBrokerPackage(): String? {
+        // Match the Android OpenXR loader: check the installable broker before the system one.
+        val abi = Build.SUPPORTED_ABIS.first()
+        return listOf("runtime_broker", "system_runtime_broker").firstNotNullOfOrNull { broker ->
+            val uri = Uri.parse("content://org.khronos.openxr.$broker/openxr/1/abi/$abi/runtimes/active")
+            try {
+                contentResolver.query(uri, arrayOf("package_name"), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) cursor.getString(0) else null
+                }
+            } catch (error: RuntimeException) {
+                Log.d(TAG, "Could not read $broker", error)
+                null
+            }
         }
     }
 
@@ -315,6 +384,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         transport = null
         renderer = null
         controlsAvailable = false
+        openingClient = false
         leavePhoneControls()
         if (headLinkStarted) {
             stopService(Cv10PocketHeadLinkService.intent(this))
@@ -342,7 +412,9 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         pcSetup.isEnabled = available
         pcScreen.isEnabled = available
         test.isEnabled = available
-        controls.isEnabled = controlsAvailable
+        controls.isEnabled = controlsAvailable && !openingClient
+        openXrApp.visibility = if (controlsAvailable) View.VISIBLE else View.GONE
+        openXrApp.isEnabled = controlsAvailable && !openingClient
         recenter.visibility = if (renderer?.worldAnchored == true) View.VISIBLE else View.GONE
         stop.isEnabled = renderer != null
     }
