@@ -1,0 +1,222 @@
+// SPDX-License-Identifier: BSL-1.0
+package org.freedesktop.monado.auxiliary;
+
+import android.annotation.SuppressLint;
+import android.app.ActivityManager;
+import android.app.ActivityOptions;
+import android.content.AttributionSource;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.Intent;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
+import android.os.Binder;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.os.Process;
+import android.os.RemoteException;
+import android.os.UserHandle;
+import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
+import androidx.annotation.Keep;
+import androidx.annotation.RequiresApi;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+/** Private Shizuku entry point for an explicitly requested Pocket XR display. */
+@Keep
+public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub {
+    private static final String TAG = "Cv10PocketXrDisplay";
+    private static final String SHELL_PACKAGE = "com.android.shell";
+    private static final ComponentName POCKET_XR = ComponentName.createRelative(
+            "com.hayeco.flipspaces", ".spatial.SpaceActivity");
+    private static final int WIDTH = 3840;
+    private static final int HEIGHT = 1080;
+    private static final int DENSITY_DPI = 240;
+    private static final int SYSTEM_USER = 0;
+
+    // DisplayManager's hidden flag values. These match scrcpy v5.0.1's Android 14+ new display
+    // with --no-vd-system-decorations and default destroy-on-removal.
+    private static final int SUPPORTS_TOUCH = 1 << 6;
+    private static final int ROTATES_WITH_CONTENT = 1 << 7;
+    private static final int DESTROY_CONTENT_ON_REMOVAL = 1 << 8;
+    private static final int TRUSTED = 1 << 10;
+    private static final int OWN_DISPLAY_GROUP = 1 << 11;
+    private static final int ALWAYS_UNLOCKED = 1 << 12;
+    private static final int TOUCH_FEEDBACK_DISABLED = 1 << 13;
+    private static final int OWN_FOCUS = 1 << 14;
+    private static final int DEVICE_DISPLAY_GROUP = 1 << 15;
+    private static final int FLAGS = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
+            | DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION
+            | DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+            | SUPPORTS_TOUCH | ROTATES_WITH_CONTENT | DESTROY_CONTENT_ON_REMOVAL
+            | TRUSTED | OWN_DISPLAY_GROUP | ALWAYS_UNLOCKED | TOUCH_FEEDBACK_DISABLED
+            | OWN_FOCUS | DEVICE_DISPLAY_GROUP;
+
+    private final Context context;
+    private final int ownerUid;
+    private Lease currentLease;
+
+    /** Shizuku supplies its package Context for Monado, even though this process is shell. */
+    @Keep
+    public Cv10PocketXrDisplayService(Context context) {
+        this.context = context;
+        ownerUid = context.getApplicationInfo().uid;
+    }
+
+    private void verifyCaller() {
+        if (Process.myUid() != Process.SHELL_UID
+                || !Process.myUserHandle().equals(UserHandle.getUserHandleForUid(ownerUid))
+                || Binder.getCallingUid() != ownerUid) {
+            throw new SecurityException("Pocket XR display requires the Monado caller and Shizuku shell in the owner profile");
+        }
+    }
+
+    @Override
+    public synchronized int start(Surface surface, IBinder clientLife, boolean showTestCard)
+            throws RemoteException {
+        verifyCaller();
+        if (surface == null) throw new IllegalArgumentException("Missing Pocket XR output Surface");
+        Lease lease = null;
+        boolean started = false;
+        long identity = Binder.clearCallingIdentity();
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                throw new IllegalStateException("Pocket XR display requires Android 14 or later");
+            }
+            if (clientLife == null || !surface.isValid()) {
+                throw new IllegalArgumentException("Invalid Pocket XR display lease or Surface");
+            }
+            if (currentLease != null) throw new IllegalStateException("Pocket XR display is already running");
+            lease = new Lease(clientLife, surface);
+            clientLife.linkToDeath(lease, 0);
+            currentLease = lease;
+            lease.display = createDisplay(surface);
+            int displayId = lease.display.getDisplay().getDisplayId();
+            if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
+                throw new IllegalStateException("Pocket XR display or caller was lost during startup");
+            }
+            launchPocketXr(displayId, showTestCard);
+            started = true;
+            Log.i(TAG, "Pocket XR start accepted on " + displayId + " (3840x1080, 240 dpi)");
+            return displayId;
+        } catch (InvocationTargetException e) {
+            throw platformFailure(e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw platformFailure(e);
+        } finally {
+            try {
+                if (!started) {
+                    if (lease != null && currentLease == lease) release(lease);
+                    else surface.release();
+                }
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        }
+    }
+
+    @RequiresApi(34)
+    @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
+    private VirtualDisplay createDisplay(Surface surface) throws ReflectiveOperationException {
+        // A normal package Context would pass Monado's package name with the shell UID.
+        Constructor<DisplayManager> constructor = DisplayManager.class.getDeclaredConstructor(Context.class);
+        constructor.setAccessible(true);
+        DisplayManager manager = constructor.newInstance(new ShellDisplayContext(context));
+        VirtualDisplay display = manager.createVirtualDisplay(
+                "Monado CV10 Pocket XR", WIDTH, HEIGHT, DENSITY_DPI, surface, FLAGS);
+        if (display == null) throw new IllegalStateException("Android rejected the Pocket XR virtual display");
+        return display;
+    }
+
+    @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
+    private void launchPocketXr(int displayId, boolean showTestCard) throws ReflectiveOperationException {
+        Intent intent = new Intent().setComponent(POCKET_XR).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (showTestCard) intent.putExtra("test_card", "eyes");
+        Bundle options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle();
+        Object manager = ActivityManager.class.getDeclaredMethod("getService").invoke(null);
+        // The explicit shell package and absent app thread match a shell-originated launch.
+        Method startActivity = Class.forName("android.app.IActivityManager").getMethod(
+                "startActivityAsUser", Class.forName("android.app.IApplicationThread"), String.class,
+                Intent.class, String.class, IBinder.class, String.class, int.class, int.class,
+                Class.forName("android.app.ProfilerInfo"), Bundle.class, int.class);
+        int status = (int) startActivity.invoke(manager, null, SHELL_PACKAGE, intent, null, null,
+                null, 0, 0, null, options, SYSTEM_USER);
+        // AOSP ActivityManager reserves 0..99 for successful activity-start results.
+        if (status < 0 || status > 99) {
+            throw new IllegalStateException("Android rejected Pocket XR's activity start (" + status + ")");
+        }
+    }
+
+    private IllegalStateException platformFailure(Throwable cause) {
+        Log.w(TAG, "System display or activity API failed", cause);
+        return new IllegalStateException("Pocket XR shell display service failed: " + cause.getMessage());
+    }
+
+    @Override
+    public synchronized void stop(IBinder clientLife) {
+        verifyCaller();
+        if (currentLease != null && currentLease.clientLife.equals(clientLife)) release(currentLease);
+    }
+
+    private synchronized void release(Lease lease) {
+        if (currentLease != lease) return;
+        currentLease = null;
+        lease.clientLife.unlinkToDeath(lease, 0);
+        long identity = Binder.clearCallingIdentity();
+        try {
+            if (lease.display != null) lease.display.release();
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Pocket XR virtual display could not be released", e);
+        } finally {
+            lease.surface.release();
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
+    @Override
+    public synchronized void destroy() {
+        if (Process.myUid() != Process.SHELL_UID || Binder.getCallingUid() != Process.SHELL_UID) {
+            throw new SecurityException("Only the Shizuku shell can destroy this UserService");
+        }
+        if (currentLease != null) release(currentLease);
+        System.exit(0);
+    }
+
+    private final class Lease implements IBinder.DeathRecipient {
+        final IBinder clientLife;
+        final Surface surface;
+        VirtualDisplay display;
+
+        Lease(IBinder clientLife, Surface surface) {
+            this.clientLife = clientLife;
+            this.surface = surface;
+        }
+
+        @Override
+        public void binderDied() {
+            release(this);
+        }
+    }
+
+    @RequiresApi(34)
+    private static final class ShellDisplayContext extends ContextWrapper {
+        ShellDisplayContext(Context base) {
+            super(base);
+        }
+
+        @Override public String getPackageName() { return SHELL_PACKAGE; }
+
+        @Override public String getOpPackageName() { return SHELL_PACKAGE; }
+
+        @Override public AttributionSource getAttributionSource() {
+            return new AttributionSource.Builder(Process.SHELL_UID).setPackageName(SHELL_PACKAGE).build();
+        }
+
+        @Override public int getDeviceId() { return 0; }
+    }
+}
