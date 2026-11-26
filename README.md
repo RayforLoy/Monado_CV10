@@ -51,7 +51,7 @@ Pocket XR v1.6.28 自带空间桌面的显示与头部跟踪管线。CV10 的 32
 
 Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600、90 Hz，系统拒绝直接打开 Pocket XR 外屏入口。切到 **已扩展**后，Android 可启动原版的 `GlassesHomeActivity`，外屏活动时序降为 640×480、60 Hz，Samsung DeX 同时报告当前分辨率不受支持。恢复 **已镜像**后回到 3200×1600、90 Hz。
 
-另一次实验在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。日志显示空间渲染线程跑到约 60 fps，但最终选择 2D 单画布，录制中的稳定区间为黑帧，并且没有实际头部姿态输入。Pocket XR 当时也没有获得自己的 Shizuku 授权。这个结果尚不能验证空间桌面、镜片双目或 3D 投屏兼容性。
+另一次实验在 Fold7 创建 3840×1080、60 Hz 的 Android 虚拟显示屏，并由 ADB 启动原版 Pocket XR 1.6.28 的 `SpaceActivity`。内置测试卡录到了独立的 `LEFT EYE` 与 `RIGHT EYE` 帧。打开 Pocket XR **空间窗口 → 3D：窗口有真实的深度** 后，日志确认实际场景按左右眼各 1920×1080 渲染。没有应用面板、未打开启动器时，正常场景仍为黑底。该轮 Pocket XR 未获得 Shizuku 授权，也没有实际头部姿态输入。镜片双目、空间应用窗口和 3D 投屏仍待验证。
 
 ## 原厂手机线
 
@@ -81,7 +81,7 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 .\gradlew.bat "-Pcv10Abi=arm64-v8a" "-Pcv10LauncherPreview=true" :src:xrt:targets:openxr_android:assembleOutOfProcessDebug
 ```
 
-预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。早期调试 APK 在使用 4 KB 内存页的 Fold7 上显示过 16 KB ELF 对齐提示。默认静态 C++ 标准库配置的新版 ARM64 APK 已通过所有 `PT_LOAD` 段的 16 KB 对齐检查及 `zipalign -c -P 16 -v 4`。16 KB 内存页设备仍待验证。[Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
+预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。默认静态 C++ 标准库配置的 ARM64 APK 已通过所有 `PT_LOAD` 段的 16 KB 对齐检查及 `zipalign -c -P 16 -v 4`。使用 4 KB 内存页的 Fold7 在更新对齐包后未再显示兼容提示，3D 菜单仍可启动原版 `hello_xr`。16 KB 内存页设备仍待验证。[Android 16 KB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
 
 历史 APK 和对应实验说明见 [apk/archive](apk/archive) 和 [history](history)。上游项目说明与许可证见 [README.upstream.md](README.upstream.md) 和 [LICENSE](LICENSE)。
 
