@@ -1,6 +1,6 @@
 # Monado CV10 Android 运行时
 
-[Fold7 离线启动器和 16 KB 预览包验收](fold7-offline-launcher.md) · [Pocket XR 测试卡外显记录](fold7-pocket-xr-display.md)
+[Fold7 离线启动器和 16 KB 预览包验收](fold7-offline-launcher.md) · [Pocket XR 测试卡外显记录](fold7-pocket-xr-display.md) · [Pocket XR 双运行时实测](fold7-pocket-dual-runtime.md)
 
 本目录的 `cv10.patch` 适用于 Monado 提交 `ce2b721eb4ffcbd726fb88357625f55871a8f262`。定制运行时包名为 `org.cv10.monado.out_of_process`，可与官方 `org.freedesktop.monado.openxr_runtime.out_of_process` 共存。在 Khronos OpenXR Runtime Broker 中选择 **Monado CV10** 使用定制版，选择 **Monado XR** 恢复官方版。[Monado 固定源码](https://gitlab.freedesktop.org/monado/monado/-/tree/ce2b721eb4ffcbd726fb88357625f55871a8f262)
 

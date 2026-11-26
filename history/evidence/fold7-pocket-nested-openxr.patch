@@ -1,0 +1,94 @@
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+index dfe2972..a3e7630 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PocketXrPreviewActivity.kt
+@@ -9,8 +9,14 @@ import android.content.Context
+ import android.content.Intent
+ import android.content.IntentFilter
+ import android.content.pm.PackageManager
++import android.graphics.PixelFormat
++import android.hardware.display.DisplayManager
++import android.hardware.display.VirtualDisplay
++import android.media.ImageReader
+ import android.net.VpnService
+ import android.os.Bundle
++import android.os.Handler
++import android.os.Looper
+ import android.util.Log
+ import android.view.View
+ import android.view.WindowManager
+@@ -44,6 +50,9 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private var pendingPermission: Int? = null
+     private var stopping = false
+     private var pendingVpn = false
++    private var diagnosticDisplay: VirtualDisplay? = null
++    private var diagnosticClient: VirtualDisplay? = null
++    private var diagnosticReader: ImageReader? = null
+     private var headLinkStarted = false
+     private var controlsAvailable = false
+     override var keepSessionWhilePaused = false
+@@ -229,11 +238,11 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private fun startPreview(mode: Int) {
+         if (renderer != null || stopping || pendingPermission != null || pendingVpn) return
+         try {
+-            if (!Shizuku.pingBinder()) {
++            if (mode != MODE_TEST_CARD && !Shizuku.pingBinder()) {
+                 status.setText(R.string.cv10_pocket_preview_needs_shizuku)
+                 return
+             }
+-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
++            if (mode != MODE_TEST_CARD && Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                 pendingPermission = mode
+                 updateButtons()
+                 Shizuku.requestPermission(REQUEST_DISPLAY_PERMISSION)
+@@ -271,9 +280,34 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+             worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS,
+             onSurface = { surface ->
+                 if (transport === nextTransport) {
+-                    nextTransport.start(surface) { result ->
+-                        if (transport === nextTransport) {
+-                            result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
++                    if (mode == MODE_TEST_CARD) {
++                        runCatching {
++                            val manager = getSystemService(DisplayManager::class.java)
++                            diagnosticDisplay = checkNotNull(manager.createVirtualDisplay(
++                                "CV10 Pocket XR Anchor Diagnostic", 3840, 1080, 240, surface,
++                                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or
++                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY,
++                            ))
++                            displayId = diagnosticDisplay?.display?.displayId
++                            Log.i(TAG, "Anchor diagnostic public display id=$displayId")
++                            val reader = ImageReader.newInstance(1280, 720, PixelFormat.RGBA_8888, 2)
++                            diagnosticReader = reader
++                            reader.setOnImageAvailableListener({ it.acquireLatestImage()?.close() },
++                                Handler(Looper.getMainLooper()))
++                            diagnosticClient = checkNotNull(manager.createVirtualDisplay(
++                                "CV10 OpenXR Client Diagnostic", 1280, 720, 240, reader.surface,
++                                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or
++                                    DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY,
++                            ))
++                            Log.i(TAG, "Anchor diagnostic client display id=${diagnosticClient?.display?.displayId}")
++                            keepSessionWhilePaused = true
++                            updateStatus()
++                        }.onFailure(::showError)
++                    } else {
++                        nextTransport.start(surface) { result ->
++                            if (transport === nextTransport) {
++                                result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
++                            }
+                         }
+                     }
+                 }
+@@ -312,6 +346,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
+     private fun stopPreview(message: String) {
+         val previousTransport = transport
+         val previousRenderer = renderer
++        diagnosticClient?.release()
++        diagnosticClient = null
++        diagnosticReader?.close()
++        diagnosticReader = null
++        diagnosticDisplay?.release()
++        diagnosticDisplay = null
+         transport = null
+         renderer = null
+         controlsAvailable = false

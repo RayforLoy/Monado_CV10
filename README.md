@@ -59,7 +59,9 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 ### Pocket XR 外显实验预览
 
-本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建，在 Broker 选择 **Monado CV10 Preview**。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。
+本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。
+
+Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenXR 应用仍从系统 Broker 选择运行时。日常直接启动 CV10 OpenXR 应用时，按前文的流程选择 **Monado CV10** 或 **Monado CV10 Preview**。
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
 - **打开 Pocket XR 空间** 并收到画面后，使用 **打开手机控制** 切到原版 Pocket XR，同时保持眼镜会话。可在手机端 **空间窗口** 打开启动器，再在启动器中使用 **深度（3D 左右并排）** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
@@ -70,7 +72,7 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 Fold7 已验证预览内的显示服务能创建和释放受信任虚拟屏。原版空间在该屏输出双目测试卡和应用占位窗口。默认电脑屏幕配对 Sunshine 后在该屏收到了 1920×1080 的 HEVC Half SBS 视频。[服务与默认电脑屏幕实测](history/fold7-pocket-shell-service.md)
 
-原版 Pocket XR 自带另一个 OpenXR 运行时。临时选用它做对照时，Fold7 在「优化」电池模式下能把原版 `hello_xr` 启动到 `FOCUSED`，随后系统冻结 Pocket XR，游戏画面仍待验收。日常运行 CV10 的 OpenXR 应用，继续按上面的启动流程选择 **Monado CV10**。[原版运行时对照](history/fold7-pocket-shell-service.md#原版-pocket-xr-运行时对照)
+临时在 Broker 选用原版 **Pocket XR** 做诊断时，原版运行时接管 `hello_xr`，内置 Monado CV10 同时将它的游戏图层送到 CV10。外显录屏的左右眼区域和右镜实拍都有蓝色方块。测试通过 ADB 启动样例，三星 Freecess 在首个游戏缓冲区出现后约 0.4 秒冻结 Pocket XR。持续运行、正常退出和从原版空间菜单点选应用仍待验证。[双运行时实测](history/fold7-pocket-dual-runtime.md)
 
 Fold7 上的 ADB 诊断接入了原版 Pocket XR 的测试卡、双目菜单和应用占位窗口。整合预览 `6e536a4` 复测了内置 3D 菜单和原版测试卡。Android 在该设备上拒绝普通应用把原版空间入口启动到诊断虚拟屏。Fold7 的真实 CV10 IMU 通过回环诊断连续两次把约 1000 Hz 的样本送入电脑端原版 Pocket XR 解析器。Fold7 上验证了 Android VPN 的确认和取消流程，授权后手机端原版连接、实物头动方向和 Shizuku 一键开流仍待实测。[外显验收](history/fold7-pocket-xr-display.md) · [实时 IMU 对照](history/fold7-pocket-xr-imu.md#fold7-实时-tcp-对照)
 

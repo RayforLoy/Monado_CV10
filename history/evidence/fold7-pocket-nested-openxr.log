@@ -1,0 +1,32 @@
+# 2026-11-27 HKT | Broker Pocket XR | CV10 original cable C9.53.6 + 5 V | filtered Fold7 logcat
+11-27 04:40:34.832 30246 30530 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeManifestFile::FindManifestFiles - using environment variable override runtime file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-pocket-runtime.json
+11-27 04:40:35.256 30246 30530 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 04:40:35.343 30246 30246 I Cv10PocketXrPreview: Anchor diagnostic public display id=132
+11-27 04:40:35.354 30246 30530 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 04:40:35.905 30246 30246 I Cv10PocketXrPreview: First virtual display frame available on display 132
+11-27 04:40:36.111 30600 30600 I FlipSpaces/Mode: test card display: 132 (CV10 Pocket XR Anchor Diagnostic), mode 337 3840x1080 60.00 Hz (supported: 337: 3840x1080 60.00 Hz), real size 3840x1080, rotation 0, cutout none, flags 0x0, state ON
+11-27 04:40:40.231 30246 30530 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 04:40:40.247 30246 30530 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 04:40:41.224 30246 30530 I OpenXR-Loader: Info [GENERAL | xrDestroyInstance | OpenXR-Loader] : RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 04:43:27.334  1699  2225 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeManifestFile::FindManifestFiles - using environment variable override runtime file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-pocket-runtime.json
+11-27 04:43:27.942  1699  2225 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled CV10 for Pocket XR display)
+11-27 04:43:28.133  1699  2225 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 04:43:28.134  1699  1699 I Cv10PocketXrPreview: Anchor diagnostic public display id=133
+11-27 04:43:28.137  1699  1699 I Cv10PocketXrPreview: Anchor diagnostic client display id=134
+11-27 04:43:28.792  1699  1699 I Cv10PocketXrPreview: First virtual display frame available on display 133
+11-27 04:43:31.020  2747  2847 I OpenXR-Loader: Got runtime: package: com.hayeco.flipspaces, so filename: libopenxr_monado.so, has functions: no
+11-27 04:43:31.076  2279  2279 I PocketXrOpenXr: the glasses: 3840x1080 at 60.0 Hz, field of view tangents 0.40642235 by 0.22861257
+11-27 04:43:31.083  2279  2279 I PocketXrOpenXr: the eyes: IPD 63.0 mm, the glasses' 3D distance 4.00 m, each view turned out by 0.45 degrees
+11-27 04:43:31.094  2279  2279 I PocketXrOpenXr: head feed on
+11-27 04:43:31.095  2279  2279 I PocketXrOpenXr: a game owns the glasses
+11-27 04:43:31.106  2279  2279 I PocketXrOpenXr: the game's surface is ready
+11-27 04:43:31.114  2279  2279 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 04:43:31.456  2747  2847 V hello_xr: [04:43:31.456][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2820126706440
+11-27 04:43:31.606  2129  4678 I SurfaceFlinger: [8a5ad0b SurfaceView[Pocket XR game]@0(BLAST)#1062758] setTransactionState with the first frame. bufferData(ID: 9788230467647, frameNumber: 1)
+11-27 04:43:31.993  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [2279] reason: Bg-buff
+11-27 04:44:04.630  2961  8660 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [2279] reason: ServiceANR
+11-27 04:44:04.678  2279  2279 I PocketXrOpenXr: head feed off
+11-27 04:44:04.679  2279  2279 I PocketXrOpenXr: the glasses are back with the Space: the game left
+11-27 04:44:04.680  2279  2279 I PocketXrOpenXr: head feed off
+11-27 04:44:04.680  2279  2279 I PocketXrOpenXr: the glasses are back with the Space: the runtime stopped
+11-27 04:44:04.680  2279  2279 I PocketXrOpenXr: the game's surface is gone

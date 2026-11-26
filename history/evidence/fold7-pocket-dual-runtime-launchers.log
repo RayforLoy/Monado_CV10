@@ -1,0 +1,18 @@
+# Fold7 on ce07cb0 production preview | Broker Monado CV10 Preview | the crash buffer remained empty.
+# 2D launch
+11-27 04:44:57.367  6930  6953 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+11-27 04:44:58.120  6930  6953 V hello_xr: [04:44:58.120][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520514316406
+# 2D sample Back
+11-27 04:45:02.972  6930  6953 V hello_xr: [04:45:02.972][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2525366221248
+11-27 04:45:04.709  6930  6953 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+# 3D menu
+11-27 04:45:10.516  7345  7379 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+11-27 04:45:11.042  7345  7379 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb'
+11-27 04:45:11.172  7345  7379 I Cv10SpatialLauncher: OpenXR session state 5
+# 3D menu select
+11-27 04:45:16.978  7345  7379 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+11-27 04:45:17.083  7592  7638 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+11-27 04:45:17.499  7592  7638 V hello_xr: [04:45:17.499][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2526759884372
+# 3D sample Back
+11-27 04:45:22.552  7592  7638 V hello_xr: [04:45:22.552][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2531813166870
+11-27 04:45:23.916  7592  7638 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
