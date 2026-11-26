@@ -42,3 +42,15 @@
 - 02:33:05.375，系统 Loader 查不到 Broker Provider。内置菜单在独立的 `:spatialLauncher` 进程使用 `XR_EXT_loader_init_properties` 指定由本包生成的 `XR_RUNTIME_JSON`，让官方 Loader 加载本包的 Monado。02:33:05.998 菜单进入 `FOCUSED`，右镜实拍有原版 `hello_xr` 卡片和激光指针。[启动日志摘录](evidence/fold7-launcher-bundled-runtime.txt) · [右镜实拍](evidence/fold7-launcher-bundled-runtime-right.jpg)
 
 这个回退作用于内置菜单的 Loader。第三方应用仍通过系统 Broker 选择运行时，三星 Freecess 冻结运行时导致的 ANR 也需要单独处理。[OpenXR Loader 1.1.65 实现](https://github.com/KhronosGroup/OpenXR-SDK-Source/blob/release-1.1.65/src/loader/loader_init_data.cpp)
+
+## 整合预览在网络隔离下启动原版样例
+
+2026-11-27 03:19 至 03:30（香港时间）。Fold7 SM-F9660 沿用 C9.53.6、5 V、三星 **已镜像**，CV10 活动模式为 3200×1600、90 Hz。普通和隔离 APK 均来自 `4e85e3e6d7e8c22cb2a026badd7a743212101d3d`。在主清单的 `INTERNET` 声明加上 `tools:node="remove"` 生成隔离版，同时移除来自依赖的同名声明。解包后两份 APK 只有 `AndroidManifest.xml` 不同。
+
+- 普通预览 SHA-256 为 `a983600ad7683d0c9cbe53dec8aa8ee7889b495a5e854992cbe3d16b06648e85`，隔离预览为 `5defe84ccd6e834b86ec61a8602d17a384ad2b65b554713a95e1dd306bcecade`。隔离 APK 的 v2 签名和 16 KiB ZIP 对齐均通过，五个已验证 ELF 与普通包字节相同。普通预览 UID 能连接本地 IPv4 和 IPv6 对照端口，隔离预览创建两种套接字时均得到 `Operation not permitted`。原版 `hello_xr` APK 的哈希同前，清单未申请 `INTERNET`。启动器未获 Shizuku 授权。
+- 03:21:14 内置 3D 菜单进入 `FOCUSED`。打开已选中 Monado CV10 Preview 的 Broker 再回到 3D 菜单，按底部上滑停留置中后点按。原版 `hello_xr` 于 03:21:21 进入 `FOCUSED`，CV10 外屏两眼各有方块，右镜先后两次拍到蓝方块。03:21:36 按返回后会话进入 `STOPPING` 和 `IDLE`，随后完成 `xrDestroyInstance`。[双目外屏原始帧](evidence/fold7-launcher-isolated-3d-hello-display.png) · [右镜实拍](evidence/fold7-launcher-isolated-3d-hello-right.jpg)
+- 03:19 的普通预览对照中，内置菜单出图后点选原版样例，样例 Loader 查询不到两个 Broker Provider，报告 `XR_ERROR_RUNTIME_UNAVAILABLE`。诊断包尝试在打开样例前持有 Broker Provider 连接，03:23 在点选时未能取得连接。03:25 在菜单进入时取得连接，三星仍在约 0.5 秒后重新冻结 Broker，样例再次报告运行时不可用。两个诊断改动均未纳入预览。
+- 03:26 临时给 Khronos Broker 添加电池优化豁免后，内置菜单点选样例成功。03:29 移除豁免后复测，也成功进入 `FOCUSED` 并正常退出。这两次均未在点选前重新打开 Broker，三星先冻结 Broker，样例查询时又解除冻结。手动打开 Broker 可用于恢复，电池豁免的效果未确认。[套接字、冻结与会话日志](evidence/fold7-launcher-isolated-3d-handoff.log)
+- 03:30 从同一个隔离包的 2D 列表直接启动原版 `hello_xr`，未配置电池豁免，也未在点选前重新打开 Broker。样例进入 `FOCUSED`，外屏双眼区均有蓝方块，右镜实拍可见蓝方块。按返回键后进入 `STOPPING`、`IDLE`，并完成 `xrDestroyInstance`。[双目外屏原始帧](evidence/fold7-launcher-integrated-isolated-direct-display.png) · [右镜实拍](evidence/fold7-launcher-integrated-isolated-direct-right.jpg)
+
+无线 ADB 和电量监测期间保留 Wi-Fi。采证后移除了临时端口映射和电池豁免，恢复稳定 Monado CV10 Broker 和完整整合预览 APK，系统最低刷新率为 `null`。

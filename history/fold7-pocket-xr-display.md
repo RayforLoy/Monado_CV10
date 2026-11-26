@@ -14,7 +14,7 @@
 
 以该模式重进，物理外屏两眼区都有各自的启动器画面，右镜拍到正立的菜单、工具按钮和应用图标。用虚拟屏的键盘输入搜索并选择 **Hello XR (OpenGL ES)**，原版关闭菜单并为 `org.khronos.openxr.hello_xr.opengles` 显示双目占位窗口。窗口提示 Pocket XR 的 Shizuku 权限未授予，与日志的 `NO_PERMISSION`、实际面板帧复制计数为 0 一致。[双目菜单](evidence/fold7-pocket-xr-launcher-display.png) · [右镜实拍](evidence/fold7-pocket-xr-launcher-right.jpg) · [点选后的双目占位窗口](evidence/fold7-pocket-xr-launcher-selection.png) · [筛选日志](evidence/fold7-pocket-xr-launcher.log)
 
-手机端一键启动外显要使用预览包自己的 Shizuku 授权，Pocket XR 创建空间应用面板还需要它自己的授权。真实应用画面、3D 视频投屏、实时头部跟踪和左镜实拍待测。
+手机端一键启动外显要使用预览包自己的 Shizuku 授权，Pocket XR 创建空间应用面板还需要它自己的授权。真实应用面板、实时头部跟踪和左镜实拍待测。独立的电脑屏幕 3D 投屏见 [Half SBS 串流实测](fold7-pocket-pc-sbs.md)。
 
 ## 整合预览复测
 

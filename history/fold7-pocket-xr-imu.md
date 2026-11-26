@@ -20,4 +20,4 @@ Fold7 安装了同一提交构建的 ARM64 调试预览，包名为 `org.cv10.mo
 
 02:04 选中该预览包作为运行时后，未经修改的 Khronos `hello_xr` 进入 FOCUSED，右镜实拍可见蓝色方块。按返回后会话进入 STOPPING、IDLE，日志记录 `xrDestroyInstance` 完成。测试结束后返回三星桌面，Broker 恢复正式 Monado CV10，`min_refresh_rate` 为 `null`。[右镜实拍](evidence/fold7-pocket-xr-head-hello-right.jpg)
 
-Fold7 上的原版 Pocket XR 尚未连接实时头踪服务。Android VPN 授权后仍须验证原版能发现本机地址并收到实时样本，再用实物运动确认三轴方向、转角及重置。
+Fold7 上的原版 Pocket XR 尚未连接实时头踪服务。保持既有授权查询路由时，手机未配置 `169.254.2.1/32`，ADB shell 到这一地址的路由指向 Wi-Fi 网关。Android VPN 授权后仍须验证原版能发现本机地址并收到实时样本，再用实物运动确认三轴方向、转角及重置。

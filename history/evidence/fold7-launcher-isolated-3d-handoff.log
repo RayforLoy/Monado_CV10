@@ -1,0 +1,47 @@
+Fold7, Hong Kong time, 2026-11-27
+
+APK UID socket controls, before removing the temporary test port
+control IPv4 allowed=True
+control IPv6 allowed=True
+isolated IPv4 allowed=False nc: socket 1 6: Operation not permitted
+isolated IPv6 allowed=False nc: socket 1 6: Operation not permitted
+
+03:19 regular preview, external loader fails after 3D menu selection
+11-27 03:19:03.889 25392 25423 E ActivityThread: Failed to find provider info for org.khronos.openxr.runtime_broker
+11-27 03:19:03.890 25392 25423 E ActivityThread: Failed to find provider info for org.khronos.openxr.system_runtime_broker
+11-27 03:19:03.890 25392 25423 E hello_xr: [03:19:03.890][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+
+03:21 isolated preview, manually reopened Broker before 3D selection
+11-27 03:21:14.790 29383 29508 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 03:21:14.974 28822 29668 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+11-27 03:21:21.765 29813 29834 V hello_xr: [03:21:21.765][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2527534771716
+11-27 03:21:36.980 29813 29834 V hello_xr: [03:21:36.980][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2542750276606
+11-27 03:21:36.981 29813 29834 V hello_xr: [03:21:36.981][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2542751125304
+11-27 03:21:38.859 29813 29834 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+
+03:23 and 03:25 diagnostic Provider connection trials
+11-27 03:23:30.485 31738 31738 I Cv10BrokerHandoff: Broker connection acquired: false
+11-27 03:23:30.591 31914 31937 E hello_xr: [03:23:30.591][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 03:25:21.859  2961  8662 D FreecessController: UFZ : org.khronos.openxr.runtime_broker(10836) [22934] reason: provider
+11-27 03:25:21.862  1319  1514 I Cv10BrokerHandoff: Early connection acquired: true
+11-27 03:25:22.362  2961  5763 D FreecessController: FZ : org.khronos.openxr.runtime_broker(10836) [22934] reason: Bg-buff
+11-27 03:25:28.550  1813  1853 E hello_xr: [03:25:28.550][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 03:25:34.433  1319  1319 I Cv10BrokerHandoff: Early connection released
+
+03:26 isolated preview, temporary Broker battery exemption
+11-27 03:26:25.991  2961  5763 D FreecessController: FZ : org.khronos.openxr.runtime_broker(10836) [22934] reason: Bg-buff
+11-27 03:26:32.336  2961  5864 D FreecessController: UFZ : org.khronos.openxr.runtime_broker(10836) [22934] reason: provider
+11-27 03:26:32.737  4027  4072 V hello_xr: [03:26:32.737][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2527026639528
+11-27 03:26:47.693  4027  4072 V hello_xr: [03:26:47.693][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2541980799366
+
+03:29 isolated preview, exemption removed and no Broker reopen before 3D selection
+11-27 03:29:07.448  2961  5763 D FreecessController: FZ : org.khronos.openxr.runtime_broker(10836) [22934] reason: Bg-buff
+11-27 03:29:13.628  2961  5254 D FreecessController: UFZ : org.khronos.openxr.runtime_broker(10836) [22934] reason: provider
+11-27 03:29:14.048  6945  6974 V hello_xr: [03:29:14.048][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2526878756717
+11-27 03:29:28.961  6945  6974 V hello_xr: [03:29:28.961][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2541791376659
+
+03:30 isolated preview, direct 2D selection without the exemption
+11-27 03:30:22.026  8265  8314 V hello_xr: [03:30:22.026][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520776807031
+11-27 03:30:37.313  8265  8314 V hello_xr: [03:30:37.313][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2536063777806
+11-27 03:30:37.313  8265  8314 V hello_xr: [03:30:37.313][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2536063959525
+11-27 03:30:38.727  8265  8314 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
