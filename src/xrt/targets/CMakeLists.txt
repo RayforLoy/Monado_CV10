@@ -7,6 +7,11 @@
 # This is where we collect all of the pieces from the different parts of
 # the source tree and build a complete driver or integration part.
 
+if(ANDROID AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+	# NDK r26 defaults to 4 KB ELF segments. Android also runs with 16 KB pages.
+	add_link_options("LINKER:-z,max-page-size=16384" "LINKER:-z,common-page-size=16384")
+endif()
+
 add_subdirectory(helpers)
 add_subdirectory(common)
 

@@ -29,7 +29,8 @@ buildscript {
         ktfmtVersion = "0.53"
 
         // Google Cardboard QR Code scan
-        barcodeScannerViewVersion = "1.6.4"
+        // 1.6.5 includes the 16 KB-aligned zxing-cpp v2.3.0.4.
+        barcodeScannerViewVersion = "1.6.5"
     }
     repositories {
         google()
