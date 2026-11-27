@@ -113,13 +113,29 @@ public class MonadoView extends SurfaceView
     @Nullable
     public static Display findCv10(Context context) {
         DisplayManager manager = context.getSystemService(DisplayManager.class);
+        Display fallback = null;
         for (Display display : manager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
-            if (display.isValid()
-                    && Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(display.getName().trim())) {
-                return display;
+            if (!display.isValid()) continue;
+            // Some phones (e.g. XREAL Beam Pro) report the sink name as "HDMI Screen" and only
+            // expose HUAWEIAV03 through the EDID product info.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                android.hardware.display.DeviceProductInfo info = display.getDeviceProductInfo();
+                if (info != null
+                        && Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(info.getName().trim())) {
+                    return display;
+                }
             }
+            if (Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(display.getName().trim())) return display;
+            if (fallback == null && hasCv10Mode(display)) fallback = display;
         }
-        return null;
+        return fallback;
+    }
+
+    private static boolean hasCv10Mode(Display display) {
+        for (Display.Mode mode : display.getSupportedModes()) {
+            if (mode.getPhysicalWidth() == 3200 && mode.getPhysicalHeight() == 1600) return true;
+        }
+        return false;
     }
 
     @Keep
