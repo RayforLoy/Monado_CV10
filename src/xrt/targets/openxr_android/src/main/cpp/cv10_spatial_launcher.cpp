@@ -62,13 +62,11 @@ precision highp float;
 in vec2 uv;
 uniform sampler2D panel;
 uniform vec2 aim;
+uniform vec3 controllerAim;
 uniform vec2 panelSize;
 uniform vec2 canvasSize;
 out vec4 color;
-void main() {
-    vec2 position = (uv - 0.5) * canvasSize + 0.5 * panelSize;
-    vec2 cursor = aim * panelSize;
-    vec2 origin = vec2(0.76, 1.32) * panelSize;
+float pointerOpacity(vec2 position, vec2 cursor, vec2 origin) {
     vec2 ray = cursor - origin;
     float along = clamp(dot(position - origin, ray) / max(dot(ray, ray), 0.0001), 0.0, 1.0);
     float rayDistance = length(position - origin - along * ray);
@@ -76,14 +74,21 @@ void main() {
     float cursorDistance = length(position - cursor);
     float ring = 1.0 - smoothstep(1.7, 3.2, abs(cursorDistance - 9.0));
     float centerDot = 1.0 - smoothstep(2.2, 3.5, cursorDistance);
-    float opacity = max(rayOpacity, max(ring, centerDot));
-
+    return max(rayOpacity, max(ring, centerDot));
+}
+void main() {
+    vec2 position = (uv - 0.5) * canvasSize + 0.5 * panelSize;
     vec2 panelUv = position / panelSize;
     vec4 background = vec4(0.0);
     if (all(greaterThanEqual(panelUv, vec2(0.0))) && all(lessThan(panelUv, vec2(1.0)))) {
         background = vec4(texture(panel, panelUv).rgb, 1.0);
     }
+    float opacity = pointerOpacity(position, aim * panelSize, vec2(0.76, 1.32) * panelSize);
     color = vec4(vec3(0.34, 1.0, 0.75) * opacity, opacity) + background * (1.0 - opacity);
+    if (controllerAim.z > 0.0) {
+        opacity = pointerOpacity(position, controllerAim.xy * panelSize, vec2(1.12, 1.18) * panelSize);
+        color = vec4(vec3(1.0, 0.77, 0.27) * opacity, opacity) + color * (1.0 - opacity);
+    }
 }
 )";
 
@@ -146,6 +151,8 @@ public:
 		panel_method = env->GetMethodID(cls, "takePanel", "()Landroid/graphics/Bitmap;");
 		aim_method = env->GetMethodID(cls, "aimBits", "()J");
 		recenter_method = env->GetMethodID(cls, "recenterGeneration", "()I");
+		controller_click_method = env->GetMethodID(cls, "controllerClick", "(FF)V");
+		controller_back_method = env->GetMethodID(cls, "controllerBack", "()V");
 		env->DeleteLocalRef(cls);
 	}
 
@@ -183,6 +190,18 @@ public:
 		return env->CallIntMethod(state, recenter_method);
 	}
 
+	void
+	controller_click(float x, float y) const
+	{
+		env->CallVoidMethod(state, controller_click_method, static_cast<jfloat>(x), static_cast<jfloat>(y));
+	}
+
+	void
+	controller_back() const
+	{
+		env->CallVoidMethod(state, controller_back_method);
+	}
+
 	JNIEnv *const env;
 
 private:
@@ -192,6 +211,8 @@ private:
 	jmethodID panel_method = nullptr;
 	jmethodID aim_method = nullptr;
 	jmethodID recenter_method = nullptr;
+	jmethodID controller_click_method = nullptr;
+	jmethodID controller_back_method = nullptr;
 };
 
 class DisplayCapture
@@ -294,11 +315,17 @@ public:
 		if (view_space != XR_NULL_HANDLE) {
 			xrDestroySpace(view_space);
 		}
+		if (controller_space != XR_NULL_HANDLE) {
+			xrDestroySpace(controller_space);
+		}
 		if (local_space != XR_NULL_HANDLE) {
 			xrDestroySpace(local_space);
 		}
 		if (session != XR_NULL_HANDLE) {
 			xrDestroySession(session);
+		}
+		if (controller_actions != XR_NULL_HANDLE) {
+			xrDestroyActionSet(controller_actions);
 		}
 		if (instance != XR_NULL_HANDLE) {
 			xrDestroyInstance(instance);
@@ -489,6 +516,14 @@ private:
 		space_info.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
 		check(xrCreateReferenceSpace(session, &space_info, &view_space), "xrCreateReferenceSpace(VIEW)");
 
+		if (!capture) {
+			try {
+				initialize_controller();
+			} catch (const std::runtime_error &error) {
+				__android_log_print(ANDROID_LOG_WARN, tag, "Controller actions unavailable: %s", error.what());
+			}
+		}
+
 		uint32_t format_count = 0;
 		check(xrEnumerateSwapchainFormats(session, 0, &format_count, nullptr), "xrEnumerateSwapchainFormats");
 		std::vector<int64_t> formats(format_count);
@@ -516,6 +551,125 @@ private:
 		check(xrEnumerateSwapchainImages(swapchain, image_count, &image_count,
 		                                 reinterpret_cast<XrSwapchainImageBaseHeader *>(images.data())),
 		      "xrEnumerateSwapchainImages");
+	}
+
+	void
+	initialize_controller()
+	{
+		XrActionSetCreateInfo set_info{XR_TYPE_ACTION_SET_CREATE_INFO};
+		std::snprintf(set_info.actionSetName, sizeof(set_info.actionSetName), "launcher_controller");
+		std::snprintf(set_info.localizedActionSetName, sizeof(set_info.localizedActionSetName), "Launcher controller");
+		check(xrCreateActionSet(instance, &set_info, &controller_actions), "xrCreateActionSet");
+
+		const auto path = [this](const char *name) {
+			XrPath result = XR_NULL_PATH;
+			check(xrStringToPath(instance, name, &result), "xrStringToPath");
+			return result;
+		};
+		const XrPath hand = path("/user/hand/right");
+		const auto create = [&](XrActionType type, const char *name, const char *label, XrAction &action) {
+			XrActionCreateInfo info{XR_TYPE_ACTION_CREATE_INFO};
+			info.actionType = type;
+			std::snprintf(info.actionName, sizeof(info.actionName), "%s", name);
+			std::snprintf(info.localizedActionName, sizeof(info.localizedActionName), "%s", label);
+			info.countSubactionPaths = 1;
+			info.subactionPaths = &hand;
+			check(xrCreateAction(controller_actions, &info, &action), "xrCreateAction");
+		};
+		create(XR_ACTION_TYPE_POSE_INPUT, "aim", "Aim", controller_pose);
+		create(XR_ACTION_TYPE_BOOLEAN_INPUT, "select", "Select", controller_select);
+		create(XR_ACTION_TYPE_BOOLEAN_INPUT, "back", "Back", controller_menu);
+
+		const XrActionSuggestedBinding inputs[] = {
+		    {controller_pose, path("/user/hand/right/input/aim/pose")},
+		    {controller_select, path("/user/hand/right/input/select/click")},
+		    {controller_menu, path("/user/hand/right/input/menu/click")},
+		};
+		XrInteractionProfileSuggestedBinding bindings{XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
+		bindings.interactionProfile = path("/interaction_profiles/khr/simple_controller");
+		bindings.countSuggestedBindings = sizeof(inputs) / sizeof(inputs[0]);
+		bindings.suggestedBindings = inputs;
+		check(xrSuggestInteractionProfileBindings(instance, &bindings), "xrSuggestInteractionProfileBindings");
+
+		XrActionSpaceCreateInfo aim_space{XR_TYPE_ACTION_SPACE_CREATE_INFO};
+		aim_space.action = controller_pose;
+		aim_space.subactionPath = hand;
+		aim_space.poseInActionSpace.orientation.w = 1.0f;
+		check(xrCreateActionSpace(session, &aim_space, &controller_space), "xrCreateActionSpace");
+		XrSessionActionSetsAttachInfo attach{XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
+		attach.countActionSets = 1;
+		attach.actionSets = &controller_actions;
+		check(xrAttachSessionActionSets(session, &attach), "xrAttachSessionActionSets");
+		controller_hand = hand;
+	}
+
+	bool
+	controller_pressed(XrAction action)
+	{
+		XrActionStateGetInfo request{XR_TYPE_ACTION_STATE_GET_INFO};
+		request.action = action;
+		request.subactionPath = controller_hand;
+		XrActionStateBoolean button{XR_TYPE_ACTION_STATE_BOOLEAN};
+		return XR_SUCCEEDED(xrGetActionStateBoolean(session, &request, &button)) && button.isActive &&
+		       button.changedSinceLastSync && button.currentState;
+	}
+
+	void
+	update_controller(XrTime time)
+	{
+		controller_visible = false;
+		if (controller_hand == XR_NULL_PATH || !focused) {
+			controller_calibrated = false;
+			return;
+		}
+		const XrActiveActionSet active{controller_actions, controller_hand};
+		XrActionsSyncInfo sync{XR_TYPE_ACTIONS_SYNC_INFO};
+		sync.countActiveActionSets = 1;
+		sync.activeActionSets = &active;
+		if (xrSyncActions(session, &sync) != XR_SUCCESS) {
+			controller_calibrated = false;
+			return;
+		}
+		if (controller_pressed(controller_menu)) {
+			state.controller_back();
+			return;
+		}
+		XrSpaceLocation aim{XR_TYPE_SPACE_LOCATION};
+		if (XR_FAILED(xrLocateSpace(controller_space, local_space, time, &aim)) ||
+		    (aim.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT) == 0) {
+			controller_calibrated = false;
+			return;
+		}
+		const XrQuaternionf q = aim.pose.orientation;
+		if (!controller_calibrated) {
+			controller_center = q;
+			controller_calibrated = true;
+			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR controller aim acquired and centered");
+		}
+
+		// CF20 tracks orientation. Take the first direction as the center of the anchored menu.
+		const XrQuaternionf c = controller_center;
+		const XrQuaternionf rotation = {
+		    c.w * q.x - c.x * q.w - c.y * q.z + c.z * q.y,
+		    c.w * q.y + c.x * q.z - c.y * q.w - c.z * q.x,
+		    c.w * q.z - c.x * q.y + c.y * q.x - c.z * q.w,
+		    c.w * q.w + c.x * q.x + c.y * q.y + c.z * q.z,
+		};
+		const float forward_z = 1.0f - 2.0f * (rotation.x * rotation.x + rotation.y * rotation.y);
+		if (forward_z <= 0.05f) {
+			return;
+		}
+		const float forward_x = -2.0f * (rotation.x * rotation.z + rotation.w * rotation.y);
+		const float forward_y = -2.0f * (rotation.y * rotation.z - rotation.w * rotation.x);
+		const float scale = 2.0f * panel_distance / (panel_width_m * forward_z);
+		controller_x = forward_x * scale;
+		controller_y = -forward_y * scale * panel_width / panel_height;
+		controller_visible = true;
+		if (controller_pressed(controller_select)) {
+			__android_log_print(ANDROID_LOG_DEBUG, tag, "OpenXR controller select at %.3f, %.3f",
+			                    controller_x, controller_y);
+			state.controller_click(controller_x, controller_y);
+		}
 	}
 
 	void
@@ -554,6 +708,7 @@ private:
 			glUniform2f(glGetUniformLocation(program, "panelSize"), panel_width, panel_height);
 			glUniform2f(glGetUniformLocation(program, "canvasSize"), canvas_width, canvas_height);
 			aim_uniform = glGetUniformLocation(program, "aim");
+			controller_aim_uniform = glGetUniformLocation(program, "controllerAim");
 			glTexStorage2D(target, 1, panel_format, panel_width, panel_height);
 			glViewport(0, 0, canvas_width, canvas_height);
 		}
@@ -580,7 +735,8 @@ private:
 				continue;
 			}
 			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR session state %d", changed.state);
-			state.set_ready(changed.state == XR_SESSION_STATE_FOCUSED);
+			focused = changed.state == XR_SESSION_STATE_FOCUSED;
+			state.set_ready(focused);
 			switch (changed.state) {
 			case XR_SESSION_STATE_READY: {
 				XrSessionBeginInfo begin_info{XR_TYPE_SESSION_BEGIN_INFO};
@@ -632,6 +788,7 @@ private:
 		                   origin.z - distance * std::cos(yaw) * std::cos(pitch)};
 		anchor_valid = true;
 		recent_generation = generation;
+		controller_calibrated = false;
 		if (capture_world_anchored) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "Anchored Pocket XR canvas (recenter %d)", generation);
 		} else if (generation != 0) {
@@ -689,6 +846,8 @@ private:
 			float y = 0.0f;
 			state.read_aim(x, y);
 			glUniform2f(aim_uniform, (x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f);
+			glUniform3f(controller_aim_uniform, (controller_x + 1.0f) / 2.0f, (controller_y + 1.0f) / 2.0f,
+			            controller_visible ? 1.0f : 0.0f);
 		}
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -781,6 +940,7 @@ private:
 		} else if (frame.shouldRender && !capture) {
 			update_anchor(frame.predictedDisplayTime, panel_distance);
 			if (anchor_valid) {
+				update_controller(frame.predictedDisplayTime);
 				auto &quad = quads[0];
 				draw_panel();
 				quad.space = local_space;
@@ -810,12 +970,24 @@ private:
 	XrSession session = XR_NULL_HANDLE;
 	XrSpace local_space = XR_NULL_HANDLE;
 	XrSpace view_space = XR_NULL_HANDLE;
+	XrActionSet controller_actions = XR_NULL_HANDLE;
+	XrAction controller_pose = XR_NULL_HANDLE;
+	XrAction controller_select = XR_NULL_HANDLE;
+	XrAction controller_menu = XR_NULL_HANDLE;
+	XrSpace controller_space = XR_NULL_HANDLE;
+	XrPath controller_hand = XR_NULL_PATH;
 	XrSwapchain swapchain = XR_NULL_HANDLE;
 	XrEnvironmentBlendMode blend_mode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	std::vector<XrSwapchainImageOpenGLESKHR> images;
 	XrPosef anchor{};
 	bool anchor_valid = false;
 	bool running = false;
+	bool focused = false;
+	XrQuaternionf controller_center{};
+	bool controller_calibrated = false;
+	bool controller_visible = false;
+	float controller_x = 0.0f;
+	float controller_y = 0.0f;
 	jint recent_generation = 0;
 	EGLDisplay display = EGL_NO_DISPLAY;
 	EGLContext context = EGL_NO_CONTEXT;
@@ -826,6 +998,7 @@ private:
 	GLuint framebuffer = 0;
 	GLuint program = 0;
 	GLint aim_uniform = -1;
+	GLint controller_aim_uniform = -1;
 	GLint transform_uniform = -1;
 };
 

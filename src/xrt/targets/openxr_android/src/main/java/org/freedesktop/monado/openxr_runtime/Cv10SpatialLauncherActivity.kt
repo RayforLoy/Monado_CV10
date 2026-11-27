@@ -155,13 +155,17 @@ class Cv10SpatialLauncherActivity : Activity() {
         }
         waitingForUsbAccess = false
         val state =
-            SpatialLauncherState {
-                runOnUiThread {
-                    if (renderState?.ready == true && !closing) {
-                        controls.setText(R.string.cv10_spatial_phone_controls)
+            SpatialLauncherState(
+                onReady = {
+                    runOnUiThread {
+                        if (renderState?.ready == true && !closing) {
+                            controls.setText(R.string.cv10_spatial_phone_controls)
+                        }
                     }
-                }
-            }
+                },
+                onControllerClick = { x, y -> runOnUiThread { confirm(x, y) } },
+                onControllerBack = { runOnUiThread { if (renderState?.ready == true) close() } },
+            )
         renderState = state
         controls.setText(R.string.cv10_spatial_opening)
         controls.postDelayed(
@@ -398,7 +402,11 @@ class Cv10SpatialLauncherActivity : Activity() {
 
 /** Single-writer render commands shared by the Android UI and the OpenXR frame loop. */
 @Keep
-internal class SpatialLauncherState(private val onReady: () -> Unit) {
+internal class SpatialLauncherState(
+    private val onControllerClick: (Float, Float) -> Unit = { _, _ -> },
+    private val onControllerBack: () -> Unit = {},
+    private val onReady: () -> Unit,
+) {
     private val panel = AtomicReference<Bitmap>()
     private val packedAim = AtomicLong()
     private val recenterCount = AtomicInteger()
@@ -420,6 +428,10 @@ internal class SpatialLauncherState(private val onReady: () -> Unit) {
     }
 
     fun aimBits(): Long = packedAim.get()
+
+    fun controllerClick(x: Float, y: Float) = onControllerClick(x, y)
+
+    fun controllerBack() = onControllerBack()
 
     fun recenter() {
         recenterCount.incrementAndGet()
