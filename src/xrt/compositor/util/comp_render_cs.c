@@ -215,7 +215,7 @@ do_cs_equirect2_layer(const struct comp_layer *layer,
 /// Data setup for a projection layer
 static inline void
 do_cs_projection_layer(const struct comp_layer *layer,
-                       const struct xrt_pose *world_pose_scanout_begin,
+                       const struct xrt_pose *target_pose,
                        uint32_t view_index,
                        uint32_t cur_layer,
                        uint32_t cur_image,
@@ -281,7 +281,7 @@ do_cs_projection_layer(const struct comp_layer *layer,
 		render_calc_time_warp_matrix(                 //
 		    &vd->pose,                                //
 		    &vd->fov,                                 //
-		    world_pose_scanout_begin,                 //
+		    target_pose,                              //
 		    &ubo_data->layers[cur_layer].transforms); //
 	} else {
 		render_calc_time_warp_projection(             //
@@ -500,8 +500,9 @@ crc_distortion_fast_path(struct render_compute *render,
 	struct xrt_normalized_rect src_norm_rects[XRT_MAX_VIEWS];
 	struct xrt_fov src_fovs[XRT_MAX_VIEWS];
 	struct xrt_pose src_poses[XRT_MAX_VIEWS];
-	struct xrt_pose world_poses_scanout_begin[XRT_MAX_VIEWS];
-	struct xrt_pose world_poses_scanout_end[XRT_MAX_VIEWS];
+	struct xrt_pose target_poses_begin[XRT_MAX_VIEWS];
+	struct xrt_pose target_poses_end[XRT_MAX_VIEWS];
+	const bool view_space = is_layer_view_space(data);
 
 	for (uint32_t i = 0; i < d->target.view_count; i++) {
 		// Data to be filled in.
@@ -510,8 +511,6 @@ crc_distortion_fast_path(struct render_compute *render,
 		struct xrt_normalized_rect src_norm_rect;
 		struct xrt_fov src_fov;
 		struct xrt_pose src_pose;
-		struct xrt_pose world_pose_scanout_begin;
-		struct xrt_pose world_pose_scanout_end;
 		uint32_t array_index = vds[i]->sub.array_index;
 		const struct comp_swapchain_image *image = get_layer_image(layer, i, vds[i]->sub.image_index);
 
@@ -521,8 +520,6 @@ crc_distortion_fast_path(struct render_compute *render,
 		viewport_data = d->views[i].target.viewport_data;
 		src_fov = vds[i]->fov;
 		src_pose = vds[i]->pose;
-		world_pose_scanout_begin = d->views[i].world_pose_scanout_begin;
-		world_pose_scanout_end = d->views[i].world_pose_scanout_end;
 
 		// No layer squasher has handled this for us already
 		if (data->flip_y) {
@@ -537,8 +534,8 @@ crc_distortion_fast_path(struct render_compute *render,
 		target_viewport_datas[i] = viewport_data;
 		src_fovs[i] = src_fov;
 		src_poses[i] = src_pose;
-		world_poses_scanout_begin[i] = world_pose_scanout_begin;
-		world_poses_scanout_end[i] = world_pose_scanout_end;
+		target_poses_begin[i] = view_space ? d->views[i].eye_pose : d->views[i].world_pose_scanout_begin;
+		target_poses_end[i] = view_space ? d->views[i].eye_pose : d->views[i].world_pose_scanout_end;
 	}
 
 	if (!d->do_timewarp) {
@@ -559,8 +556,8 @@ crc_distortion_fast_path(struct render_compute *render,
 		    src_norm_rects,                 //
 		    src_poses,                      //
 		    src_fovs,                       //
-		    world_poses_scanout_begin,      //
-		    world_poses_scanout_end,        //
+		    target_poses_begin,             //
+		    target_poses_end,               //
 		    d->target.cs.image,             //
 		    d->target.cs.storage_view,      //
 		    d->target.cs.final_layout,      //
@@ -681,9 +678,11 @@ comp_render_cs_layer(struct render_compute *render,
 			break;
 		case XRT_LAYER_PROJECTION_DEPTH:
 		case XRT_LAYER_PROJECTION: {
+			const struct xrt_pose *target_pose =
+			    is_layer_view_space(&layer->data) ? eye_pose : world_pose_scanout_begin;
 			do_cs_projection_layer(       //
 			    layer,                    // layer
-			    world_pose_scanout_begin, // world_pose_scanout_begin
+			    target_pose,              // target_pose
 			    view_index,               // view_index
 			    cur_layer,                // cur_layer
 			    cur_image,                // cur_image

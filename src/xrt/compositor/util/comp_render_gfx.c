@@ -514,6 +514,7 @@ crg_clear_output(struct render_gfx *render, const struct comp_render_dispatch_da
 static void
 crg_distortion_common(struct render_gfx *render,
                       bool do_timewarp,
+                      bool view_space,
                       const struct gfx_mesh_data *md,
                       const struct comp_render_dispatch_data *d)
 {
@@ -537,19 +538,23 @@ crg_distortion_common(struct render_gfx *render,
 
 		// Extra arguments for timewarp.
 		if (do_timewarp) {
-			data.pre_transform = d->views[i].pre_transform;
+			const struct comp_render_view_data *view = &d->views[i];
+			// A VIEW layer's source pose is head-relative. Reproject it in the same space.
+			const struct xrt_pose *begin = view_space ? &view->eye_pose : &view->world_pose_scanout_begin;
+			const struct xrt_pose *end = view_space ? &view->eye_pose : &view->world_pose_scanout_end;
+			data.pre_transform = view->pre_transform;
 
-			render_calc_time_warp_matrix(              //
-			    &md->views[i].src_pose,                //
-			    &md->views[i].src_fov,                 //
-			    &d->views[i].world_pose_scanout_begin, //
-			    &data.transform_scanout_begin);        //
+			render_calc_time_warp_matrix(       //
+			    &md->views[i].src_pose,         //
+			    &md->views[i].src_fov,          //
+			    begin,                         //
+			    &data.transform_scanout_begin); //
 
-			render_calc_time_warp_matrix(            //
-			    &md->views[i].src_pose,              //
-			    &md->views[i].src_fov,               //
-			    &d->views[i].world_pose_scanout_end, //
-			    &data.transform_scanout_end);        //
+			render_calc_time_warp_matrix(     //
+			    &md->views[i].src_pose,       //
+			    &md->views[i].src_fov,        //
+			    end,                         //
+			    &data.transform_scanout_end); //
 		}
 
 		ret = render_gfx_mesh_alloc_and_write( //
@@ -631,6 +636,7 @@ crg_distortion_after_squash(struct render_gfx *render, const struct comp_render_
 	crg_distortion_common( //
 	    render,            //
 	    d->do_timewarp,    //
+	    false,             // view_space
 	    &md,               //
 	    d);                //
 }
@@ -676,11 +682,7 @@ crg_distortion_fast_path(struct render_gfx *render,
 		    src_image_view);       // src_image_view
 	}
 
-	crg_distortion_common( //
-	    render,            //
-	    d->do_timewarp,    //
-	    &md,               //
-	    d);                //
+	crg_distortion_common(render, d->do_timewarp, is_layer_view_space(data), &md, d);
 }
 
 
