@@ -140,6 +140,40 @@ check_egl(EGLBoolean success, const char *operation)
 	}
 }
 
+XrQuaternionf
+multiply(XrQuaternionf a, XrQuaternionf b)
+{
+	return {a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+	        a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+	        a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+	        a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
+}
+
+XrQuaternionf
+inverse_rotation(XrQuaternionf q)
+{
+	return {-q.x, -q.y, -q.z, q.w};
+}
+
+XrQuaternionf
+normalize(XrQuaternionf q)
+{
+	const float norm = std::sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+	return {q.x / norm, q.y / norm, q.z / norm, q.w / norm};
+}
+
+bool
+rotation_near(XrQuaternionf a, XrQuaternionf b, float angle_degrees)
+{
+	const float sign = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w < 0.0f ? -1.0f : 1.0f;
+	const float dx = a.x - sign * b.x;
+	const float dy = a.y - sign * b.y;
+	const float dz = a.z - sign * b.z;
+	const float dw = a.w - sign * b.w;
+	const float distance = 2.0f * std::sin(angle_degrees * 0.00436332313f);
+	return dx * dx + dy * dy + dz * dz + dw * dw <= distance * distance;
+}
+
 GLuint
 compile_shader(GLenum type, const char *source)
 {
@@ -243,6 +277,16 @@ private:
 class DisplayCapture
 {
 public:
+	struct FramePose
+	{
+		jlong time_ns = 0;
+		jlong epoch = 0;
+		XrQuaternionf center{};
+		XrQuaternionf top{};
+		XrQuaternionf bottom{};
+		XrQuaternionf reference{};
+	};
+
 	DisplayCapture(JNIEnv *env, jobject capture) : env(env), capture(capture)
 	{
 		if (capture == nullptr) {
@@ -250,7 +294,7 @@ public:
 		}
 		jclass cls = env->GetObjectClass(capture);
 		start_method = env->GetMethodID(cls, "startCapture", "(III)Z");
-		update_method = env->GetMethodID(cls, "updateCapture", "([F)J");
+		update_method = env->GetMethodID(cls, "updateCapture", "([F[J[F)J");
 		stop_method = env->GetMethodID(cls, "stopCapture", "()V");
 		env->DeleteLocalRef(cls);
 		matrix = env->NewFloatArray(16);
@@ -262,6 +306,23 @@ public:
 		if (matrix != nullptr) {
 			env->DeleteLocalRef(matrix);
 		}
+		if (orientation_array != nullptr) {
+			env->DeleteLocalRef(orientation_array);
+			env->DeleteLocalRef(time_array);
+		}
+	}
+
+	void
+	enable_frame_poses()
+	{
+		time_array = env->NewLongArray(2);
+		orientation_array = env->NewFloatArray(16);
+	}
+
+	const FramePose &
+	frame_pose() const
+	{
+		return pose;
 	}
 
 	void
@@ -288,12 +349,26 @@ public:
 	jlong
 	update(GLint transform_uniform)
 	{
-		const auto timestamp = env->CallLongMethod(capture, update_method, matrix);
+		const auto timestamp = env->CallLongMethod(capture, update_method, matrix, time_array, orientation_array);
 		if (timestamp != 0 && timestamp != latched_timestamp) {
 			std::array<jfloat, 16> transform{};
 			env->GetFloatArrayRegion(matrix, 0, transform.size(), transform.data());
 			glUniformMatrix4fv(transform_uniform, 1, GL_FALSE, transform.data());
 			latched_timestamp = timestamp;
+			if (time_array != nullptr) {
+				std::array<jlong, 2> time{};
+				env->GetLongArrayRegion(time_array, 0, time.size(), time.data());
+				pose.time_ns = time[0];
+				pose.epoch = time[1];
+				if (pose.time_ns != 0) {
+					std::array<jfloat, 16> q{};
+					env->GetFloatArrayRegion(orientation_array, 0, q.size(), q.data());
+					pose.center = normalize({q[0], q[1], q[2], q[3]});
+					pose.top = normalize({q[4], q[5], q[6], q[7]});
+					pose.bottom = normalize({q[8], q[9], q[10], q[11]});
+					pose.reference = normalize({q[12], q[13], q[14], q[15]});
+				}
+			}
 		}
 		return timestamp;
 	}
@@ -305,6 +380,9 @@ private:
 	jmethodID update_method = nullptr;
 	jmethodID stop_method = nullptr;
 	jfloatArray matrix = nullptr;
+	jlongArray time_array = nullptr;
+	jfloatArray orientation_array = nullptr;
+	FramePose pose{};
 	jlong latched_timestamp = 0;
 	bool started = false;
 };
@@ -334,6 +412,10 @@ public:
 
 	~Launcher()
 	{
+		if (convert_from_monotonic != nullptr) {
+			__android_log_print(ANDROID_LOG_INFO, tag, "Pocket XR late projection: %u corrected, %u unchanged",
+			                    warped_frames, unwarped_frames);
+		}
 		state.set_ready(false);
 		if (capture_cv10_optics && copied_frames != 0) {
 			__android_log_print(ANDROID_LOG_DEBUG, tag, "Pocket XR optical capture: %u copied, %u reused",
@@ -436,7 +518,12 @@ private:
 		const bool request_trace = capture_cv10_optics && use_bundled_runtime &&
 		                           __system_property_get("debug.xrt.CV10_PRESENT_TRACE", trace_setting) > 0 &&
 		                           std::strcmp(trace_setting, "true") == 0;
-		if (request_trace) {
+		trace_late_projection = request_trace;
+		char warp_setting[PROP_VALUE_MAX]{};
+		const bool request_warp = capture_cv10_optics && use_bundled_runtime &&
+		                          __system_property_get("debug.cv10.pocket_atw", warp_setting) > 0 &&
+		                          std::strcmp(warp_setting, "1") == 0;
+		if (request_trace || request_warp) {
 			uint32_t count = 0;
 			if (XR_SUCCEEDED(xrEnumerateInstanceExtensionProperties(nullptr, 0, &count, nullptr))) {
 				std::vector<XrExtensionProperties> available(count, {XR_TYPE_EXTENSION_PROPERTIES});
@@ -475,10 +562,17 @@ private:
 			result = xrCreateInstance(&instance_info, &instance);
 		}
 		check(result, "xrCreateInstance");
-		if (extensions.size() > 2) {
+		if (extensions.size() > 2 && request_trace) {
 			PFN_xrVoidFunction convert = nullptr;
 			if (XR_SUCCEEDED(xrGetInstanceProcAddr(instance, "xrConvertTimeToTimespecTimeKHR", &convert))) {
 				convert_time = reinterpret_cast<PFN_xrConvertTimeToTimespecTimeKHR>(convert);
+			}
+		}
+		if (extensions.size() > 2 && request_warp) {
+			PFN_xrVoidFunction convert = nullptr;
+			if (XR_SUCCEEDED(xrGetInstanceProcAddr(instance, "xrConvertTimespecTimeToTimeKHR", &convert))) {
+				convert_from_monotonic = reinterpret_cast<PFN_xrConvertTimespecTimeToTimeKHR>(convert);
+				capture.enable_frame_poses();
 			}
 		}
 
@@ -1034,6 +1128,74 @@ private:
 		return true;
 	}
 
+	bool
+	locate_head(XrTime time, XrPosef &head) const
+	{
+		XrSpaceLocation location{XR_TYPE_SPACE_LOCATION};
+		constexpr XrSpaceLocationFlags valid = XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT |
+		                                       XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+		                                       XR_SPACE_LOCATION_POSITION_VALID_BIT;
+		if (XR_FAILED(xrLocateSpace(view_space, local_space, time, &location)) ||
+		    (location.locationFlags & valid) != valid) {
+			return false;
+		}
+		head = location.pose;
+		return true;
+	}
+
+	bool
+	set_late_projection(XrTime display_time, jlong stamp, std::array<XrCompositionLayerProjectionView, 4> &views)
+	{
+		const auto &pose = capture.frame_pose();
+		if (pose.time_ns <= 0) {
+			return false;
+		}
+		if (warp_epoch != pose.epoch) {
+			if (warp_epoch >= 0) {
+				recenter_stamp = stamp;
+			}
+			warp_epoch = pose.epoch;
+		}
+		// One projection cannot describe source rows that used visibly different camera poses.
+		if (stamp == recenter_stamp || !rotation_near(pose.center, pose.top, 0.025f) ||
+		    !rotation_near(pose.center, pose.bottom, 0.025f)) {
+			return false;
+		}
+		const timespec monotonic{static_cast<time_t>(pose.time_ns / 1'000'000'000),
+		                        static_cast<long>(pose.time_ns % 1'000'000'000)};
+		XrTime source_time = 0;
+		XrPosef reference{}, predicted{};
+		if (XR_FAILED(convert_from_monotonic(instance, &monotonic, &source_time)) ||
+		    source_time < display_time - 48'000'000 || source_time > display_time + 48'000'000 ||
+		    !locate_head(source_time, reference) || !locate_head(display_time, predicted)) {
+			return false;
+		}
+		// Transform the actual Pocket render orientation from its unsmoothed reference into LOCAL.
+		// The shared pose timestamp supplies the runtime side of that reference. The compositor then
+		// locates the display pose at scanout, including on repeats of this captured image.
+		const auto source = normalize(multiply(reference.orientation, multiply(inverse_rotation(pose.reference), pose.center)));
+		if (!rotation_near(source, predicted.orientation, 12.0f)) {
+			return false;
+		}
+		for (uint32_t i = 0; i < projection_count; ++i) {
+			auto &eye = views[i].pose;
+			const auto offset = multiply(multiply(source, {eye.position.x, eye.position.y, eye.position.z, 0.0f}),
+			                             inverse_rotation(source));
+			eye.orientation = multiply(source, eye.orientation);
+			eye.position = {reference.position.x + offset.x, reference.position.y + offset.y,
+			                reference.position.z + offset.z};
+		}
+		if (trace_late_projection) {
+			const auto target = predicted.orientation;
+			__android_log_print(ANDROID_LOG_DEBUG, tag,
+			                    "CV10_ATW stamp=%lld pose=%lld epoch=%lld source=%g,%g,%g,%g target=%g,%g,%g,%g",
+			                    static_cast<long long>(stamp), static_cast<long long>(pose.time_ns),
+			                    static_cast<long long>(pose.epoch), source.x, source.y, source.z, source.w,
+			                    target.x, target.y, target.z, target.w);
+		}
+		return true;
+	}
+
 	void
 	draw_frame()
 	{
@@ -1067,6 +1229,14 @@ private:
 						++reused_frames;
 					}
 					projection.space = view_space;
+					if (convert_from_monotonic != nullptr) {
+						if (set_late_projection(frame.predictedDisplayTime, capture_timestamp, projection_views)) {
+							projection.space = local_space;
+							++warped_frames;
+						} else {
+							++unwarped_frames;
+						}
+					}
 					projection.viewCount = projection_count;
 					projection.views = projection_views.data();
 					layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projection);
@@ -1134,6 +1304,12 @@ private:
 	const XrExtent2Df capture_size;
 	jlong submitted_capture_timestamp = 0;
 	PFN_xrConvertTimeToTimespecTimeKHR convert_time = nullptr;
+	PFN_xrConvertTimespecTimeToTimeKHR convert_from_monotonic = nullptr;
+	jlong warp_epoch = -1;
+	jlong recenter_stamp = 0;
+	uint32_t warped_frames = 0;
+	uint32_t unwarped_frames = 0;
+	bool trace_late_projection = false;
 	uint32_t copied_frames = 0;
 	uint32_t reused_frames = 0;
 	XrInstance instance = XR_NULL_HANDLE;

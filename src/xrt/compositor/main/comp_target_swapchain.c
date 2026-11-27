@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 /*
@@ -50,6 +51,7 @@ DEBUG_GET_ONCE_NUM_OPTION(preferred_at_least_image_count, "XRT_COMPOSITOR_PREFER
 DEBUG_GET_ONCE_BOOL_OPTION(use_present_wait, "XRT_COMPOSITOR_USE_PRESENT_WAIT", false)
 DEBUG_GET_ONCE_BOOL_OPTION(use_display_timing, "XRT_COMPOSITOR_USE_DISPLAY_TIMING", true)
 DEBUG_GET_ONCE_BOOL_OPTION(cv10_present_trace, "CV10_PRESENT_TRACE", false)
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_scanout_feedback, "CV10_SCANOUT_FEEDBACK", false)
 
 static inline struct vk_bundle *
 get_vk(struct comp_target_swapchain *cts)
@@ -397,6 +399,51 @@ done:
 }
 
 static void
+update_cv10_scanout_offset(struct comp_target_swapchain *cts, const VkPastPresentationTimingGOOGLE *timing, int64_t now_ns)
+{
+	if (!cts->base.c->is_cv10 || !debug_get_bool_option_cv10_scanout_feedback()) {
+		return;
+	}
+	const uint32_t id = timing->presentID;
+	struct comp_target_cv10_submission *frame = &cts->cv10_feedback.frames[id % COMP_TARGET_CV10_FEEDBACK_HISTORY];
+	if (id == 0 || frame->id != id || timing->actualPresentTime > (uint64_t)now_ns ||
+	    timing->actualPresentTime < (uint64_t)frame->submit_ns ||
+	    now_ns - (int64_t)timing->actualPresentTime > 250 * U_TIME_1MS_IN_NS) {
+		return;
+	}
+	frame->id = 0;
+	const int64_t error_ns = (int64_t)timing->actualPresentTime - frame->predicted_ns;
+	if (error_ns < -60 * (int64_t)U_TIME_1MS_IN_NS || error_ns > 60 * (int64_t)U_TIME_1MS_IN_NS) {
+		return;
+	}
+	if (now_ns - cts->base.cv10_scanout_feedback_ns > 250 * U_TIME_1MS_IN_NS) {
+		cts->cv10_feedback.count = 0;
+		cts->cv10_feedback.next = 0;
+		cts->base.cv10_scanout_offset_ns = 0;
+	}
+	cts->base.cv10_scanout_feedback_ns = now_ns;
+	cts->cv10_feedback.errors[cts->cv10_feedback.next] = error_ns;
+	cts->cv10_feedback.next = (cts->cv10_feedback.next + 1) % COMP_TARGET_CV10_FEEDBACK_WINDOW;
+	if (cts->cv10_feedback.count < COMP_TARGET_CV10_FEEDBACK_WINDOW) {
+		++cts->cv10_feedback.count;
+	}
+	if (cts->cv10_feedback.count < 5) {
+		return;
+	}
+	int64_t sorted[COMP_TARGET_CV10_FEEDBACK_WINDOW];
+	for (uint32_t i = 0; i < cts->cv10_feedback.count; ++i) {
+		const int64_t sample = cts->cv10_feedback.errors[i];
+		uint32_t j = i;
+		while (j > 0 && sorted[j - 1] > sample) {
+			sorted[j] = sorted[j - 1];
+			--j;
+		}
+		sorted[j] = sample;
+	}
+	cts->base.cv10_scanout_offset_ns = sorted[cts->cv10_feedback.count / 2];
+}
+
+static void
 do_update_timings_google_display_timing(struct comp_target_swapchain *cts)
 {
 	struct vk_bundle *vk = get_vk(cts);
@@ -427,6 +474,7 @@ do_update_timings_google_display_timing(struct comp_target_swapchain *cts)
 	    timings);                          //
 	int64_t now_ns = os_monotonic_get_ns();
 	for (uint32_t i = 0; i < count; i++) {
+		update_cv10_scanout_offset(cts, &timings[i], now_ns);
 		if (cts->base.c->is_cv10 && debug_get_bool_option_cv10_present_trace()) {
 			U_LOG_I("CV10_FEEDBACK id=%u desired=%" PRIu64 " actual=%" PRIu64 " earliest=%" PRIu64
 			        " margin=%" PRIu64 " now=%" PRIi64,
@@ -740,6 +788,9 @@ comp_target_swapchain_create_images(struct comp_target *ct,
 	target_init_semaphores(cts);
 
 	VkSwapchainKHR old_swapchain_handle = cts->swapchain.handle;
+	memset(&cts->cv10_feedback, 0, sizeof(cts->cv10_feedback));
+	cts->base.cv10_scanout_offset_ns = 0;
+	cts->base.cv10_scanout_feedback_ns = 0;
 
 	cts->base.image_count = 0;
 	cts->swapchain.handle = VK_NULL_HANDLE;
@@ -1090,10 +1141,17 @@ comp_target_swapchain_present(struct comp_target *ct,
 
 	// Need to take the queue lock for present.
 	const bool trace = cts->base.c->is_cv10 && debug_get_bool_option_cv10_present_trace();
-	int64_t start_ns = trace ? os_monotonic_get_ns() : 0;
+	const bool calibrate = cts->base.c->is_cv10 && vk->has_GOOGLE_display_timing &&
+	                       debug_get_bool_option_cv10_scanout_feedback();
+	int64_t start_ns = (trace || calibrate) ? os_monotonic_get_ns() : 0;
 	vk_queue_lock(present_queue);
 	VkResult ret = vk->vkQueuePresentKHR(present_queue->queue, &present_info);
 	vk_queue_unlock(present_queue);
+	if (calibrate && (ret == VK_SUCCESS || ret == VK_SUBOPTIMAL_KHR)) {
+		const uint32_t id = (uint32_t)cts->current_frame_id;
+		cts->cv10_feedback.frames[id % COMP_TARGET_CV10_FEEDBACK_HISTORY] =
+		    (struct comp_target_cv10_submission){id, start_ns, cts->base.c->frame.rendering.predicted_display_time_ns};
+	}
 	if (trace) {
 		U_LOG_I("CV10_PRESENT id=%" PRIi64 " image=%u start=%" PRIi64 " end=%" PRIi64
 		        " desired=%" PRIi64 " result=%d fb=%d",

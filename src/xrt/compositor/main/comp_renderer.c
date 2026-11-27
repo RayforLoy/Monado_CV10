@@ -346,6 +346,11 @@ calc_pose_data(struct comp_renderer *r,
 	const int64_t scanout_time_ns = calc_scanout_compensation_ns(r);
 
 	int64_t begin_timestamp_ns = r->c->frame.rendering.predicted_display_time_ns;
+	const struct comp_target *target = r->c->target;
+	if (target->cv10_scanout_offset_ns != 0 &&
+	    os_monotonic_get_ns() - target->cv10_scanout_feedback_ns <= 250 * U_TIME_1MS_IN_NS) {
+		begin_timestamp_ns += target->cv10_scanout_offset_ns;
+	}
 	int64_t end_timestamp_ns = begin_timestamp_ns + scanout_time_ns;
 
 	// Pose at beginning of scanout
@@ -364,6 +369,12 @@ calc_pose_data(struct comp_renderer *r,
 		u_pp_xrt_result(dg, xret);
 		U_LOG_E("xrt_device_get_view_poses failed: %s", sink.buffer);
 		return;
+	}
+	if (r->c->is_cv10 && debug_get_bool_option_cv10_present_trace()) {
+		const struct xrt_quat head = head_relation[0].pose.orientation;
+		U_LOG_I("CV10_SCANOUT id=%" PRIi64 " target_ns=%" PRIi64 " source_ns=%" PRIi64 " q=%g,%g,%g,%g",
+		        r->c->frame.rendering.id, begin_timestamp_ns, r->c->frame.rendering.predicted_display_time_ns,
+		        head.x, head.y, head.z, head.w);
 	}
 
 	// Pose at end of scanout

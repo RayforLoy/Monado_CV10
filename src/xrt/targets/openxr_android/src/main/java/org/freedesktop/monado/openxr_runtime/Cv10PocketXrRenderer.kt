@@ -91,7 +91,7 @@ internal class Cv10PocketXrRenderer(
             }
         }
 
-        fun updateCapture(transform: FloatArray): Long {
+        fun updateCapture(transform: FloatArray, poseTime: LongArray?, rotations: FloatArray?): Long {
             val current = texture ?: return 0L
             val timestamp: Long
             try {
@@ -111,15 +111,25 @@ internal class Cv10PocketXrRenderer(
                 activity.runOnUiThread { if (!state.stop) onFirstFrame() }
             }
             lastTimestamp = timestamp
+            if (poseTime != null) poseTime[0] = 0
             framePoses?.let { channel ->
                 val pose = channel.match(timestamp)
                 if (pose == null) posesMissing++ else posesMatched++
+                val reference = pose?.reference
+                if (pose != null && reference != null && poseTime != null && rotations != null) {
+                    pose.center.copyTo(rotations, 0)
+                    pose.top.copyTo(rotations, 4)
+                    pose.bottom.copyTo(rotations, 8)
+                    reference.copyTo(rotations, 12)
+                    poseTime[0] = pose.predictionTime
+                    poseTime[1] = pose.recenter.toLong()
+                }
                 val tag = Cv10PocketFramePoses.TAG
                 if (Log.isLoggable(tag, Log.DEBUG)) {
                     Log.d(tag, if (pose == null) "CV10_RX_POSE stamp=$timestamp missing" else
                         "CV10_RX_POSE stamp=${pose.stamp} pose=${pose.predictionTime} epoch=${pose.recenter} " +
                         "x=${pose.center.x} y=${pose.center.y} z=${pose.center.z} w=${pose.center.w} " +
-                        "rowPoses=${pose.top != pose.bottom}")
+                            "rowPoses=${pose.top != pose.bottom} ref=${reference != null}")
                 }
             }
             return timestamp

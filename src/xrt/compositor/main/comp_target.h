@@ -163,6 +163,10 @@ struct comp_target
 	//! Whether wait_for_present is supported by this comp_target.
 	bool wait_for_present_supported;
 
+	//! CV10-only correction for scanout pose sampling from recent, matched presentation feedback.
+	int64_t cv10_scanout_offset_ns;
+	int64_t cv10_scanout_feedback_ns;
+
 	/*
 	 *
 	 * Vulkan functions.

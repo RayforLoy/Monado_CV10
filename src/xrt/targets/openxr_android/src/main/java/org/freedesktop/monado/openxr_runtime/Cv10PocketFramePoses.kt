@@ -32,6 +32,7 @@ internal class Cv10PocketFramePoses private constructor(
         val center: Orientation,
         val top: Orientation,
         val bottom: Orientation,
+        val reference: Orientation?,
     )
 
     data class Orientation(
@@ -39,10 +40,18 @@ internal class Cv10PocketFramePoses private constructor(
         val y: Float,
         val z: Float,
         val w: Float,
-    )
+    ) {
+        fun copyTo(values: FloatArray, offset: Int) {
+            values[offset] = x
+            values[offset + 1] = y
+            values[offset + 2] = z
+            values[offset + 3] = w
+        }
+    }
 
-    private val bytes = ByteArray(RECORD_BYTES)
+    private val bytes = ByteArray(REFERENCE_RECORD_BYTES)
     private val record = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+    @Volatile private var recordBytes = 0
     private var extent = 0
     private val pending = TreeMap<Long, Pose>()
 
@@ -50,10 +59,15 @@ internal class Cv10PocketFramePoses private constructor(
     // Binder once after checking the launch identity. Frame delivery itself does not use Binder.
     val source: IBinder = object : Binder() {
         override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
-            if (code != FIRST_CALL_TRANSACTION || reply == null) return super.onTransact(code, data, reply, flags)
+            if (reply == null || (code != FIRST_CALL_TRANSACTION && code != REFERENCE_TRANSACTION)) {
+                return super.onTransact(code, data, reply, flags)
+            }
             data.enforceInterface(DESCRIPTOR)
             if (getCallingUid() != producerUid) throw SecurityException("Unexpected CV10 pose producer")
             synchronized(this@Cv10PocketFramePoses) {
+                if (writer != null) {
+                    recordBytes = if (code == REFERENCE_TRANSACTION) REFERENCE_RECORD_BYTES else BASE_RECORD_BYTES
+                }
                 reply.writeNoException()
                 reply.writeTypedObject(writer, Parcelable.PARCELABLE_WRITE_RETURN_VALUE)
                 writer = null
@@ -66,8 +80,10 @@ internal class Cv10PocketFramePoses private constructor(
     fun match(stamp: Long): Pose? {
         pending.headMap(stamp, false).clear()
         repeat(MAX_PENDING) {
+            val size = recordBytes
+            if (size == 0) return null
             val read = try {
-                Os.read(reader.fileDescriptor, bytes, extent, bytes.size - extent)
+                Os.read(reader.fileDescriptor, bytes, extent, size - extent)
             } catch (error: ErrnoException) {
                 if (error.errno != OsConstants.EAGAIN) {
                     Log.w(TAG, "CV10 pose channel read failed", error)
@@ -79,10 +95,11 @@ internal class Cv10PocketFramePoses private constructor(
             }
             if (read == 0) return pending.remove(stamp)
             extent += read
-            if (extent < bytes.size) return@repeat
+            if (extent < size) return@repeat
             extent = 0
             record.rewind()
-            if (record.int != MAGIC) return@repeat
+            val hasReference = size == REFERENCE_RECORD_BYTES
+            if (record.int != (if (hasReference) REFERENCE_MAGIC else BASE_MAGIC)) return@repeat
             val recenter = record.int
             val timestamp = record.long
             val predictionTime = record.long
@@ -90,7 +107,8 @@ internal class Cv10PocketFramePoses private constructor(
             val center = readOrientation() ?: return@repeat
             val top = readOrientation() ?: return@repeat
             val bottom = readOrientation() ?: return@repeat
-            pending[timestamp] = Pose(timestamp, predictionTime, recenter, center, top, bottom)
+            val reference = if (hasReference) readOrientation() else null
+            pending[timestamp] = Pose(timestamp, predictionTime, recenter, center, top, bottom, reference)
             if (pending.size > MAX_PENDING) pending.pollLastEntry()
         }
         return pending.remove(stamp)
@@ -118,8 +136,11 @@ internal class Cv10PocketFramePoses private constructor(
     companion object {
         const val TAG = "Cv10PocketFramePoses"
         private const val DESCRIPTOR = "org.cv10.pocketxr.frame_pose_source.v1"
-        private const val MAGIC = 0x31505643 // CVP1
-        private const val RECORD_BYTES = 72
+        private const val REFERENCE_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION + 1
+        private const val BASE_MAGIC = 0x31505643 // CVP1
+        private const val REFERENCE_MAGIC = 0x32505643 // CVP2
+        private const val BASE_RECORD_BYTES = 72
+        private const val REFERENCE_RECORD_BYTES = 88
         private const val MAX_PENDING = 32
 
         fun create(context: Context): Cv10PocketFramePoses? = runCatching {

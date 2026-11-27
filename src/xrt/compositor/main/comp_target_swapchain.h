@@ -28,6 +28,16 @@ extern "C" {
 
 struct u_pacing_compositor;
 
+struct comp_target_cv10_submission
+{
+	uint32_t id;
+	int64_t submit_ns;
+	int64_t predicted_ns;
+};
+
+#define COMP_TARGET_CV10_FEEDBACK_HISTORY 64
+#define COMP_TARGET_CV10_FEEDBACK_WINDOW 21
+
 /*!
  * Wraps and manage VkSwapchainKHR and VkSurfaceKHR, used by @ref comp code.
  *
@@ -46,6 +56,14 @@ struct comp_target_swapchain
 
 	//! Also works as a frame index.
 	int64_t current_frame_id;
+
+	struct
+	{
+		struct comp_target_cv10_submission frames[COMP_TARGET_CV10_FEEDBACK_HISTORY];
+		int64_t errors[COMP_TARGET_CV10_FEEDBACK_WINDOW];
+		uint32_t count;
+		uint32_t next;
+	} cv10_feedback;
 
 	struct
 	{

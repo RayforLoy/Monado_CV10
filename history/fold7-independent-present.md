@@ -21,6 +21,10 @@
 
 系统修复需保证当手机保持 ON/60 时，外屏可以按自身 90 Hz 的节拍提交。应检查当只有 CV10 有新内容时，SurfaceFlinger 是否仍把手机纳入同批 Present/Validate，以及 Qualcomm Composer 能否异步处理不同显示器的提交和栅栏。AOSP 的并行路径需要所有参与的 HWC 输出都声明支持，SurfaceFlinger 还会等待当批输出完成。单独并行化可能仍受超过 11.1 ms 的等待限制，需用同一亮屏对照验证。[AOSP Scheduler](https://android.googlesource.com/platform/frameworks/native/+/9095117f55f3a44a62cb249ab1b952fcb4ca8a42/services/surfaceflinger/Scheduler/Scheduler.cpp#204) · [AOSP CompositionEngine](https://android.googlesource.com/platform/frameworks/native/+/1fc9e7f03d5719e8043a4c0b415278860f94badd/services/surfaceflinger/CompositionEngine/src/CompositionEngine.cpp#97)
 
+Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这条路径仍将物理显示放在同一组。可在系统树做两个可独立回退的对照。先按输出的损伤和待处理事务跳过静置内屏的不必要提交，再将需要更新的内屏和 CV10 提交从共同的同步等待中拆开，分别处理本输出的 present fence。验收应覆盖静置和持续操作内屏两种情况，同时看内屏物理模式、两路 HWC 调用和 CV10 实际呈现。上述系统改动尚未部署到 Fold7。[AOSP SurfaceFlinger](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-qpr2-release/services/surfaceflinger/SurfaceFlinger.cpp#3050)
+
+本机 `sfdo` 可指定时钟和强制 GPU 合成。已列出的命令没有针对单个物理输出拆分 Present 的选项。量产系统要求 root 才能读取 `aflags list`，无线 ADB 也无法读取 Composer 服务和 `libsdmcore.so`、`libsdedrm.so` 的文件内容。现有 Perfetto 证据能定位同步等待链。此固件是否在 HAL 对各物理显示声明 `MULTI_THREADED_PRESENT`、以及内部调用使用的 DRM flags，仍需用可读的同版固件或系统构建核对。[Composer AIDL 能力定义](https://android.googlesource.com/platform/hardware/interfaces/+/48fc7fb9ac330141c352b293f36c7c23fa00ae37/graphics/composer/aidl/android/hardware/graphics/composer3/DisplayCapability.aidl)
+
 ## Pocket 工作区性能对照
 
 每眼 2240×2240，GLES 固定中心 1×1、外围 2×2。两条路径保持同一 Bilibili 工作区，使用 34° 峰峰值、3 秒周期的模拟左右转头，连续比较约 15 秒；动态推荐内容随页面变化。熄屏对照的电池温度在 35.1–35.7°C，系统热状态分别为 1→2 和 2→2。右镜固定相机确认内容出画，刷新率由呈现时间戳统计。延迟是模拟头动信号的相位拟合，不是光学测得的运动到光子时延。
@@ -42,7 +46,31 @@
 
 通过同一 VPN 链输入可重复的 32° 峰峰值三轴运动，观测到全部 2782 个锁存时间戳精确配对且单调递增。yaw、pitch 和 roll 的实测主轴峰峰值分别为 31.41°、31.40°、31.43°，与模拟输入的相关系数均为 +0.994。测试在 pitch 段观察到 9 帧上边与下边使用不同姿态，yaw 和 roll 的运动采样内两者相同。姿态轴和符号已验证到 Monado 的捕获端，逐行补偿的目标时序和应用重投影后的光学校验待做。测试结束后恢复了使用真实 IMU 的构建。
 
-将最终重投影统一到 Monado 前，仍需用 CV10 实际呈现时钟预测目标姿态，并覆盖重复帧、丢帧、回正以及逐行姿态插值。
+## Late projection calibrated against CV10 presentation
+
+`debug.cv10.pocket_atw=1` allows the direct bridge to express the source orientation in OpenXR `LOCAL` space. It combines the unsmoothed `CVP2` reference with a Monado pose sampled at that same time. Repeated submissions keep the orientation of the captured source frame. Missing or stale metadata, the first capture after recenter, materially different row orientations and excessive corrections retain the existing `VIEW` path. Pocket XR retains its own row correction. The experiment defaults to off.
+
+`debug.xrt.CV10_SCANOUT_FEEDBACK=true` joins `VK_GOOGLE_display_timing` feedback by present ID and estimates the prediction error from the median of the last 21 valid samples. The adjustment applies to the poses sampled for CV10 scanout. Submission cadence and desired present times are unchanged. The estimate expires after 250 ms without feedback and resets when the swapchain is rebuilt. This property also defaults to off.
+
+The same Bilibili workspace used direct rendering at 2240×2240 per eye, GLES FFR and the graphics compositor. The phone panel stayed ON at 60 Hz. The replay swept yaw by 34 degrees peak to peak on a 3-second cycle. Each arm had 905 exact present-to-pose joins over five complete cycles. Battery temperature rose from 34.5 to 35.6°C during the sequence. The baseline and combined runs stayed at thermal status 1. The late-projection-only run ended at status 2. A fixed camera verified right-lens output. The table reports software fitted pose phase, not a camera measurement of motion-to-photon latency.
+
+| During replay | Neither experiment | Late projection only | Late projection and feedback |
+| --- | ---: | ---: | ---: |
+| Actual CV10 presents/s | 60.36 | 60.36 | 60.31 |
+| Frames with a matched late projection | 0/905 | 431/905 | 875/905 |
+| Actual present minus scanout pose target, median | 32.54 ms | 33.31 ms | 0.00 ms |
+| Absolute scanout pose target error p95 | 43.65 ms | 44.43 ms | 11.11 ms |
+| Source yaw phase delay | 24.6 ms | 28.3 ms | 32.9 ms |
+| Effective yaw phase delay after composition | 24.6 ms | 30.2 ms | 1.6 ms |
+| Effective angular error RMS | 0.674° | 0.817° | 0.194° |
+
+All three arms submitted about 90 frames per second and exactly matched the valid Vulkan and SurfaceFlinger presentation timestamps. The combined run had a Monado GPU p95 of 4.48 ms. A causal replay checked a per-phase median for the 90-to-60 cadence. It did not improve the absolute p95 across the lit-panel traces, so the implementation uses one median.
+
+The first comparison used a producer pose offset of +45 ms. With the standard zero offset, Pocket XR used materially different row poses on 830 of the 905 lit-panel frames. A rigid projection could handle the other 75. The direct build now leaves row timing to Monado when both experiments are enabled and the producer has a usable `CVP2` reference. With no producer offset, the lit-panel run used late projection for all 905 frames and held 60.31 actual presents/s. Fitted yaw error went from 66.8 ms in the uncorrected source pose to an estimated 1.1 ms lead in the composed pose. Angular RMS went from 1.692° to 0.239°. Monado GPU p95 was 4.07 ms and 895 of the 905 displayed samples carried a new source buffer. System thermal status stayed at 1.
+
+The panel-off control used the same uniform source pose with zero offset. During the yaw sweep CV10 sustained 89.73 actual presents/s, p99 interval 11.11 ms, with 85.80 new source frames/s and Monado GPU p95 of 2.99 ms. All 1346 presented samples in the fit were corrected. The uncorrected source lag was 47.0 ms and the composed pose led the replay by an estimated 0.9 ms. Thermal status changed from 1 to 2. This reference temporarily powered off the phone panel and forced SurfaceFlinger to use the CV10 clock. Both settings reverted after capture.
+
+The final build also displayed the workspace through the original cable with the real CV10 IMU. With the phone at 60 Hz, all 884 unique uniform-pose frames with a `CVP2` reference applied late projection. The fixed right-lens camera captured the visible workspace. The automated check reached the phone trackpad, but its UI hierarchy did not expose the recenter button in this run. The handoff after a new recenter remains to be checked with the final build.
 
 ## 可选熄屏 90 Hz
 
@@ -72,3 +100,6 @@
 - `frame-pose-live-matches.log`、`frame-pose-recenter.log` 和 `frame-pose-recenter-right.jpg`，记录逐帧配对、回正序号切换和右镜实拍。
 - `frame-pose-replay-matches.log`、`frame-pose-replay-summary.txt` 和 `analyze-frame-pose-replay.py`，记录三轴合成输入的配对与方向；同目录的 `build-direct-frame-pose-replay.ps1` 和 `check-direct-frame-pose-replay.ps1` 复现采样。
 - 姿态记录 APK SHA-256。Monado 为 `10149c55d75a963c061d17905f11ffcd288518d49a2edcffdf3888c97e153f5c`，Pocket XR 为 `421e7a750935fd4decd990af286cf0ccefcbdf175e2b9b9ba8e837c850aa69ce`。
+- `late-projection-host-clock-{0,1,2}-summary.txt`, `late-projection-host-clock-result.txt`, `scanout-cadence-result.txt` and `direct-atw-live-right.jpg` cover the timing comparison, the causal cadence check and the right-lens capture using the real IMU. The regular Monado APK SHA-256 was `672b281b556e8097d0e9faf6513a1c2e4a11ccf789aca90d8dd5c5dac583f601`, the replay APK was `d1842d5122c7f61f523a5272afb4112836b29f4b6f1d2bbd3697e68303ebc39d` and the Pocket XR APK was `d5a6cf89117105f03ccb7de3d687360a749d10608ef70d0df4051d9250eb7f47`.
+- `late-projection-clock-zero-{lit,off}-2-summary.txt`, `late-projection-uniform-{lit,off}-2-summary.txt` and the associated right-lens captures cover the follow-up at the standard producer offset. The uniform-pose Pocket XR APK SHA-256 was `9cc83db25254f449114a9b84e809276abb132b40bf96eeea3033dbf500287c06`.
+- `late-projection-uniform-live.log` and `late-projection-uniform-live-before-right.jpg` record the final real-IMU smoke check.
