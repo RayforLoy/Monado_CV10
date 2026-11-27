@@ -35,7 +35,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 从 Pocket XR 外显模式切回内置启动器时，如果 Broker 仍选中 **Pocket XR** 或 **Pocket XR (Monado CV10)**，点选 OpenXR 应用会提示切回 Monado。可以从提示直接打开 Broker，选好后返回启动器。普通 Android 应用仍可直接打开。
 
 - 首次使用或重新插入眼镜后，可从 Monado 菜单选择 **CV10 USB access**，预先允许访问 **HUAWEI GLASS HID**。3D 启动器也会在开启会话前请求权限，允许后会自动打开菜单。若从 2D 列表点选 XR 应用触发了权限提示，允许后会继续启动所选应用。拒绝后会停留在列表，可再次点选重试。
-- 应用列表优先使用应用声明的 OpenXR 沉浸式入口。仅有普通启动入口、但在清单请求 OpenXR 权限的应用也出现在 **仅显示 XR 应用** 中，例如需要先选择串流主机的 Moonlight XR。应用仍会在手机上打开自己的设置界面。若应用两个标记都未声明，可取消 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。
+- 应用列表优先使用应用声明的 OpenXR 沉浸式入口。仅有普通启动入口、但在清单请求 OpenXR 权限的应用也出现在 **仅显示 XR 应用** 中，例如需要先选择串流主机的 Moonlight XR。应用仍会在手机上打开自己的设置界面。若应用两个标记都未声明，可取消 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。[Fold7 从应用启动器打开 Moonlight XR](history/fold7-offline-launcher.md#从应用启动器打开-moonlight-xr)
 - 3D 菜单使用手机姿态控制激光指向。激光可以越过菜单边框，指向菜单按钮时点按屏幕确认，从手机两侧的蓝色标记向内滑动返回。从底部蓝色标记向上滑并停留约 350 毫秒，可将菜单和激光指向一起置中。标记位于 Android 的系统手势区内侧，屏幕外沿仍用于系统返回和 Home。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
 

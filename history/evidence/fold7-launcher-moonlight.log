@@ -1,0 +1,41 @@
+# Fold7, 2026-11-27 HKT. CV10 C9.53.6 cable, 5 V, Samsung mirrored display.
+# Preview APK: 5b650d6, arm64-v8a, v2/v3 signed, 16 KiB ZIP and all 15 ELF PT_LOAD segments verified.
+
+# Comparison, 3D catalog and first stream
+11-27 14:51:54.000
+Old Preview 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281, Moonlight 581e973086ef5a2a378a542c2d87d32a8d768dc078e9723868f1131948fbaf39, hello_xr 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Original Preview: Moonlight XR row absent with XR-only selected.
+Updated Preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648
+Updated Preview: same XR-only list contains both Moonlight XR and Khronos hello_xr.
+11-27 14:52:23.888  3017  3066 I Cv10SpatialLauncher: OpenXR session state 5
+topResumedActivity=org.cv10.moonlightxr/com.limelight.PcView
+11-27 14:53:16.304  3640  4123 I moonlight-xr: session state 4 -> 5
+topResumedActivity=org.cv10.moonlightxr/com.limelight.GameXR
+11-27 14:53:22.227  3640  4123 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:53:12.404  3640  3640 I com.limelight.LimeLog: Selected HEVC decoder: c2.qti.hevc.decoder.low_latency
+11-27 14:53:15.986  3640  4123 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+11-27 14:53:16.298  3640  4011 I com.limelight.LimeLog: Using codec c2.qti.hevc.decoder.low_latency for hardware decoding video/hevc
+11-27 14:53:16.304  3640  4123 I moonlight-xr: session state 4 -> 5
+11-27 14:53:21.656  3640  4123 I moonlight-xr: session state 5 -> 4
+11-27 14:53:35.884  5615  5642 V hello_xr: [14:53:35.884][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520312020312
+11-27 14:53:37.412  5615  5642 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648, displays 0, 247, min_refresh_rate null
+
+# Second stream and two matched external/camera captures
+11-27 14:53:57.000
+Current Preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648, Moonlight 581e973086ef5a2a378a542c2d87d32a8d768dc078e9723868f1131948fbaf39, hello_xr 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+topResumedActivity=org.cv10.moonlightxr/com.limelight.PcView
+11-27 14:54:46.767  3640  7220 I moonlight-xr: session state 4 -> 5
+topResumedActivity=org.cv10.moonlightxr/com.limelight.GameXR
+topResumedActivity=org.cv10.moonlightxr/com.limelight.GameXR
+11-27 14:54:58.748  3640  7220 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:54:43.223  3640  3640 I com.limelight.LimeLog: Selected HEVC decoder: c2.qti.hevc.decoder.low_latency
+11-27 14:54:46.492  3640  7220 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+11-27 14:54:46.767  3640  7220 I moonlight-xr: session state 4 -> 5
+11-27 14:54:46.769  3640  7127 I com.limelight.LimeLog: Using codec c2.qti.hevc.decoder.low_latency for hardware decoding video/hevc
+11-27 14:54:58.155  3640  7220 I moonlight-xr: session state 5 -> 4
+11-27 14:55:09.499  5615  8150 V hello_xr: [14:55:09.499][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2520304467344
+11-27 14:55:10.855  5615  8150 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648, displays 0, 247, min_refresh_rate null
+External frame A: 00:17.45 on both eye regions. Right camera: no readable test card.
+External frame B: 00:21.95 on both eye regions. Right camera: no readable test card.

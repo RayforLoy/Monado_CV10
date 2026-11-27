@@ -216,6 +216,14 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 常用包名 `org.cv10.monado.out_of_process.launcher_preview` 的 APK SHA-256 为 `c09cbfae6db51145e78638e60f32306dbd38d00b77bfc92ca057fe4b8894e079`。五个 ARM64 原生库使用安装时解包方式，15 个 ELF `PT_LOAD` 均通过 16 KiB 对齐检查。保留已有授权后依次从 2D 列表及竖屏 3D 菜单启动同一原版样例，两次均在 PID 26288 进入 `FOCUSED`，返回后均完成 `xrDestroyInstance`。Fold7 保留这个预览包和对应 Broker 选项，系统最低刷新率为 `null`。[常用预览包实机日志](evidence/fold7-direct-usb-continuation-preview.log)
 
+## 从应用启动器打开 Moonlight XR
+
+2026-11-27 14:51–14:55 香港时间，使用同一台 Fold7、C9.53.6 原厂线、外接 5 V 和三星外显镜像。源码 `5b650d6` 的 ARM64 预览 APK SHA-256 为 `e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648`。v2、v3 签名、16 KiB ZIP 对齐和五个 ARM64 库的 15 个 ELF `PT_LOAD` 段均通过检查。
+
+旧预览的 **仅显示 XR 应用** 隐藏 Moonlight XR CV10。覆盖安装后，同一筛选包含 Moonlight XR CV10 和原版 `hello_xr`，原版 Pocket XR 触控板及 Monado CV10 Controller 设置入口仍归在 **全部应用**。3D 菜单进入 `FOCUSED`，双目外显截图显示同样的 XR 条目。本轮从 2D 列表点选 Moonlight XR CV10，手机主屏先显示主机列表，随后选择测试 Sunshine 主机和桌面。两次串流均使用 Monado CV10 Preview 进入 `FOCUSED`，采用 Qualcomm HEVC 硬件解码。两次返回都完成 `xrDestroyInstance`，随后从同一列表直启原版 `hello_xr` 并正常退出。该应用的设置入口需要手机主屏，因此 Pocket XR 嵌套的 OpenXR 应用列表仍只提供声明沉浸式入口的应用。[筛选与退出日志](evidence/fold7-launcher-moonlight.log) · [3D 菜单双目外显](evidence/fold7-launcher-moonlight-menu.jpg)
+
+Moonlight XR CV10 v0.4.3 的 APK SHA-256 为 `581e973086ef5a2a378a542c2d87d32a8d768dc078e9723868f1131948fbaf39`。第二轮串流中，相隔约 4.5 秒的双目外显截图均显示测试卡，计时从 `00:17.45` 走到 `00:21.95`。同期固定右镜相机均未拍到测试图案，镜片端现象仍待独立确认。两轮均沿用现有配对与授权，结束后退出本机测试主机、保留新预览包和 Preview Broker，并恢复到手机桌面。[串流外显与右镜实拍](evidence/fold7-launcher-moonlight-optics.jpg)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。
