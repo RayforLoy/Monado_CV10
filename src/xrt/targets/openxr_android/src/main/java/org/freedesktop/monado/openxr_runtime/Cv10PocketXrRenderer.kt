@@ -18,7 +18,8 @@ internal class Cv10PocketXrRenderer(
     private val wideCanvas: Boolean,
     private val opticalEyeSize: Int,
     private val direct: Boolean,
-    private val onSurface: (Surface, IBinder?) -> Unit,
+    private val producerQuadSupported: Boolean,
+    private val onSurface: (Surface, IBinder?, Int) -> Unit,
     private val onFirstFrame: () -> Unit,
     private val onFinished: (String?) -> Unit,
 ) {
@@ -33,7 +34,8 @@ internal class Cv10PocketXrRenderer(
                 val context = activity.applicationContext
                 if (direct) framePoses = Cv10PocketFramePoses.create(context)
                 val manifest = Cv10BundledRuntime.manifestPath(context, "cv10-pocket-runtime.json")
-                nativeRun(activity, context, state, capture, manifest, worldAnchored, wideCanvas, opticalEyeSize, direct)
+                nativeRun(activity, context, state, capture, manifest, worldAnchored, wideCanvas, opticalEyeSize,
+                    direct, producerQuadSupported)
             } catch (error: LinkageError) {
                 Log.e(TAG, "OpenXR capture library unavailable", error)
                 error.message ?: error.toString()
@@ -64,6 +66,7 @@ internal class Cv10PocketXrRenderer(
         wideCanvas: Boolean,
         opticalEyeSize: Int,
         direct: Boolean,
+        producerQuadSupported: Boolean,
     ): String?
 
     @Keep
@@ -82,21 +85,21 @@ internal class Cv10PocketXrRenderer(
                 texture = current
                 current.setDefaultBufferSize(captureWidth ?: width, height)
                 val output = Surface(current)
-                return startStreamCapture(output)
+                return startStreamCapture(output, 0)
             } catch (error: RuntimeException) {
                 Log.e(TAG, "Cannot create a Pocket XR capture surface", error)
                 return false
             }
         }
 
-        fun startStreamCapture(output: Surface): Boolean {
+        fun startStreamCapture(output: Surface, focusEyeSize: Int): Boolean {
             if (!output.isValid) {
                 output.release()
                 return false
             }
             surface = output
             val poseSource = framePoses?.source
-            activity.runOnUiThread { if (!state.stop && output.isValid) onSurface(output, poseSource) }
+            activity.runOnUiThread { if (!state.stop && output.isValid) onSurface(output, poseSource, focusEyeSize) }
             return true
         }
 

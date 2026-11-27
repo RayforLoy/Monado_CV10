@@ -52,6 +52,7 @@ constexpr float cv10_half_fov = 47.5f * 0.017453292519943295f;
 constexpr XrFovf cv10_fov = {-cv10_half_fov, cv10_half_fov, cv10_half_fov, -cv10_half_fov};
 constexpr float cv10_focus_scale = 0.4f;
 constexpr int32_t cv10_context_eye_limit = 1600;
+constexpr int32_t cv10_default_focus_eye_size = 1280;
 constexpr float panel_distance = 1.45f;
 constexpr float pocket_distance = 1.0f;
 constexpr XrExtent2Df pocket_size = {0.812f, 0.458f};
@@ -492,7 +493,7 @@ public:
 		}
 		jclass cls = env->GetObjectClass(capture);
 		start_method = env->GetMethodID(cls, "startCapture", "(III)Z");
-		start_stream_method = env->GetMethodID(cls, "startStreamCapture", "(Landroid/view/Surface;)Z");
+		start_stream_method = env->GetMethodID(cls, "startStreamCapture", "(Landroid/view/Surface;I)Z");
 		update_method = env->GetMethodID(cls, "updateCapture", "([F[J[F)J");
 		latch_method = env->GetMethodID(cls, "latchCaptureTimestamp", "(J[J[F)J");
 		stop_method = env->GetMethodID(cls, "stopCapture", "()V");
@@ -547,13 +548,13 @@ public:
 	}
 
 	bool
-	start_stream(AndroidStream &stream, XrInstance instance, uint32_t width, uint32_t height)
+	start_stream(AndroidStream &stream, XrInstance instance, uint32_t width, uint32_t height, jint focus_eye_size)
 	{
 		jobject surface = nullptr;
 		if (!stream.initialize(env, instance, width, height, surface)) {
 			return false;
 		}
-		started = env->CallBooleanMethod(capture, start_stream_method, surface);
+		started = env->CallBooleanMethod(capture, start_stream_method, surface, focus_eye_size);
 		env->DeleteLocalRef(surface);
 		return started;
 	}
@@ -626,11 +627,13 @@ public:
 	         bool capture_world_anchored,
 	         bool capture_wide_canvas,
 	         uint32_t optical_eye_size,
-	         bool direct_capture)
+	         bool direct_capture,
+	         bool producer_quad_supported)
 	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored),
 	      capture_cv10_optics(optical_eye_size != 0), capture_width(capture_cv10_optics ? 2 * optical_eye_size : pocket_width),
 	      capture_height(capture_cv10_optics ? optical_eye_size : pocket_height),
-	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size), direct_capture(direct_capture)
+	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size), direct_capture(direct_capture),
+	      producer_quad_supported(producer_quad_supported)
 	{
 		if (capture_cv10_optics) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "CV10 stereo projection %u x %u, 95 x 95 degrees per eye",
@@ -838,22 +841,6 @@ private:
 				__android_log_print(ANDROID_LOG_INFO, tag, "CV10 four views unavailable; using stereo");
 			}
 		}
-		if (capture_cv10_optics) {
-			const int32_t eye_width = static_cast<int32_t>(capture_width / 2);
-			const int32_t eye_height = static_cast<int32_t>(capture_height);
-			const int32_t context_width = projection_count == 4 ? std::min(eye_width, cv10_context_eye_limit) : eye_width;
-			const int32_t context_height =
-			    projection_count == 4 ? std::min(eye_height, cv10_context_eye_limit) : eye_height;
-			const int32_t focus_width = static_cast<int32_t>(std::lround(eye_width * cv10_focus_scale));
-			const int32_t focus_height = static_cast<int32_t>(std::lround(eye_height * cv10_focus_scale));
-			for (int32_t eye = 0; eye < 2; ++eye) {
-				projection_rects[eye] = {{eye * context_width, 0}, {context_width, context_height}};
-				projection_rects[eye + 2] = {
-				    {eye * context_width + (context_width - focus_width) / 2, context_height},
-				    {focus_width, focus_height}};
-			}
-		}
-
 		uint32_t blend_count = 0;
 		check(xrEnumerateEnvironmentBlendModes(instance, system_id, view_configuration,
 		                                       0, &blend_count, nullptr),
@@ -911,6 +898,21 @@ private:
 	}
 
 	void
+	set_projection_rects(int32_t producer_focus_size)
+	{
+		const auto eye_size = static_cast<int32_t>(capture_height);
+		const auto context_size = projection_count == 4 ? std::min(eye_size, cv10_context_eye_limit) : eye_size;
+		const auto focus_size = producer_focus_size > 0
+		                            ? producer_focus_size
+		                            : static_cast<int32_t>(std::lround(eye_size * cv10_focus_scale));
+		for (int32_t eye = 0; eye < 2; ++eye) {
+			projection_rects[eye] = {{eye * context_size, 0}, {context_size, context_size}};
+			projection_rects[eye + 2] = {
+			    {eye * context_size + (context_size - focus_size) / 2, context_size}, {focus_size, focus_size}};
+		}
+	}
+
+	void
 	initialize_session()
 	{
 		PFN_xrVoidFunction function = nullptr;
@@ -953,15 +955,33 @@ private:
 		}
 
 		char stream_setting[PROP_VALUE_MAX]{};
-		if (direct_capture && capture_cv10_optics && projection_count == 2 &&
+		char atlas_setting[PROP_VALUE_MAX]{};
+		const bool stream_atlas = projection_count == 4 && producer_quad_supported &&
+		                          __system_property_get("debug.cv10.pocket_quad_atlas", atlas_setting) > 0 &&
+		                          std::strcmp(atlas_setting, "1") == 0;
+		if (direct_capture && capture_cv10_optics && (projection_count == 2 || stream_atlas) &&
 		    __system_property_get("debug.cv10.pocket_zero_copy", stream_setting) > 0 &&
 		    std::strcmp(stream_setting, "1") == 0) {
-			using_android_stream = capture.start_stream(android_stream, instance, capture_width, capture_height);
+			const uint32_t stream_width = stream_atlas ? 2 * cv10_context_eye_limit : capture_width;
+			const uint32_t stream_height =
+			    stream_atlas ? cv10_context_eye_limit + cv10_default_focus_eye_size : capture_height;
+			const int32_t focus_eye_size = stream_atlas ? cv10_default_focus_eye_size : 0;
+			using_android_stream =
+			    capture.start_stream(android_stream, instance, stream_width, stream_height, focus_eye_size);
 			__android_log_print(ANDROID_LOG_INFO, tag, "CV10_STREAM %s",
 			                    using_android_stream ? "enabled" : "unavailable, using GLES copy");
 			if (using_android_stream) {
+				set_projection_rects(focus_eye_size);
+				if (stream_atlas) {
+					__android_log_print(ANDROID_LOG_INFO, tag,
+					                    "CV10 producer four-view atlas %ux%u: context %d, center %d per eye",
+					                    stream_width, stream_height, cv10_context_eye_limit, focus_eye_size);
+				}
 				return;
 			}
+		}
+		if (capture_cv10_optics) {
+			set_projection_rects(0);
 		}
 
 		uint32_t format_count = 0;
@@ -1561,6 +1581,7 @@ private:
 	const uint32_t capture_height;
 	const XrExtent2Df capture_size;
 	const bool direct_capture;
+	const bool producer_quad_supported;
 	AndroidStream android_stream;
 	bool using_android_stream = false;
 	jlong submitted_capture_timestamp = 0;
@@ -1628,14 +1649,16 @@ run_launcher(JNIEnv *env,
              bool capture_wide_canvas,
              uint32_t optical_eye_size,
              bool use_bundled_runtime,
-             bool direct_capture)
+             bool direct_capture,
+             bool producer_quad_supported)
 {
 	try {
 		// A display configuration change can start a new Activity before the old worker exits.
 		std::lock_guard<std::mutex> lock(session_mutex);
 		JavaState state(env, java_state);
 		DisplayCapture capture(env, java_capture);
-		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, optical_eye_size, direct_capture);
+		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, optical_eye_size, direct_capture,
+		                  producer_quad_supported);
 		if (!state.should_stop()) {
 			std::string runtime_manifest;
 			if (java_runtime_manifest != nullptr) {
@@ -1665,7 +1688,7 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jboolean use_bundled_runtime)
 {
 	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false, 0,
-	                    use_bundled_runtime == JNI_TRUE, false);
+	                    use_bundled_runtime == JNI_TRUE, false, false);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -1679,9 +1702,10 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jboolean world_anchored,
                                                                            jboolean wide_canvas,
                                                                            jint optical_eye_size,
-                                                                           jboolean direct_capture)
+                                                                           jboolean direct_capture,
+                                                                           jboolean producer_quad_supported)
 {
 	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
 	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, optical_eye_size, true,
-	                    direct_capture == JNI_TRUE);
+	                    direct_capture == JNI_TRUE, producer_quad_supported == JNI_TRUE);
 }

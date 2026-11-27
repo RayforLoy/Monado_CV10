@@ -45,8 +45,10 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     public static final ComponentName POCKET_CV10_SPACE = new ComponentName(
             POCKET_CV10_PACKAGE, "com.hayeco.flipspaces.spatial.SpaceActivity");
     public static final String DIRECT_SURFACE_CAPABILITY = "org.cv10.pocketxr.direct_surface_v1";
+    private static final String DIRECT_QUAD_ATLAS_CAPABILITY = "org.cv10.pocketxr.direct_quad_atlas_v1";
     private static final String DIRECT_SURFACE_EXTRA = "org.cv10.pocketxr.extra.RENDER_SURFACE";
     private static final String DIRECT_EYE_SIZE_EXTRA = "org.cv10.pocketxr.extra.RENDER_EYE_SIZE";
+    private static final String DIRECT_FOCUS_SIZE_EXTRA = "org.cv10.pocketxr.extra.RENDER_FOCUS_SIZE";
     private static final String DIRECT_POSE_SOURCE_EXTRA = "org.cv10.pocketxr.extra.FRAME_POSE_SOURCE";
     static final String CV10_DISPLAY_NAME = "Monado CV10 Pocket XR Optics";
     static final String COMPATIBILITY_DISPLAY_NAME = "Monado CV10 Pocket XR";
@@ -100,17 +102,26 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     }
 
     public static boolean supportsDirectSurface(PackageManager manager) {
+        return supportsDirectCapability(manager, DIRECT_SURFACE_CAPABILITY);
+    }
+
+    public static boolean supportsDirectQuadAtlas(PackageManager manager) {
+        return supportsDirectCapability(manager, DIRECT_QUAD_ATLAS_CAPABILITY);
+    }
+
+    private static boolean supportsDirectCapability(PackageManager manager, String capability) {
         if (Build.VERSION.SDK_INT < 35) return false;
         try {
             Bundle metadata = manager.getActivityInfo(POCKET_CV10_SPACE, PackageManager.GET_META_DATA).metaData;
-            return metadata != null && metadata.getBoolean(DIRECT_SURFACE_CAPABILITY);
+            return metadata != null && metadata.getBoolean(capability);
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
     }
 
     @Override
-    public synchronized int start(Surface surface, IBinder clientLife, int mode, int opticalEyeSize, IBinder poseSource)
+    public synchronized int start(Surface surface, IBinder clientLife, int mode, int opticalEyeSize, IBinder poseSource,
+            int focusEyeSize)
             throws RemoteException {
         verifyCaller();
         if (surface == null) throw new IllegalArgumentException("Missing Pocket XR output Surface");
@@ -134,6 +145,11 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             }
             if (direct && !supportsDirectSurface(context.getPackageManager())) {
                 throw new IllegalStateException("Pocket XR CV10 does not support the direct render surface");
+            }
+            if (focusEyeSize != 0 && (!direct || focusEyeSize < 720
+                    || focusEyeSize > Cv10RenderSettings.BASELINE_EYE_SIZE
+                    || !supportsDirectQuadAtlas(context.getPackageManager()))) {
+                throw new IllegalArgumentException("Invalid Pocket XR four-view capture");
             }
             int width = cv10Optics ? 2 * opticalEyeSize : (mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH);
             int height = cv10Optics ? opticalEyeSize : HEIGHT;
@@ -162,7 +178,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
             }
-            launchPocketXr(displayId, mode, direct ? surface : null, opticalEyeSize, poseSource);
+            launchPocketXr(displayId, mode, direct ? surface : null, opticalEyeSize, poseSource, focusEyeSize);
             started = true;
             Log.i(TAG, "Pocket XR mode " + mode + " start accepted on " + displayId
                     + " (" + width + "x" + height + " @ " + lease.display.getDisplay().getRefreshRate()
@@ -283,7 +299,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
 
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
     private void launchPocketXr(int displayId, int mode, Surface directSurface, int opticalEyeSize,
-            IBinder poseSource)
+            IBinder poseSource, int focusEyeSize)
             throws ReflectiveOperationException {
         ComponentName target;
         switch (mode) {
@@ -305,7 +321,8 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             // The singleTask activity must create an EGL surface for this session's new producer.
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
             intent.putExtra(DIRECT_SURFACE_EXTRA, directSurface);
-            intent.putExtra(DIRECT_EYE_SIZE_EXTRA, opticalEyeSize);
+            intent.putExtra(DIRECT_EYE_SIZE_EXTRA, focusEyeSize > 0 ? Cv10RenderSettings.BASELINE_EYE_SIZE : opticalEyeSize);
+            if (focusEyeSize > 0) intent.putExtra(DIRECT_FOCUS_SIZE_EXTRA, focusEyeSize);
             if (poseSource != null) {
                 Bundle session = new Bundle();
                 session.putBinder(DIRECT_POSE_SOURCE_EXTRA, poseSource);

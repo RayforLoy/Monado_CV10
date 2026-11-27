@@ -457,9 +457,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             wideCanvas = wideCanvas.isChecked && mode == MODE_SPACE,
             opticalEyeSize = opticalEyeSize,
             direct = direct,
-            onSurface = { surface, poseSource ->
+            producerQuadSupported = direct && Cv10PocketXrDisplayService.supportsDirectQuadAtlas(packageManager),
+            onSurface = { surface, poseSource, focusEyeSize ->
                 if (transport === nextTransport) {
-                    nextTransport.start(surface, poseSource) { result ->
+                    nextTransport.start(surface, poseSource, focusEyeSize) { result ->
                         if (transport === nextTransport) {
                             result.onSuccess { id ->
                                 displayId = id

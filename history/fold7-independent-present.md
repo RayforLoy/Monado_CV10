@@ -107,6 +107,25 @@ Compute 四视图也完成模拟转头采样。每眼全视场从 2240×2240 缩
 
 The generic Monado swapchain import currently transitions images from `UNDEFINED` during creation. Producer-filled buffers require a path that preserves their contents and acquires ownership from `VK_QUEUE_FAMILY_FOREIGN_EXT` after the producer fence. Keep the image and associated pose together until the compositor has finished its final use, including repeated reprojections. Return its slot with the compositor’s release fence. Keep imported views in a bounded cache per reader generation and use an explicit mapping for the top-first stereo crop. [Vulkan external memory ownership](https://docs.vulkan.org/spec/latest/chapters/resources.html#resources-external-sharing)
 
+### Producer-rendered four-view atlas
+
+Pocket XR can now draw the context and inset projections independently and put all four images in one Android hardware buffer. The OpenXR configuration is `PRIMARY_STEREO_WITH_FOVEATED_INSET`, with 1600×1600 full-field and 1280×1280 inset views per eye. The inset half-angle is `atan(0.4 × tan(47.5°))`. The 3200×2880 buffer uses top-origin rectangles on import. The prior path takes a single 2240×2240 view per eye and resamples it to 1600×1600 context and 896×896 inset rectangles. The producer uses one pose for its four passes, reuses the same panel textures, and lets Monado handle late reprojection. The Monado four-view Compute path still blends the views into intermediate images before distortion.
+
+The experiment requires the compatible Pocket XR CV10 build, Android hardware-buffer import, and Compute composition. In the direct preview, set `debug.cv10.pocket_quad=1`, `debug.cv10.pocket_quad_atlas=1`, and `debug.cv10.pocket_zero_copy=1` to use it. The ordinary stereo and four-view resampling paths remain available.
+
+Fold7 test on the original powered cable, with the phone panel ON at 60 Hz and CV10 physically in its 90 Hz mode. Both runs used the same Bilibili workspace, Compute, scanout feedback, and the 34° peak-to-peak yaw replay. Metrics use 15 seconds of continuous yaw. Bilibili recommendations changed between runs. The first AB pass started at different thermal states (0 and 2). The reversed BA pass recorded Android thermal status 2 during both runs and peak skin readings of 42.1→44.0°C for the producer atlas and 42.6→44.8°C for resampling.
+
+| Run | Four-view source | Monado submits/s | CV10 actual/s | CV10 new source frames/s | Compositor GPU p50/p95 | Pocket swap to actual p50/p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| AB | Resampled SBS | 56.59 | 51.76 | 41.71 | 10.26 / 11.53 ms | 47.90 / 92.43 ms |
+| AB | Producer atlas | 79.79 | 59.29 | 51.84 | 8.62 / 10.78 ms | 57.68 / 73.37 ms |
+| BA | Producer atlas | 83.67 | 58.77 | 51.30 | 7.59 / 10.51 ms | 57.31 / 73.46 ms |
+| BA | Resampled SBS | 55.55 | 47.10 | 42.29 | 10.29 / 20.48 ms | 51.46 / 104.68 ms |
+
+Both producer sessions reported zero bridge copies, clean Back, and four correctly dimensioned imported buffers. Vulkan actual timestamps matched all 3172 unique SurfaceFlinger timestamps across the four motion samples. The replay fit for the producer atlas was 1.0–1.1 ms after late reprojection, with 0.21–0.25° RMS error. This is a pose-phase estimate. Fold7 external screenshots showed both eyes with the same window layout and orientation as the resampling path. The fixed right-eye camera still captured a dark image, including when the ordinary Hello XR control reached FOCUSED with both blue blocks in the external screenshot. Optical clarity, motion-to-photon latency, and smearing await optical verification.
+
+Reproduction evidence is in `.research/monado-rc2-fold7/pocket-performance/ffr-quad/` under `producer-quad-ab-*` and `producer-quad-ba-*`. The replay APK hashes are `bf0ffbb782fd4b99d4c04c64f9c4ea822aa630282b692f797ec9325a56bc3dbd` (Monado) and `f1dafd19c9570d13cceed017826140ba06badef4afab7b74b0227443af09f259` (Pocket XR). The steady-state CV10 limitation remains the physical-display Composer wait described above. The producer atlas improves rendering headroom before that system limit.
+
 ## 直出帧的姿态记录
 
 按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。
