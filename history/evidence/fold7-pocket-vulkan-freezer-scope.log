@@ -1,0 +1,50 @@
+# 2026-11-27 Hong Kong time. Galaxy Z Fold7 SM-F9660 connected directly to CV10 by USB-C.
+# Regular 6d2fb4c preview APK, stock Pocket XR 1.6.28, Pocket XR (Monado CV10) Broker and stock Khronos Vulkan hello_xr 1.1.65.
+# No system freezer settings were changed. The scoped command affected only the temporary sample process.
+Initial displays: 0, 390; charge: 59%
+Installed official Vulkan sample SHA-256 80eaa7105fdefda2936fc74622ac91fec7cf60a9940090b6bb58d92e0a73c2ab
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 16:25:14.882 27124 27124 I Cv10PocketXrPreview: First virtual display frame available on display 395
+11-27 16:25:24.628 27124 27124 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 398
+11-27 16:25:25.353 20231 20273 V hello_xr: [16:25:25.353][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2819957617615
+Round 1 starting close for sample PID 20231, app display 398, space display 395
+11-27 16:25:31.000 PID 20231 isfrozen: false
+11-27 16:25:32.000 PID 20231 isfrozen: true
+11-27 16:25:34.000 PID 20231 isfrozen: true
+11-27 16:25:36.000 PID 20231 isfrozen: true
+11-27 16:25:38.000 PID 20231 isfrozen: true
+11-27 16:25:40.000 PID 20231 isfrozen: true
+11-27 16:25:41.000 PID 20231 isfrozen: true
+11-27 16:25:43.000 PID 20231 isfrozen: true
+11-27 16:25:45.000 PID 20231 isfrozen: true
+No completed XR instance destruction during the 16-second observation.
+Native stack request: debuggerd: root is required
+11-27 16:25:30.782  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10872) [20231] reason: bf_input
+11-27 16:25:30.791 20231 20273 V hello_xr: [16:25:30.791][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598440064 time=2825397287093
+11-27 16:25:31.042 20231 20273 V hello_xr: [16:25:31.042][Info   ]     APP_CMD_DESTROY
+11-27 16:25:31.260  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.vulkan(10872) [20231] reason: Bg-buff
+11-27 16:25:40.763  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10872) [20231] reason: ActivityDestroyTimeout
+11-27 16:25:40.776  2961  4563 D ActivityManager: freezing 20231 org.khronos.openxr.hello_xr.vulkan
+11-27 16:25:52.889 27124 27124 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 399
+11-27 16:25:53.614 20231 21117 V hello_xr: [16:25:53.614][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598171792 time=2818747742976
+Round 2 starting close for sample PID 20231, app display 399, space display 395
+Applying lifetime-scoped AOSP unfreeze to only the temporary sample PID 20231
+Unfreezing process org.khronos.openxr.hello_xr.vulkan (20231) sticky=true
+Immediately before close, isfrozen: true
+11-27 16:25:59.000 PID 20231 isfrozen: false
+11-27 16:26:01.000 PID 20231 isfrozen: true
+11-27 16:26:03.000 PID 20231 isfrozen: true
+11-27 16:26:05.000 PID 20231 isfrozen: true
+11-27 16:26:07.000 PID 20231 isfrozen: true
+11-27 16:26:08.000 PID 20231 isfrozen: true
+11-27 16:26:10.000 PID 20231 isfrozen: false
+11-27 16:26:09.320 20231 21117 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 16:25:59.317  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10872) [20231] reason: bf_input
+11-27 16:25:59.326 20231 21117 V hello_xr: [16:25:59.326][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598171792 time=2824459148286
+11-27 16:25:59.577 20231 21117 V hello_xr: [16:25:59.577][Info   ]     APP_CMD_DESTROY
+11-27 16:25:59.807  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.vulkan(10872) [20231] reason: Bg-buff
+11-27 16:26:09.300  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10872) [20231] reason: ActivityDestroyTimeout
+11-27 16:26:09.313 20231 21117 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Entering loader trampoline
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Removed temporary Vulkan sample: Success
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 390, minimum refresh null

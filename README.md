@@ -106,6 +106,8 @@ Pocket XR 的原版空间菜单按普通应用面板启动和恢复应用。声�
 
 **Pocket XR (Monado CV10)** 是可选的 ARM64 客户端包。它加载带卸载修复的库，渲染服务由未修改的官方 Pocket XR 1.6.28 或 1.6.31 提供。客户端包与 Monado 预览需使用同一签名。Fold7 用原版 1.6.28、正式 Shizuku 入口和此客户端，已复测 `hello_xr` 出画、正常关闭和同进程重进。选择原版 Broker 条目 **Pocket XR** 时，应用加载上游自带的客户端，可能遇到退出崩溃。[客户端构建](src/xrt/targets/pocket_client_android/README.md) · [Fold7 正式入口实测](history/fold7-pocket-dual-runtime.md#正式预览通过-shizuku-打开-openxr-应用)
 
+Fold7 在关闭 Pocket XR 的独立 Vulkan 应用屏时，三星后台管理可能冻结样例。应用屏可以释放，空间仍保留。应用自身退出可能等到系统约十秒后的解冻，单次观测也有解冻后再次冻结的情况。[Vulkan 退出对照](history/fold7-pocket-dual-runtime.md#usb-c-直连下的-vulkan-退出冻结对照)
+
 Fold7 的 CV10 IMU 通过 ADB 回环将实时样本送到隔离的 Android 16 模拟器。模拟器关闭 Wi-Fi 和移动数据，Shizuku 未运行。未修改的 Pocket XR 通过模拟器内的本机 VPN 收到约 1000 Hz 的静置数据并解算姿态。此前的模拟姿态测试还覆盖了转动方向、停止 VPN 和同进程重连。Fold7 上已验证 VPN 授权可取消。Fold7 同机实时连接及佩戴转头仍待验收。[实时 IMU 对照](history/fold7-pocket-xr-imu.md#实时-fold7-采样送入原版-android-应用)
 
 ## 原厂手机线

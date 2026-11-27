@@ -185,6 +185,12 @@ ARM64 预览 APK SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1
 
 重开后的 **Hello XR (Vulkan)** 在独立屏 389 进入 `FOCUSED`。关闭应用屏后，Vulkan 会话到达 `IDLE`，屏 389 释放，原版空间保留。三星 Freecess 随后冻结样例，约十秒后因 `ActivityDestroyTimeout` 解冻。该轮观测 45 秒，未记录实例销毁完成。较早一次重开也遇到 Monado 预览的 About 页面触摸超时，结束预览进程后才成功重开。旧普通面板恢复和这两个退出、重开现象有各自的日志。[面板关闭、重开及进程日志](evidence/fold7-pocket-remove-stale-test-panel.log)
 
+#### USB-C 直连下的 Vulkan 退出冻结对照
+
+2026-11-27 16:25–16:26 香港时间，Fold7（SM-F9660）经视频 USB-C 线直连 CV10。沿用 `6d2fb4c` 预览、原版 Pocket XR 1.6.28、**Pocket XR (Monado CV10)** Broker 及原版 Khronos Vulkan 样例。两轮使用同一 PID 20231，进入 `FOCUSED` 后关闭独立应用屏。两次都保留空间显示 395，样例会话到达 `IDLE`，并收到 Android 的 `APP_CMD_DESTROY`。
+
+第一轮在 `APP_CMD_DESTROY` 后 218 ms 被三星 Freecess 冻结。约十秒后，`ActivityDestroyTimeout` 触发三星解冻，系统 ActivityManager 在 13 ms 后再次冻结同一 PID。16 秒观测窗内没有完成 `xrDestroyInstance`，同一进程随后仍能再进 `FOCUSED`。第二轮关闭前只对临时测试进程执行 `cmd activity unfreeze --sticky`。三星仍发生冻结，直到 `ActivityDestroyTimeout` 才解冻。样例在解冻 13 ms 后开始 `xrDestroyInstance`，7 ms 后完成。两轮都出现关闭等待，单轮对照不足以确认 `--sticky` 可稳定改善退出。测试没有改变系统冻结设置，结束后卸载临时样例并恢复原 Broker、外显和桌面。[同一进程两轮的对照日志](evidence/fold7-pocket-vulkan-freezer-scope.log)
+
 恢复 **Monado CV10 Preview** Broker 后，从 Monado 2D 列表选 **Hello XR (OpenGL ES)**。样例在新 PID 30476 进入 `FOCUSED`，按返回后完成 `xrDestroyInstance`。测试结束后回到桌面，只保留已有的两个显示以及原有 Shizuku 授权。[2D 入口回归日志](evidence/fold7-pocket-remove-stale-test-panel.log)
 
 ### 右镜输出对照

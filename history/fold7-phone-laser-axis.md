@@ -61,3 +61,7 @@
 - 从屏幕最下沿使用 Android 上滑手势回到三星桌面，未再次置中。测试结束恢复原预览 APK `f439234`，Broker 仍选中 Preview，最低刷新率为 `null`。
 
 [竖屏控制页截图](evidence/fold7-laser-portrait-guides.png) · [前台页面与置中日志](evidence/fold7-laser-portrait-gestures.log)
+
+## USB-C 直连佩戴复测
+
+同日 15:58，Fold7 用 USB-C 直连 CV10。用户手持手机上下转动，确认激光指针同向，并瞄准、点按 **Hello XR**。日志记录底部上滑停留置中一次，同一原版样例进程进入 `FOCUSED`，按返回后完成实例销毁。用户确认双眼出画，此前已在同一接法确认左右转头及抬头低头时画面移动正常。[实机记录与右镜实拍](fold7-offline-launcher.md#usb-c-直连恢复右镜画面)
