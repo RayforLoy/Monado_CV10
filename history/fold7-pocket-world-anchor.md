@@ -38,3 +38,7 @@ Galaxy Z Fold7（SM-F9660）、C9.53.6 原厂线和外接 5 V。三星外接显�
 保留原样例和同一预览包，Broker 改选 **Pocket XR (Monado CV10)**。从 **在 Pocket XR 中打开 OpenXR 应用** 选择样例，独立应用屏收到画面，样例进入 `FOCUSED`。关闭独立应用屏释放该屏并保留原空间。三星 Freecess 随后冻结样例，约十秒后因 `ActivityDestroyTimeout` 解冻，该轮关闭应用屏时未观察到 `xrDestroyInstance`。结束整个预览后，Broker 恢复为 **Monado CV10 Preview**，外加的虚拟屏全部释放。[实机筛选日志](evidence/fold7-pocket-panel-routing.log)
 
 本轮的 ARM64 预览 APK SHA-256 为 `2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281`。APK 签名及 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 ELF `PT_LOAD` 段均按 16 KiB 对齐。此轮验证了正式入口下的实时 IMU 与置中流程，佩戴转头、左镜实拍及 Fold7 上原版应用接收本机 VPN 姿态仍待验收。
+
+## USB-C 直连佩戴复测
+
+2026-11-27 16:00 香港时间。Fold7 与 CV10 使用 USB-C 直连，三星镜像为 3200×1600 @ 90 Hz。原版 Pocket XR 1.6.28、`6d2fb4c` Monado CV10 Preview，沿用两包的 Shizuku 授权。选择 **使用 CV10 头部追踪固定 Pocket XR 画面** 后打开原版空间，原版时钟恢复到窗口。佩戴者确认两只镜片都能看到时钟，转头时窗口留在其原方向。同一轮四张外显帧记录了双眼时钟窗口在头动时的画面边界。本轮使用 Monado 的画面锚定，未启用本机 VPN。停止预览后释放外加显示，恢复固定选项的原值和手机桌面。[佩戴及外显读数](evidence/fold7-pocket-direct-world-anchor.log) · [转头时的双目外显帧](evidence/fold7-pocket-direct-world-anchor.jpg)

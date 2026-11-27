@@ -1,0 +1,17 @@
+11-27 15:59:53.000
+Original world anchor checked: false
+11-27 16:00:11.987 27124 27124 I Cv10PocketXrPreview: First virtual display frame available on display 391
+Active displays 0, 390, 391, 392, 393
+11-27 16:00:11.330 27124  3715 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+Wearer confirmed both eyes and normal world anchoring during head movement, with the original Clock panel visible
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 390, minimum refresh null
+
+Bounds in four successive external stereo frames, with per-eye coordinates before lens rotation
+Left external eye frame 1 x1:348 x2:846 y1:670 y2:1466
+Right external eye frame 1 x1:755 x2:1259 y1:26 y2:845
+Left external eye frame 2 x1:764 x2:1126 y1:588 y2:1331
+Right external eye frame 2 x1:473 x2:837 y1:166 y2:928
+Left external eye frame 3 x1:518 x2:891 y1:683 y2:1439
+Right external eye frame 3 x1:708 x2:1084 y1:54 y2:834
+Left external eye frame 4 x1:634 x2:987 y1:485 y2:1194
+Right external eye frame 4 x1:613 x2:966 y1:315 y2:1030
