@@ -1,0 +1,14 @@
+# 2026-11-27 Hong Kong time. Galaxy Z Fold7 SM-F9660, USB-C direct to CV10.
+# Regular Monado CV10 Preview 6d2fb4c APK SHA-256 37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293.
+# Stock Pocket XR 1.6.28 APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337.
+# Tested with Wi-Fi and mobile data available, without a running Shizuku server.
+11-27 16:33:25.000
+Shizuku server absent before opening the built-in 2D launcher. Displays: 0, 390
+11-27 16:33:48.084  2961  7394 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.hayeco.flipspaces/.MainActivity} with LAUNCH_SINGLE_TOP from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=35876180) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 16:33:48.208  2961  7394 I ActivityTaskManager: START u0 {flg=0x10020000 xflg=0x4 cmp=com.hayeco.flipspaces/.TrackpadActivity} with LAUNCH_MULTIPLE from uid 10846 (com.hayeco.flipspaces) (sr=233642660) (BAL_ALLOW_VISIBLE_WINDOW) result code=2
+topResumedActivity=ActivityRecord{73529908 u0 com.hayeco.flipspaces/.TrackpadActivity t33931}
+11-27 16:33:48.253  2961  3281 I ActivityTaskManager: Displayed com.hayeco.flipspaces/.TrackpadActivity for user 0: +179ms
+Shizuku server still absent. Pocket XR mobile activity did not create a virtual display.
+11-27 16:33:49.337  2961  4691 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=true, r=ActivityRecord{5656588 u0 com.samsung.android.permissioncontroller/.permission.ui.GrantPermissionsActivity t33931}, caller=com.android.server.wm.ActivityTaskSupervisor.scheduleTopResumedActivityStateIfNeeded:18 com.android.server.wm.ActivityTaskSupervisor.handleTopResumedStateReleasedIfNeeded:57 com.android.server.wm.ActivityRecord.activityPaused:94 com.android.server.wm.ActivityClientController.activityPaused:26 android.app.IActivityClientController$Stub.onTransact:812 com.android.server.wm.ActivityClientController.onTransact:1
+# The Samsung permission screen became active after Back. No new permission was granted.
+Restored Shizuku PID 29781, displays 0, 390, Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview

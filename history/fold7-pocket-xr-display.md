@@ -135,3 +135,9 @@
 09:25 用相同的生产 APK 和 Android 16 模拟器打开独立 3D 菜单。没有启动 Pocket XR 或创建其源虚拟屏，菜单的 1280×720 OpenXR 交换链仍在进入 `FOCUSED` 后输出全黑。将 Monado 的 GLES 驱动切到 Android 内置 ANGLE 后，Pocket XR 预览的 `eglCreateImageKHR` 导入失败，`xrCreateSwapchain` 返回 `XR_ERROR_RUNTIME_FAILURE`。恢复默认 GLES 后，原版空间再次进入 `FOCUSED` 并送来虚拟显示首帧，最终画面仍黑。模拟器黑屏也影响独立菜单，ANGLE 的导入错误仅解释该配置。Windows 原生模拟器在 GPU 枚举前退出，未取得硬件渲染对照。[独立菜单、ANGLE 导入与复测日志](evidence/android16-16k-gles-interop.txt)
 
 09:33 至 09:41 在同一模拟器做了暂存图像用途和像素读回对照。移除两眼共八张合成暂存图像的 STORAGE 用途后，两种场景各自的八条 AHardwareBuffer 警告都消失，截图仍全黑。默认设备路径下，独立 3D 菜单未取得有效姿态，采样期间未提交菜单图层。启用 Monado 的模拟头显后，独立菜单取得有效姿态并提交图层。此时 GLES 读到了菜单像素 `6/10/19/255`，Pocket XR 测试卡也读到了 `51/255/51/255`。两轮 Vulkan 读回中，共享交换链图像的 RGB 全为零，左右暂存图像和最终呈现图像也全黑。问题范围缩小到该模拟器的 GLES 与 Vulkan 共享图像路径，具体机制仍待区分。测试包和临时属性已恢复，诊断补丁未应用于 Fold7 或正式构建。[像素和用途对照](evidence/android16-16k-vulkan-readback.txt) · [复现用诊断补丁](android16-vulkan-readback-diagnostic.patch)
+
+## Fold7 停止 Shizuku 后的手机入口
+
+2026-11-27 16:33 香港时间，Fold7（SM-F9660）直连 CV10，使用源码 `6d2fb4c` 的常规 ARM64 预览和原版 Pocket XR 1.6.28。保持 Wi-Fi 和移动数据，单独停止 Shizuku。打开 Monado 2D 列表，取消 **仅显示 XR 应用** 后点选 **Pocket XR**。Monado 启动原版 `MainActivity`，原版随后在手机上显示 `TrackpadActivity`。前后均未发现 Shizuku 进程，显示列表只有手机和物理 CV10。[手机入口实测日志](evidence/fold7-stock-pocket-phone-entry-no-shizuku.log)
+
+按返回后，三星系统权限页成为前台。测试未新增权限，随后恢复原 Broker、Shizuku 和手机桌面。此轮在 Fold7 验证了不运行 Shizuku 时的手机入口。原版空间模式源码在 Shizuku 不可用时选择平面模式，虚拟应用面板需要 Shizuku。[原版模式选择](https://github.com/pocket-xr/pocket-xr/blob/v1.6.28/core/src/main/kotlin/com/hayeco/flipspaces/core/spatial/SpatialMode.kt#L159-L172)

@@ -191,6 +191,8 @@ ARM64 预览 APK SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1
 
 第一轮在 `APP_CMD_DESTROY` 后 218 ms 被三星 Freecess 冻结。约十秒后，`ActivityDestroyTimeout` 触发三星解冻，系统 ActivityManager 在 13 ms 后再次冻结同一 PID。16 秒观测窗内没有完成 `xrDestroyInstance`，同一进程随后仍能再进 `FOCUSED`。第二轮关闭前只对临时测试进程执行 `cmd activity unfreeze --sticky`。三星仍发生冻结，直到 `ActivityDestroyTimeout` 才解冻。样例在解冻 13 ms 后开始 `xrDestroyInstance`，7 ms 后完成。两轮都出现关闭等待，单轮对照不足以确认 `--sticky` 可稳定改善退出。测试没有改变系统冻结设置，结束后卸载临时样例并恢复原 Broker、外显和桌面。[同一进程两轮的对照日志](evidence/fold7-pocket-vulkan-freezer-scope.log)
 
+16:29–16:30，用同一接法再做两轮。每轮关闭前通过 `cmd deviceidle tempwhitelist` 给 Vulkan 测试包 20 秒的临时电源豁免，读回仍有效。同一 PID 24582 两轮进入 `FOCUSED`，分别释放应用屏 403、404，保留空间屏 400。两轮在 `APP_CMD_DESTROY` 后仍触发三星 `Bg-buff`，冻结各约 9.5 秒。`ActivityDestroyTimeout` 解冻后分别在 33 ms、25 ms 内完成 `xrDestroyInstance`。电源豁免未消除退出等待。测完移除豁免及测试样例，恢复原 Broker 和桌面。[电源豁免与退出日志](evidence/fold7-pocket-vulkan-temp-exemption.log)
+
 恢复 **Monado CV10 Preview** Broker 后，从 Monado 2D 列表选 **Hello XR (OpenGL ES)**。样例在新 PID 30476 进入 `FOCUSED`，按返回后完成 `xrDestroyInstance`。测试结束后回到桌面，只保留已有的两个显示以及原有 Shizuku 授权。[2D 入口回归日志](evidence/fold7-pocket-remove-stale-test-panel.log)
 
 ### 右镜输出对照

@@ -1,0 +1,27 @@
+# 2026-11-27 Hong Kong time. Fold7 SM-F9660 directly connected to CV10. Preview 6d2fb4c, stock Pocket XR 1.6.28.
+# Broker: Pocket XR (Monado CV10). Stock Khronos hello_xr Vulkan fixture; temporary Android device-idle allowance.
+Initial displays: 0, 390; charge: 56%
+Installed official Vulkan sample SHA-256 80eaa7105fdefda2936fc74622ac91fec7cf60a9940090b6bb58d92e0a73c2ab
+11-27 16:29:21.949 27124 27124 I Cv10PocketXrPreview: First virtual display frame available on display 400
+11-27 16:29:31.354 27124 27124 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 403
+11-27 16:29:31.922 24582 24633 V hello_xr: [16:29:31.922][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2818238505444
+Round 1 starting close for sample PID 24582, app display 403, space display 400
+Applying a 20-second Android device-idle allowance to only the temporary Vulkan package
+UID=10873: +19s933ms - shell
+11-27 16:29:37.323 24582 24633 V hello_xr: [16:29:37.323][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598440064 time=2823640131692
+11-27 16:29:37.575 24582 24633 V hello_xr: [16:29:37.575][Info   ]     APP_CMD_DESTROY
+11-27 16:29:37.798  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.vulkan(10873) [24582] reason: Bg-buff
+11-27 16:29:47.296  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10873) [24582] reason: ActivityDestroyTimeout
+11-27 16:29:47.329 24582 24633 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 16:29:53.691 27124 27124 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 404
+11-27 16:29:54.180 24582 25211 V hello_xr: [16:29:54.180][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598171792 time=2819482819042
+Round 2 starting close for sample PID 24582, app display 404, space display 400
+Applying a 20-second Android device-idle allowance to only the temporary Vulkan package
+UID=10873: +19s934ms - shell
+11-27 16:29:59.771 24582 25211 V hello_xr: [16:29:59.771][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598171792 time=2825073680081
+11-27 16:30:00.023 24582 25211 V hello_xr: [16:30:00.023][Info   ]     APP_CMD_DESTROY
+11-27 16:30:00.247  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.vulkan(10873) [24582] reason: Bg-buff
+11-27 16:30:09.746  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10873) [24582] reason: ActivityDestroyTimeout
+11-27 16:30:09.771 24582 25211 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Removed temporary Vulkan sample: Success
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 390, minimum refresh null
