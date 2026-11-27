@@ -118,6 +118,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             lease = new Lease(clientLife, surface, mode);
             clientLife.linkToDeath(lease, 0);
             currentLease = lease;
+            if (cv10Optics) lease.clock = Cv10PocketDisplayClock.acquire();
             lease.display = createDisplay(name, surface, width, height, FLAGS, cv10Optics);
             int displayId = lease.display.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
@@ -277,8 +278,12 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
         } catch (RuntimeException e) {
             Log.w(TAG, "Pocket XR virtual display could not be released", e);
         } finally {
-            lease.surface.release();
-            Binder.restoreCallingIdentity(identity);
+            try {
+                if (lease.clock != null) lease.clock.close();
+                lease.surface.release();
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
         }
     }
 
@@ -292,6 +297,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     }
 
     private final class Lease implements IBinder.DeathRecipient {
+        Cv10PocketDisplayClock clock;
         final IBinder clientLife;
         final Surface surface;
         final int mode;
