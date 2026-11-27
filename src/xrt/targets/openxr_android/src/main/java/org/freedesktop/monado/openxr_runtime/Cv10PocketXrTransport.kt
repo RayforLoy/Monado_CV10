@@ -36,7 +36,7 @@ internal class Cv10PocketXrTransport(
             .tag("cv10_pocket_xr_display")
             .processNameSuffix("cv10_pocket_xr_display")
             .daemon(false)
-            .version(4)
+            .version(5)
     private var connection: ServiceConnection? = null
     private var remote: ICv10PocketXrDisplay? = null
     private var startupResult: ((Result<Int>) -> Unit)? = null

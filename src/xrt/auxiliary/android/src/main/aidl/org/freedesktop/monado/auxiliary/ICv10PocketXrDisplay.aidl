@@ -7,6 +7,7 @@ interface ICv10PocketXrDisplay {
     const int MODE_SPACE = 0;
     const int MODE_TEST_CARD = 1;
     const int MODE_PC_SCREEN_SBS = 2;
+    const int MODE_CV10_OPTICS = 3;
     const int PC_SCREEN_WIDTH = 1920;
 
     void destroy() = 16777114;

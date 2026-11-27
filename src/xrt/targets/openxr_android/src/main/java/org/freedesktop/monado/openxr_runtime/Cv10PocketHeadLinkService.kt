@@ -40,11 +40,14 @@ class Cv10PocketHeadLinkService : VpnService() {
             val address = InetAddress.getByName(VPN_ADDRESS)
             check(NetworkInterface.getByInetAddress(address) == null) { "$VPN_ADDRESS is already assigned" }
 
+            val pocketPackage = intent.getStringExtra(EXTRA_POCKET_PACKAGE) ?: POCKET_PACKAGE
+            require(pocketPackage == POCKET_PACKAGE || pocketPackage == "org.cv10.pocketxr")
+
             // Publish the fixed headset address on this phone. No TUN forwarding, DNS, or default route.
             tunnel = checkNotNull(
                 Builder()
                     .setSession(getString(R.string.cv10_pocket_head_link))
-                    .addAllowedApplication(POCKET_PACKAGE)
+                    .addAllowedApplication(pocketPackage)
                     .addAddress(address, 32)
                     .allowFamily(OsConstants.AF_INET6)
                     .allowBypass()
@@ -97,6 +100,7 @@ class Cv10PocketHeadLinkService : VpnService() {
 
     companion object {
         internal const val POCKET_PACKAGE = "com.hayeco.flipspaces"
+        private const val EXTRA_POCKET_PACKAGE = "pocket_package"
         private const val START = "org.cv10.monado.pocket.HEAD_LINK"
         private const val STOP = "org.cv10.monado.pocket.STOP_HEAD_LINK"
         private const val VPN_ADDRESS = "169.254.2.1"
@@ -112,7 +116,9 @@ class Cv10PocketHeadLinkService : VpnService() {
             }
         }
 
-        internal fun intent(context: Context) = Intent(context, Cv10PocketHeadLinkService::class.java).setAction(START)
+        internal fun intent(context: Context, pocketPackage: String = POCKET_PACKAGE) =
+            Intent(context, Cv10PocketHeadLinkService::class.java).setAction(START)
+                .putExtra(EXTRA_POCKET_PACKAGE, pocketPackage)
 
         internal fun stop(context: Context) {
             // Android keeps the service bound until its VPN interface closes.

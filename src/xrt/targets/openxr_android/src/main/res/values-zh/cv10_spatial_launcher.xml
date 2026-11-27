@@ -15,4 +15,5 @@
     <string name="cv10_spatial_previous">上一页</string>
     <string name="cv10_spatial_next">下一页</string>
     <string name="cv10_spatial_empty">列表中没有应用</string>
+    <string name="cv10_pocket_preview_cv10_optics">打开 Pocket XR（CV10 光学视场）</string>
 </resources>

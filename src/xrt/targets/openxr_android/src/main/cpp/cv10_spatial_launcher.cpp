@@ -35,6 +35,10 @@ constexpr uint32_t canvas_width = 2048;
 constexpr uint32_t canvas_height = 1280;
 constexpr uint32_t pocket_width = 3840;
 constexpr uint32_t pocket_height = 1080;
+constexpr uint32_t cv10_eye_size = 1600;
+// The Pocket XR companion uses the symmetric OEM CV10 frustum at 47.5 degrees per side.
+constexpr float cv10_half_fov = 47.5f * 0.017453292519943295f;
+constexpr XrFovf cv10_fov = {-cv10_half_fov, cv10_half_fov, cv10_half_fov, -cv10_half_fov};
 constexpr float panel_distance = 1.45f;
 constexpr float pocket_distance = 1.0f;
 constexpr XrExtent2Df pocket_size = {0.812f, 0.458f};
@@ -226,11 +230,11 @@ public:
 	explicit operator bool() const { return capture != nullptr; }
 
 	void
-	start(GLuint texture)
+	start(GLuint texture, uint32_t width, uint32_t height)
 	{
 		started = true;
 		if (!env->CallBooleanMethod(capture, start_method, static_cast<jint>(texture),
-		                            static_cast<jint>(pocket_width), static_cast<jint>(pocket_height))) {
+		                            static_cast<jint>(width), static_cast<jint>(height))) {
 			throw std::runtime_error("Cannot create the Pocket XR capture surface");
 		}
 	}
@@ -260,11 +264,20 @@ private:
 class Launcher
 {
 public:
-	Launcher(JavaState &state, DisplayCapture &capture, bool capture_world_anchored, bool capture_wide_canvas)
+	Launcher(JavaState &state,
+	         DisplayCapture &capture,
+	         bool capture_world_anchored,
+	         bool capture_wide_canvas,
+	         bool capture_cv10_optics)
 	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored),
+	      capture_cv10_optics(capture_cv10_optics), capture_width(capture_cv10_optics ? 2 * cv10_eye_size : pocket_width),
+	      capture_height(capture_cv10_optics ? cv10_eye_size : pocket_height),
 	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size)
 	{
-		if (capture) {
+		if (capture_cv10_optics) {
+			__android_log_print(ANDROID_LOG_INFO, tag, "CV10 stereo projection %u x %u, 95 x 95 degrees per eye",
+			                    capture_width, capture_height);
+		} else if (capture) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "Stereo canvas %.3f x %.3f m at %.1f m (anchored: %s)",
 			                    capture_size.width, capture_size.height, pocket_distance,
 			                    capture_world_anchored ? "yes" : "no");
@@ -491,8 +504,8 @@ private:
 		chain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
 		chain_info.format = panel_format;
 		chain_info.sampleCount = 1;
-		chain_info.width = capture ? pocket_width : canvas_width;
-		chain_info.height = capture ? pocket_height : canvas_height;
+		chain_info.width = capture ? capture_width : canvas_width;
+		chain_info.height = capture ? capture_height : canvas_height;
 		chain_info.faceCount = 1;
 		chain_info.arraySize = 1;
 		chain_info.mipCount = 1;
@@ -535,8 +548,8 @@ private:
 		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		if (capture) {
 			transform_uniform = glGetUniformLocation(program, "textureTransform");
-			glViewport(0, 0, pocket_width, pocket_height);
-			capture.start(panel_texture);
+			glViewport(0, 0, capture_width, capture_height);
+			capture.start(panel_texture, capture_width, capture_height);
 		} else {
 			glUniform2f(glGetUniformLocation(program, "panelSize"), panel_width, panel_height);
 			glUniform2f(glGetUniformLocation(program, "canvasSize"), canvas_width, canvas_height);
@@ -685,6 +698,32 @@ private:
 		check(xrReleaseSwapchainImage(swapchain, &release), "xrReleaseSwapchainImage");
 	}
 
+	bool
+	locate_projection_views(XrTime display_time, std::array<XrCompositionLayerProjectionView, 2> &projection_views)
+	{
+		XrViewLocateInfo info{XR_TYPE_VIEW_LOCATE_INFO};
+		info.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+		info.space = view_space;
+		info.displayTime = display_time;
+		XrViewState view_state{XR_TYPE_VIEW_STATE};
+		XrView views[] = {{XR_TYPE_VIEW}, {XR_TYPE_VIEW}};
+		uint32_t count = 0;
+		check(xrLocateViews(session, &info, &view_state, 2, &count, views), "xrLocateViews(VIEW)");
+		if (count != 2 || (view_state.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
+			return false;
+		}
+		const auto eye_width = static_cast<int32_t>(capture_width / 2);
+		for (int eye = 0; eye < 2; ++eye) {
+			auto &view = projection_views[eye];
+			view.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+			view.pose = views[eye].pose;
+			view.fov = cv10_fov;
+			view.subImage.swapchain = swapchain;
+			view.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, static_cast<int32_t>(capture_height)}};
+		}
+		return true;
+	}
+
 	void
 	draw_frame()
 	{
@@ -703,27 +742,41 @@ private:
 		    reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quads[0]),
 		    reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quads[1]),
 		};
+		XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
+		std::array<XrCompositionLayerProjectionView, 2> projection_views{};
 		if (frame.shouldRender && capture && capture.update(transform_uniform)) {
-			if (capture_world_anchored) {
-				update_anchor(frame.predictedDisplayTime, pocket_distance);
-			}
-			if (!capture_world_anchored || anchor_valid) {
-				draw_panel();
-				// The capture is either Pocket XR's stereo canvas or a side-by-side PC video.
-				constexpr int32_t eye_width = pocket_width / 2;
-				const XrPosef view_pose = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -pocket_distance}};
-				for (int eye = 0; eye < 2; ++eye) {
-					auto &quad = quads[eye];
-					quad.space = capture_world_anchored ? local_space : view_space;
-					quad.eyeVisibility = eye == 0 ? XR_EYE_VISIBILITY_LEFT : XR_EYE_VISIBILITY_RIGHT;
-					quad.subImage.swapchain = swapchain;
-					quad.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, pocket_height}};
-					quad.pose = capture_world_anchored ? anchor : view_pose;
-					// Pocket XR applies the display size to the projection tangents, not the texture.
-					quad.size = capture_size;
+			if (capture_cv10_optics) {
+				if (locate_projection_views(frame.predictedDisplayTime, projection_views)) {
+					draw_panel();
+					projection.space = view_space;
+					projection.viewCount = static_cast<uint32_t>(projection_views.size());
+					projection.views = projection_views.data();
+					layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projection);
+					end_info.layerCount = 1;
+					end_info.layers = layers;
 				}
-				end_info.layerCount = 2;
-				end_info.layers = layers;
+			} else {
+				if (capture_world_anchored) {
+					update_anchor(frame.predictedDisplayTime, pocket_distance);
+				}
+				if (!capture_world_anchored || anchor_valid) {
+					draw_panel();
+					// The capture is either Pocket XR's stereo canvas or a side-by-side PC video.
+					constexpr int32_t eye_width = pocket_width / 2;
+					const XrPosef view_pose = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -pocket_distance}};
+					for (int eye = 0; eye < 2; ++eye) {
+						auto &quad = quads[eye];
+						quad.space = capture_world_anchored ? local_space : view_space;
+						quad.eyeVisibility = eye == 0 ? XR_EYE_VISIBILITY_LEFT : XR_EYE_VISIBILITY_RIGHT;
+						quad.subImage.swapchain = swapchain;
+						quad.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, pocket_height}};
+						quad.pose = capture_world_anchored ? anchor : view_pose;
+						// Pocket XR applies the display size to the projection tangents, not the texture.
+						quad.size = capture_size;
+					}
+					end_info.layerCount = 2;
+					end_info.layers = layers;
+				}
 			}
 		} else if (frame.shouldRender && !capture) {
 			update_anchor(frame.predictedDisplayTime, panel_distance);
@@ -748,6 +801,9 @@ private:
 	JavaState &state;
 	DisplayCapture &capture;
 	const bool capture_world_anchored;
+	const bool capture_cv10_optics;
+	const uint32_t capture_width;
+	const uint32_t capture_height;
 	const XrExtent2Df capture_size;
 	XrInstance instance = XR_NULL_HANDLE;
 	XrSystemId system_id = XR_NULL_SYSTEM_ID;
@@ -782,6 +838,7 @@ run_launcher(JNIEnv *env,
              jstring java_runtime_manifest,
              bool capture_world_anchored,
              bool capture_wide_canvas,
+             bool capture_cv10_optics,
              bool use_bundled_runtime)
 {
 	try {
@@ -789,7 +846,7 @@ run_launcher(JNIEnv *env,
 		std::lock_guard<std::mutex> lock(session_mutex);
 		JavaState state(env, java_state);
 		DisplayCapture capture(env, java_capture);
-		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas);
+		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, capture_cv10_optics);
 		if (!state.should_stop()) {
 			std::string runtime_manifest;
 			if (java_runtime_manifest != nullptr) {
@@ -818,7 +875,7 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jstring java_runtime_manifest,
                                                                                   jboolean use_bundled_runtime)
 {
-	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false,
+	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false, false,
 	                    use_bundled_runtime == JNI_TRUE);
 }
 
@@ -831,8 +888,9 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jobject java_capture,
                                                                            jstring java_runtime_manifest,
                                                                            jboolean world_anchored,
-                                                                           jboolean wide_canvas)
+                                                                           jboolean wide_canvas,
+                                                                           jboolean cv10_optics)
 {
 	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
-	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, true);
+	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, cv10_optics == JNI_TRUE, true);
 }

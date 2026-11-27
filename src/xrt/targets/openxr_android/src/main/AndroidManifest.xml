@@ -70,6 +70,7 @@
             <category android:name="org.khronos.openxr.intent.category.IMMERSIVE_HMD" />
         </intent>
         <package android:name="com.hayeco.flipspaces" />
+        <package android:name="org.cv10.pocketxr" />
         <package android:name="org.cv10.monado.pocket_client" />
         <package android:name="org.khronos.openxr.runtime_broker" />
     </queries>

@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import org.freedesktop.monado.auxiliary.Cv10ExternalPresentation
 import org.freedesktop.monado.auxiliary.Cv10PocketXrDisplayService
+import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_CV10_OPTICS
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_PC_SCREEN_SBS
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_SPACE
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_TEST_CARD
@@ -34,6 +35,7 @@ import rikka.shizuku.Shizuku
 class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var status: TextView
     private lateinit var open: Button
+    private lateinit var openCv10Optics: Button
     private lateinit var pcSetup: Button
     private lateinit var pcScreen: Button
     private lateinit var test: Button
@@ -52,6 +54,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private var pendingVpn = false
     private var headLinkStarted = false
     private var controlsAvailable = false
+    private var activePocketPackage = Cv10PocketHeadLinkService.POCKET_PACKAGE
     private var clientDisplayOpen = false
     private var changingClientDisplay = false
     private val usbLaunch = Cv10UsbLaunch(this) {
@@ -101,6 +104,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         open = Button(this).apply {
             setText(R.string.cv10_pocket_preview_open)
             setOnClickListener { startPreview(MODE_SPACE) }
+        }
+        openCv10Optics = Button(this).apply {
+            setText(R.string.cv10_pocket_preview_cv10_optics)
+            setOnClickListener { startPreview(MODE_CV10_OPTICS) }
         }
         pcSetup = Button(this).apply {
             setText(R.string.cv10_pocket_pc_setup)
@@ -162,6 +169,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         panel.addView(worldAnchor)
         panel.addView(wideCanvas)
         panel.addView(open)
+        panel.addView(openCv10Optics)
         panel.addView(recenter)
         panel.addView(controls)
         panel.addView(openXrApp)
@@ -212,7 +220,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private fun openPhoneControls(): Boolean {
         if (!controlsAvailable) return false
         try {
-            val launch = checkNotNull(packageManager.getLaunchIntentForPackage(Cv10PocketHeadLinkService.POCKET_PACKAGE))
+            val launch = checkNotNull(packageManager.getLaunchIntentForPackage(activePocketPackage))
             keepSessionForPhoneControls()
             startActivity(launch)
             Log.i(TAG, "Opened Pocket XR phone controls with the external session active")
@@ -326,7 +334,6 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
 
     private fun requestHeadLink() {
         try {
-            packageManager.getApplicationInfo(Cv10PocketHeadLinkService.POCKET_PACKAGE, 0)
             if (Cv10PocketHeadLinkService.vpnVisible(this)) {
                 headLink.isChecked = false
                 status.setText(R.string.cv10_pocket_head_link_vpn_conflict)
@@ -385,6 +392,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         }
 
         status.setText(R.string.cv10_pocket_preview_starting)
+        val cv10Optics = mode == MODE_CV10_OPTICS
+        val space = mode == MODE_SPACE || cv10Optics
+        activePocketPackage = if (cv10Optics) Cv10PocketXrDisplayService.POCKET_CV10_PACKAGE
+            else Cv10PocketHeadLinkService.POCKET_PACKAGE
         var displayId: Int? = null
         var hasFrame = false
         lateinit var nextTransport: Cv10PocketXrTransport
@@ -397,7 +408,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             if (hasFrame) {
                 status.text = getString(R.string.cv10_pocket_preview_receiving, id)
                 Log.i(TAG, "First virtual display frame available on display $id")
-                controlsAvailable = mode == MODE_SPACE
+                controlsAvailable = space
                 updateButtons()
             } else if (mode == MODE_PC_SCREEN_SBS) {
                 status.setText(R.string.cv10_pocket_pc_waiting_for_stream)
@@ -406,8 +417,9 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         val nextRenderer = Cv10PocketXrRenderer(
             activity = this,
             captureWidth = if (mode == MODE_PC_SCREEN_SBS) PC_SCREEN_WIDTH else null,
-            worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS,
+            worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS && !cv10Optics,
             wideCanvas = wideCanvas.isChecked && mode == MODE_SPACE,
+            cv10Optics = cv10Optics,
             onSurface = { surface ->
                 if (transport === nextTransport) {
                     nextTransport.start(surface) { result ->
@@ -430,12 +442,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         )
         transport = nextTransport
         renderer = nextRenderer
-        if (mode == MODE_SPACE) {
+        if (space) {
             try {
                 // The original SpaceActivity can open its phone trackpad before the first frame.
                 keepSessionForPhoneControls()
                 if (headLink.isChecked) {
-                    startForegroundService(Cv10PocketHeadLinkService.intent(this))
+                    startForegroundService(Cv10PocketHeadLinkService.intent(this, activePocketPackage))
                     headLinkStarted = true
                 }
             } catch (error: RuntimeException) {
@@ -485,11 +497,15 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         worldAnchor.isEnabled = available
         wideCanvas.isEnabled = available
         open.isEnabled = available
+        openCv10Optics.visibility = if (packageManager.getLaunchIntentForPackage(Cv10PocketXrDisplayService.POCKET_CV10_PACKAGE) != null)
+            View.VISIBLE else View.GONE
+        openCv10Optics.isEnabled = available
         pcSetup.isEnabled = available
         pcScreen.isEnabled = available
         test.isEnabled = available
         controls.isEnabled = controlsAvailable && !changingClientDisplay
-        openXrApp.visibility = if (controlsAvailable) View.VISIBLE else View.GONE
+        openXrApp.visibility = if (controlsAvailable && activePocketPackage == Cv10PocketHeadLinkService.POCKET_PACKAGE)
+            View.VISIBLE else View.GONE
         openXrApp.isEnabled = controlsAvailable && !changingClientDisplay
         closeXrApp.visibility = if (clientDisplayOpen) View.VISIBLE else View.GONE
         closeXrApp.isEnabled = !changingClientDisplay

@@ -15,4 +15,5 @@
     <string name="cv10_spatial_previous">Previous</string>
     <string name="cv10_spatial_next">Next</string>
     <string name="cv10_spatial_empty">No apps in this list</string>
+    <string name="cv10_pocket_preview_cv10_optics">Open Pocket XR at CV10 optical FOV</string>
 </resources>

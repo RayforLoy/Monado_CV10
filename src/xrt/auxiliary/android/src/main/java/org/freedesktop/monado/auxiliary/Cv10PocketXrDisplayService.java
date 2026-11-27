@@ -39,10 +39,15 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private static final String SHELL_PACKAGE = "com.android.shell";
     private static final ComponentName POCKET_SPACE = ComponentName.createRelative(
             "com.hayeco.flipspaces", ".spatial.SpaceActivity");
+    public static final String POCKET_CV10_PACKAGE = "org.cv10.pocketxr";
+    private static final ComponentName POCKET_CV10_SPACE = new ComponentName(
+            POCKET_CV10_PACKAGE, "com.hayeco.flipspaces.spatial.SpaceActivity");
+    private static final String CV10_DISPLAY_NAME = "Monado CV10 Pocket XR Optics";
     public static final ComponentName POCKET_PC_SCREEN = ComponentName.createRelative(
             "com.hayeco.flipspaces", ".pcscreen.PcScreenActivity");
     private static final int SPACE_WIDTH = 3840;
     private static final int HEIGHT = 1080;
+    private static final int CV10_EYE_SIZE = 1600;
     private static final int DENSITY_DPI = 240;
     private static final int CLIENT_WIDTH = 1280;
     private static final int CLIENT_HEIGHT = 720;
@@ -101,15 +106,18 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             if (clientLife == null || !surface.isValid()) {
                 throw new IllegalArgumentException("Invalid Pocket XR display lease or Surface");
             }
-            if (mode != MODE_SPACE && mode != MODE_TEST_CARD && mode != MODE_PC_SCREEN_SBS) {
+            boolean cv10Optics = mode == MODE_CV10_OPTICS;
+            if (mode != MODE_SPACE && mode != MODE_TEST_CARD && mode != MODE_PC_SCREEN_SBS && !cv10Optics) {
                 throw new IllegalArgumentException("Unknown Pocket XR display mode");
             }
-            int width = mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH;
+            int width = cv10Optics ? 2 * CV10_EYE_SIZE : (mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH);
+            int height = cv10Optics ? CV10_EYE_SIZE : HEIGHT;
+            String name = cv10Optics ? CV10_DISPLAY_NAME : "Monado CV10 Pocket XR";
             if (currentLease != null) throw new IllegalStateException("Pocket XR display is already running");
             lease = new Lease(clientLife, surface, mode);
             clientLife.linkToDeath(lease, 0);
             currentLease = lease;
-            lease.display = createDisplay("Monado CV10 Pocket XR", surface, width, HEIGHT, FLAGS);
+            lease.display = createDisplay(name, surface, width, height, FLAGS);
             int displayId = lease.display.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
@@ -117,7 +125,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             launchPocketXr(displayId, mode);
             started = true;
             Log.i(TAG, "Pocket XR mode " + mode + " start accepted on " + displayId
-                    + " (" + width + "x" + HEIGHT + ", " + DENSITY_DPI + " dpi)");
+                    + " (" + width + "x" + height + ", " + DENSITY_DPI + " dpi)");
             return displayId;
         } catch (InvocationTargetException e) {
             throw platformFailure(e.getCause());
@@ -206,7 +214,12 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
 
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
     private void launchPocketXr(int displayId, int mode) throws ReflectiveOperationException {
-        ComponentName target = mode == MODE_PC_SCREEN_SBS ? POCKET_PC_SCREEN : POCKET_SPACE;
+        ComponentName target;
+        switch (mode) {
+        case MODE_PC_SCREEN_SBS: target = POCKET_PC_SCREEN; break;
+        case MODE_CV10_OPTICS: target = POCKET_CV10_SPACE; break;
+        default: target = POCKET_SPACE;
+        }
         Intent intent = new Intent().setComponent(target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (mode == MODE_PC_SCREEN_SBS) {
             // This Pocket XR activity has its own task. A fresh instance auto-connects after pairing.
