@@ -2,26 +2,16 @@ diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado
 index dc2ba3d..91e6bb0 100644
 --- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
 +++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
-@@ -6,6 +6,8 @@ import android.content.Context;
- import android.hardware.usb.*;
- import android.os.SystemClock;
+@@ -8,2 +8,4 @@ import android.os.SystemClock;
  import android.util.Log;
 +import java.io.IOException;
 +import java.net.InetAddress;
  import java.nio.ByteBuffer;
- import java.nio.ByteOrder;
- import java.util.concurrent.TimeoutException;
-@@ -20,6 +22,7 @@ public final class Cv10UsbReader {
-     private UsbInterface iface;
-     private UsbRequest request;
+@@ -22,2 +24,3 @@ public final class Cv10UsbReader {
      private ByteBuffer packet;
 +    private Cv10PocketHeadLink diagnosticHeadLink;
      private boolean queued, enabled, proximityEnabled;
-     private int askedId = -1;
-     private long nextOpen, deadline, frames;
-@@ -84,6 +87,15 @@ public final class Cv10UsbReader {
-                 frames=0;
-                 deadline=SystemClock.elapsedRealtime()+5000;
+@@ -86,2 +89,11 @@ public final class Cv10UsbReader {
                  Log.i(TAG,"CV10 IMU enabled, interrupt IN 0x84");
 +                if (BuildConfig.DEBUG && BuildConfig.cv10LauncherPreview) {
 +                    try {
@@ -33,11 +23,7 @@ index dc2ba3d..91e6bb0 100644
 +                    }
 +                }
                  return true;
-             }
-         }
-@@ -133,6 +145,11 @@ public final class Cv10UsbReader {
-     }
-
+@@ -135,2 +147,7 @@ public final class Cv10UsbReader {
      public void close() {
 +        if (diagnosticHeadLink != null) {
 +            diagnosticHeadLink.close();
@@ -45,5 +31,3 @@ index dc2ba3d..91e6bb0 100644
 +            Log.i("Cv10HeadLiveDiag", "Loopback TCP listeners closed");
 +        }
          try {
-             if (request!=null && queued) {
-                 request.cancel();

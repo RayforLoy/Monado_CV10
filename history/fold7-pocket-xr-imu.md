@@ -52,3 +52,13 @@ Fold7 安装了同一提交构建的 ARM64 调试预览，包名为 `org.cv10.mo
 07:22 香港时间，Android 16 API 36 模拟器关闭 Wi-Fi 和移动数据，Shizuku 未运行。测试小程序使用 `595683d` 的正式头踪桥与 VPN 服务，以录制的采样间隔将 Fold7 实测的 3000 帧静置 IMU 数据循环送回采样入口。源文件为上文 `4d92709` 采集的 `cv10-pocket-imu.bin`，SHA-256 为 `229090fcd078cb3251463701b11a8fd2ca722aaa65178bd7e029f6aa80cbb0bc`。构建探针时把该文件放入 `assets`，与 [回放 Activity](VerifyPocketAndroidReplay.kt) 及生产的 `Cv10PocketImu`、`Cv10PocketHeadLink` 和 `Cv10PocketHeadLinkService` 一同打包。
 
 未修改的 Pocket XR 1.6.28 在 3840×1080、60 Hz 的测试显示上运行 `SpaceActivity`。原版连接了本机 VPN 的 52998 和 52999 端口，报告 1000 Hz，融合结果为 yaw 约 0.0°、pitch −0.23°、roll −0.14°，与电脑端的静置记录一致。模拟器端收到的是 Fold7 的录制样本。验收 Fold7 上的实时连接及实物转动仍需要可用的本机头踪授权和佩戴转头测试。[原版应用与回放日志](evidence/android16-pocket-fold7-imu-replay.txt)
+
+## 实时 Fold7 采样送入原版 Android 应用
+
+2026-11-27 15:01–15:04 香港时间。Fold7 保持 C9.53.6 原厂线、外接 5 V、三星外显镜像和固定镜位。从 Monado 2D 列表打开原版 Khronos `hello_xr` 并进入 `FOCUSED`，由 `54992ee` 加回环诊断补丁构建的 ARM64 调试包读取 CV10 HID。调试包 SHA-256 为 `5347fa3074079a7096cdbf071e9afb9ddca01b21ba9a49afbddff63416cea71c`，通过 APK 签名与 16 KiB ZIP 对齐检查。[CV10 回环诊断补丁](pocket-head-live-loopback-diagnostic.patch)
+
+用临时 ADB 转发将 Fold7 的 `127.0.0.1:52998` 连到电脑。从这个端口读到的 TCP 数据，经隔离的 ADB 服务器写入 Android 16 API 36 模拟器上的回环端口。模拟器里的探针将报文中的设备时间和六轴采样值送入同提交的 `Cv10PocketImu`，再由原样的 `Cv10PocketHeadLink` 和 `Cv10PocketHeadLinkService` 提供本机 VPN 服务。探针 APK SHA-256 为 `658c213bab9174ace2fbd056133a8e121314f74c6f94e28cd887e42b52a1f528`。模拟器的 Wi-Fi 和移动数据均关闭，Shizuku 未运行。未修改的 ARM64 Pocket XR 1.6.28 在 3840×1080、60 Hz 的虚拟屏上运行。[实时输入探针](VerifyPocketAndroidLive.kt)
+
+26 秒内传送 26,261 个完整采样包。Pocket XR 自行发现 VPN 地址，打开 IMU 和控制端口，两个相隔十秒的统计窗口均报告约 1002 Hz。静置 yaw 约 0.0°，pitch −1.32° 到 −1.33°，roll +1.76° 到 +1.77°，与同轮重力估计的倾斜误差不超过 0.04°。跨设备转发会影响时延，读数用于验证实时数据接入和姿态融合。Fold7 的本机 VPN 未开启，实机同一设备上的连接及佩戴头动仍待验收。
+
+退出后 Fold7 完成 `xrDestroyInstance`，关闭回环监听并移除 ADB 转发。手机恢复正式整合预览和 **Monado CV10 Preview** Broker，既有 Shizuku 进程、授权和最低刷新率保持，回到桌面。模拟器关闭前确认 VPN 地址已移除。[实时传输、原版融合与清理日志](evidence/android16-pocket-fold7-live-imu.log)

@@ -1,0 +1,42 @@
+# 2026-11-27 HKT. Galaxy Z Fold7 + CV10, C9.53.6, 5 V, Samsung mirrored display.
+# Stock ARM64 Pocket XR 1.6.28 (214): 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+# Emulator guest probe APK: 658c213bab9174ace2fbd056133a8e121314f74c6f94e28cd887e42b52a1f528
+# Diagnostic Fold7 APK: 54992ee + history/pocket-head-live-loopback-diagnostic.patch
+
+# Fold7 launch, HID loopback, and restore
+11-27 15:02:34.000
+Production preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648; Shizuku PID 15412
+Diagnostic preview 5347fa3074079a7096cdbf071e9afb9ddca01b21ba9a49afbddff63416cea71c
+11-27 15:02:46.465  5615 11337 V hello_xr: [15:02:46.465][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598463392 time=2520681116302
+11-27 15:02:45.805 10833 11349 I Cv10HeadLiveDiag: Loopback TCP listeners ready
+Starting: Intent { cmp=com.hayeco.flipspaces/.spatial.SpaceActivity }
+Relayed 3518974 bytes (26261 complete live CV10 packets)
+11-27 15:02:46.835 10833 11355 I Cv10HeadLiveDiag: Sent first live CV10 IMU frame
+11-27 15:03:16.267  5615 11337 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:03:17.795 10833 11349 I Cv10HeadLiveDiag: Loopback TCP listeners closed
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648, displays 0, 247, Shizuku PID 15412, min_refresh_rate null
+After restore: no ADB forwardings present, Samsung launcher top resumed, no Fold7 VPN address.
+
+# Isolated Android guest and unmodified Pocket XR
+Android 16 API 36, page size 4096
+Wi-Fi 0, mobile data 0
+Guest Shizuku PID: none
+11-27 15:01:31.395  3254  3254 I Cv10PocketHeadLink: Listening on 169.254.2.1/32 for local Pocket XR head tracking
+11-27 15:02:46.847  3254  3292 I Cv10LiveRelay: Published 1 live CV10 samples
+11-27 15:02:47.093  3254  3302 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52998
+11-27 15:02:47.098  3254  3302 I Cv10PocketHeadLink: Sent first live CV10 IMU frame
+11-27 15:02:47.099  3342  3372 I FlipSpaces/Head: first IMU report over tun0 (vpn), app socket bound to the network
+11-27 15:02:47.316  3254  3303 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52999
+11-27 15:02:51.571  3254  3292 I Cv10LiveRelay: Published 5000 live CV10 samples
+11-27 15:02:56.595  3254  3292 I Cv10LiveRelay: Published 10000 live CV10 samples
+11-27 15:02:57.127  3342  3372 I FlipSpaces/Head: head chain: IMU 1002 Hz in 147 reads a second (about 7 reports a read), newest report 41.3 ms in the pipe, pose predicted p50 49.5 ms p95 82.1 ms ahead
+11-27 15:02:57.129  3342  3372 I FlipSpaces/Head: head attitude: yaw -0.0 pitch -1.32 roll 1.77 deg (tracking frame); gravity mean says pitch -1.34 roll 1.77 deg (tilt error 0.02 deg, size off 0.01 %)
+11-27 15:03:01.617  3254  3292 I Cv10LiveRelay: Published 15000 live CV10 samples
+11-27 15:03:06.591  3254  3292 I Cv10LiveRelay: Published 20000 live CV10 samples
+11-27 15:03:07.145  3342  3372 I FlipSpaces/Head: head chain: IMU 1002 Hz in 151 reads a second (about 7 reports a read), newest report 41.3 ms in the pipe, pose predicted p50 44.7 ms p95 76.5 ms ahead
+11-27 15:03:07.149  3342  3372 I FlipSpaces/Head: head attitude: yaw -0.0 pitch -1.33 roll 1.76 deg (tracking frame); gravity mean says pitch -1.35 roll 1.79 deg (tilt error 0.04 deg, size off 0.00 %)
+11-27 15:03:11.604  3254  3292 I Cv10LiveRelay: Published 25000 live CV10 samples
+11-27 15:03:12.859  3254  3292 I Cv10LiveRelay: Live Fold7 stream ended after 26261 samples
+11-27 15:03:23.877  3254  3302 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52998
+11-27 15:03:37.893  3254  3302 I Cv10PocketHeadLink: Accepted local Pocket XR connection on 52998
+Probe stopped and guest VPN address removed
