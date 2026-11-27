@@ -18,6 +18,18 @@
 
 ## 整合预览复测
 
+### Fold7 双应用授权后的一键启动
+
+2026-11-27 10:13–10:20 香港时间。设备及原厂线供电配置同上。安装源码 `951f570` 构建的 ARM64 预览 APK，SHA-256 为 `edf1b775fcda7135879ed471f65a81f20575d9382cf996be56d29776136c3154`，原版 Pocket XR 沿用同一 SHA-256。两个包均已授权 Shizuku。前一个预览在原版自动切到手机触控板时结束外显。本构建会在启动原版空间前启用现有的外显保留服务。
+
+在手机预览页点按 **打开 Pocket XR 空间** 后，Monado 在 10:13:55.822 进入 `FOCUSED`，Shizuku 启动原版 `SpaceActivity` 到 3840×1080 的虚拟屏 194，Monado 在 10:13:56.014 收到首帧。原版触控板自动到手机前台，原版空间仍可见，触控板的 Home 按钮打开了原版双目菜单。[Fold7 外屏菜单](evidence/fold7-pocket-authorized-menu.png)
+
+用原版菜单搜索并点选系统 **时钟**。原版日志记下启动，建立了 1786×976 的应用虚拟屏 196，并记录 80 次成功复制面板帧。时钟虚拟屏可截图看到真实界面。原版空间恢复的旧 Hello XR 关闭提示起初覆盖在前景，用原版触控板关闭它后，空间虚拟屏和 CV10 外屏仍未显示时钟界面。此轮验收通过正式一键启动、触控板交接和原版应用入口，时钟面板的双目显示待修。此次未启用 CV10 头部追踪选项。[独立应用屏截图](evidence/fold7-pocket-authorized-clock-source.png) · [关闭占位后的 CV10 外屏](evidence/fold7-pocket-authorized-clock-output.png)
+
+返回预览页点按 **停止预览** 后，原版空间与面板虚拟屏均已释放。随后用同一 APK 从 Monado 内置 3D 菜单冷启动原版 `hello_xr`，约 0.45 秒进入 `FOCUSED`，CV10 外屏两眼区都抓到蓝色方块。[该次双目外屏截图](evidence/fold7-launcher-handoff-pocket-build.png)
+
+### 早期整合预览
+
 2026-11-27 02:40 香港时间，同一台 Fold7 和接线。ARM64 整合预览来自 `6e536a4`，包含内置 2D、3D 启动器及 Pocket XR 外显和头踪实验。正式预览包 SHA-256 为 `94fc866acb33f0def30ec4d3f03ffd11a09e918e44b30604635ea850c110f21c`。签名与 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 `PT_LOAD` 段均对齐到 16 KiB。本机页大小为 4 KiB。内置 3D 菜单进入 `XR_SESSION_STATE_FOCUSED`，右镜拍到应用卡片和手机指针。[内置 3D 菜单右镜实拍](evidence/fold7-pocket-integrated-menu-right.jpg)
 
 光学诊断包来自同一提交加 [诊断补丁](pocket-display-entry-diagnostic.patch)，SHA-256 为 `faa80bd4e7e59e4c7bff85f39c02f23d1d675d047015a23a73a8b0d62794c169`。在同一源码上应用补丁，使用与正式预览相同的 Gradle 构建选项，选择 **显示左右眼测试卡**。这次先记录到系统 Broker 查询失败，随后使用预览包附带的 Monado 运行时进入 `FOCUSED`。诊断创建公共自有内容虚拟屏 103，由已授权的 ADB 在该屏启动原版 `com.hayeco.flipspaces/.spatial.SpaceActivity`，设置 `test_card=eyes`，随后收到首帧。CV10 的两个眼区显示各自的眼别标记，右镜拍到正立的 `RIGHT EYE`。左镜仍待拍摄。[双眼外屏截图](evidence/fold7-pocket-integrated-card-display.png) · [右镜实拍](evidence/fold7-pocket-integrated-card-right.jpg) · [筛选日志](evidence/fold7-pocket-integrated-entry-policy.log)
