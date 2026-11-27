@@ -13,6 +13,7 @@
 
 #include "oxr_extension_support.h"
 #include "actions/oxr_api_action.h"
+#include "xrt/xrt_cv10_android_stream.h"
 
 
 #ifdef __cplusplus
@@ -40,6 +41,14 @@ extern "C" {
 //! OpenXR API function @ep{xrGetInstanceProcAddr}
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrGetInstanceProcAddr(XrInstance instance, const char *name, PFN_xrVoidFunction *function);
+
+#ifdef OXR_HAVE_KHR_opengl_es_enable
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCv10ImportAndroidStreamImageMONADO(XrSession session, struct AHardwareBuffer *buffer, XrSwapchain *out_swapchain);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCv10PollAndroidStreamImageMONADO(XrSwapchain swapchain);
+#endif
 
 //! OpenXR API function @ep{xrEnumerateApiLayerProperties}
 XRAPI_ATTR XrResult XRAPI_CALL

@@ -586,12 +586,18 @@ multi_main_loop(struct multi_system_compositor *msc)
 
 		xrt_comp_begin_frame(xc, frame_id);
 
+#ifdef XRT_OS_ANDROID
+		os_mutex_lock(&msc->draw_lock);
+#endif
 		// Make sure that the clients doesn't go away while we transfer layers.
 		os_mutex_lock(&msc->list_and_timing_lock);
 		transfer_layers_locked(msc, predicted_display_time_ns, frame_id);
 		os_mutex_unlock(&msc->list_and_timing_lock);
 
 		xrt_comp_layer_commit(xc, XRT_GRAPHICS_SYNC_HANDLE_INVALID);
+#ifdef XRT_OS_ANDROID
+		os_mutex_unlock(&msc->draw_lock);
+#endif
 
 		// Re-lock the thread for check in while statement.
 		os_thread_helper_lock(&msc->oth);
@@ -815,6 +821,9 @@ system_compositor_destroy(struct xrt_system_compositor *xsc)
 	xrt_comp_native_destroy(&msc->xcn);
 
 	os_mutex_destroy(&msc->list_and_timing_lock);
+#ifdef XRT_OS_ANDROID
+	os_mutex_destroy(&msc->draw_lock);
+#endif
 
 	free(msc);
 }
@@ -874,6 +883,9 @@ comp_multi_create_system_compositor(struct xrt_compositor_native *xcn,
 	msc->get_view_config_callback = get_view_config_callback;
 
 	os_mutex_init(&msc->list_and_timing_lock);
+#ifdef XRT_OS_ANDROID
+	os_mutex_init(&msc->draw_lock);
+#endif
 
 	//! @todo Make the clients not go from IDLE to READY before we have completed a first frame.
 	// Make sure there is at least some sort of valid frame data here.

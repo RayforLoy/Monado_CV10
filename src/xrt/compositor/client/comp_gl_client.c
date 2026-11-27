@@ -238,11 +238,17 @@ client_gl_compositor_layer_projection(struct xrt_compositor *xc,
 
 	xcn = to_native_compositor(xc);
 	assert(data->type == XRT_LAYER_PROJECTION);
+	const bool android_stream = xsc[0]->android_stream;
 	for (uint32_t i = 0; i < data->view_count; ++i) {
+		if (xsc[i]->android_stream != android_stream) {
+			return XRT_ERROR_INVALID_ARGUMENT;
+		}
 		xscn[i] = &client_gl_swapchain(xsc[i])->xscn->base;
 	}
 	struct xrt_layer_data d = *data;
-	d.flip_y = !d.flip_y;
+	if (!android_stream) {
+		d.flip_y = !d.flip_y;
+	}
 
 	return xrt_comp_layer_projection(xcn, xdev, xscn, &d);
 }
@@ -434,6 +440,47 @@ client_gl_compositor_get_swapchain_create_properties(struct xrt_compositor *xc,
 	return xrt_comp_get_swapchain_create_properties(&c->xcn->base, &vkinfo, xsccp);
 }
 
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+static void
+client_gl_android_stream_destroy(struct xrt_swapchain *xsc)
+{
+	struct client_gl_swapchain *sc = client_gl_swapchain(xsc);
+	struct xrt_swapchain *native = to_native_swapchain(xsc);
+	xrt_swapchain_reference(&native, NULL);
+	free(sc);
+}
+
+static xrt_result_t
+client_gl_android_stream_import(struct xrt_compositor *xc,
+                                 const struct xrt_swapchain_create_info *info,
+                                 struct xrt_image_native *images,
+                                 uint32_t image_count,
+                                 struct xrt_swapchain **out_xsc)
+{
+	if (!(info->create & XRT_SWAPCHAIN_CREATE_ANDROID_STREAM)) {
+		return XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED;
+	}
+	struct client_gl_swapchain *sc = U_TYPED_CALLOC(struct client_gl_swapchain);
+	if (sc == NULL) {
+		return XRT_ERROR_ALLOCATION;
+	}
+	struct xrt_swapchain *native = NULL;
+	xrt_result_t xret = xrt_comp_import_swapchain(to_native_compositor(xc), info, images, image_count, &native);
+	if (xret != XRT_SUCCESS) {
+		free(sc);
+		return xret;
+	}
+	sc->base.base.reference.count = 1;
+	sc->base.base.image_count = image_count;
+	sc->base.base.android_stream = true;
+	sc->base.base.wait_image = client_gl_swapchain_wait_image;
+	sc->base.base.destroy = client_gl_android_stream_destroy;
+	sc->xscn = (struct xrt_swapchain_native *)native;
+	*out_xsc = &sc->base.base;
+	return XRT_SUCCESS;
+}
+#endif
+
 static xrt_result_t
 client_gl_swapchain_create(struct xrt_compositor *xc,
                            const struct xrt_swapchain_create_info *info,
@@ -596,6 +643,9 @@ client_gl_compositor_init(struct client_gl_compositor *c,
 
 	c->base.get_swapchain_create_properties = client_gl_compositor_get_swapchain_create_properties;
 	c->base.create_swapchain = client_gl_swapchain_create;
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+	c->base.import_swapchain = client_gl_android_stream_import;
+#endif
 	c->base.create_passthrough = client_gl_compositor_passthrough_create;
 	c->base.create_passthrough_layer = client_gl_compositor_passthrough_layer_create;
 	c->base.destroy_passthrough = client_gl_compositor_passthrough_destroy;

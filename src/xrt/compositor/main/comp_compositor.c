@@ -340,6 +340,7 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 
 	// Do the drawing
 	xrt_result_t xret = comp_renderer_draw(c->r);
+	comp_layer_accum_release_android_streams(&c->base.layer_accum);
 	if (xret != XRT_SUCCESS) {
 		return xret;
 	}

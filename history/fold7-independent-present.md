@@ -76,7 +76,34 @@ The direct bridge still draws each new `SurfaceTexture` frame into the launcher�
 | 4480×2240 | 40,321,024 | 180 | 180/180 | 180 / 180 |
 | 6400×3200 | 82,280,448 | 180 | 180/180 | 180 / 180 |
 
-The probe validated the full crop and sampled four distinguishable quadrant texels per frame. Raw Vulkan sampling was top-first at all sizes. Each frame waited for its four-pixel verification readback. The results establish format, timestamp, and fence compatibility on the device. Pocket XR’s existing session still uses the `SurfaceTexture` bridge. Its frame rate, optical orientation, and lifetime across process exit need an integrated comparison.
+The probe validated the full crop and sampled four distinguishable quadrant texels per frame. Raw Vulkan sampling was top-first at all sizes. Each frame waited for its four-pixel verification readback. The results establish format, timestamp, and fence compatibility for the integrated bridge.
+
+### Pocket XR 缓冲直采实验
+
+调试属性 `debug.cv10.pocket_zero_copy=1` 启用双视图直采。Pocket XR 直接绘制到 Monado 提供的 Android Surface。Monado 等缓冲的 acquire fence 就绪后，把同一个 `AHardwareBuffer` 导入 Vulkan，在畸变合成中采样。缓冲在合成器及 GPU 完成使用后交还 Android。实验保留现有的 `SurfaceTexture` 和 GLES 拷贝路径作对照，四视图也沿用拷贝路径。此开关默认关闭。
+
+首轮长跑在 Android 异步丢帧时触发了 fdsan。现在逐个取得图像及各自的栅栏，保留已经完成的最新帧，并将还没完成的下一帧留到后续检查。日志可按 `CV10_STREAM` 核对导入缓冲及提交、复用和拷贝数量。[Android NDK ImageReader](https://android.googlesource.com/platform/frameworks/av/+/refs/heads/main/media/ndk/NdkImageReader.cpp#650)
+
+配对测量使用同一 Bilibili 工作区、每眼 2240×2240、中心 1×1 和外围 2×2 的 GLES FFR，以及 34° 峰峰值、周期 3 秒的模拟左右转头。两组采用 Compute 合成、0 ms 的 Pocket 姿态偏移和基于 CV10 实际呈现的后期重投影。手机外侧面板保持亮屏 60 Hz，CV10 活动模式为 90 Hz。两组热状态均为 3，主表面温度传感器读数为 45.0°C。
+
+| 指标 | GLES 整帧复制 | 缓冲直采 |
+| --- | ---: | ---: |
+| Monado Vulkan 提交 | 89.97/s | 90.00/s |
+| 模拟转头时 CV10 图层实呈 | 59.88/s | 59.95/s |
+| 模拟转头时实呈间隔 p99 | 33.33 ms | 33.33 ms |
+| Monado 合成 GPU 时间 p50 / p95 | 2.15 / 3.64 ms | 1.71 / 3.69 ms |
+| 模拟转头时 Pocket 提交到 CV10 实呈 p50 / p95 | 55.81 / 66.74 ms | 57.34 / 58.32 ms |
+| 重投影后的模拟转头相位差 | 提前 0.7 ms | 提前 1.1 ms |
+
+直采在该会话提交了 2654 帧新缓冲、复用 104 次、整帧复制 0 次，全部新缓冲都有匹配的姿态元数据。两组纳入相位拟合的帧均使用了后期重投影。相位拟合衡量日志中姿态和实际呈现的对齐，运动到光子延迟仍需光学测量。Graphics 直采对照的合成中位数由 2.41 ms 升至 3.19 ms。
+
+先前对照遗留了 +45 ms 的 Pocket 姿态偏移。直采让帧更早进入 OpenXR，带偏移的源姿态在 833 个拟合样本中超出 48 ms 配对范围。该轮数据用于诊断，表中采用 0 ms 及已校准配置。清理测试后已移除旧偏移并恢复常规预览 APK。
+
+Compute 四视图也完成模拟转头采样。每眼全视场从 2240×2240 缩至 1600×1600，896×896 的中心由同一双目源画面裁出。外显截图显示了 Bilibili 页面。这轮带旧偏移的四视图测试合成时间 p95 为 11.34 ms，整段外显实呈 58.77/s。独立高密度的中心源渲染待做。
+
+测试中的外显截图记录到工作区，固定右镜相机的中心仍为黑色。恢复常规预览后，原版 Hello XR 进入 FOCUSED，外显截图有双眼蓝块，连续两次右镜实拍仍黑。这一轮的光学显示和主观拖影验收仍待复测。
+
+证据位于 `.research/monado-rc2-fold7/pocket-performance/ffr-quad/`，保留 `zero-motion-default-calibrated-true-{0-0,1-1}-summary.txt`、`zero-motion-calibrated-projection.txt`、`quad-motion-true-0-0-summary.txt`、`zero-hello-control-external.png` 和对应实拍。实测直采 APK 摘要为 `d6dd8c65ba64314360d9c2c660329f722510a13e5257da209e815aadb5756cf3`，模拟转头 APK 摘要为 `35891f604e7bd60ae3e857dffef77a346d7d23f964bb5e25cac5261b64ee2af7`。
 
 The generic Monado swapchain import currently transitions images from `UNDEFINED` during creation. Producer-filled buffers require a path that preserves their contents and acquires ownership from `VK_QUEUE_FAMILY_FOREIGN_EXT` after the producer fence. Keep the image and associated pose together until the compositor has finished its final use, including repeated reprojections. Return its slot with the compositor’s release fence. Keep imported views in a bounded cache per reader generation and use an explicit mapping for the top-first stereo crop. [Vulkan external memory ownership](https://docs.vulkan.org/spec/latest/chapters/resources.html#resources-external-sharing)
 

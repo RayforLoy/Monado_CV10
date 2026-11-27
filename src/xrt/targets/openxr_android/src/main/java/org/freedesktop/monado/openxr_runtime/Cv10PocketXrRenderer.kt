@@ -33,7 +33,7 @@ internal class Cv10PocketXrRenderer(
                 val context = activity.applicationContext
                 if (direct) framePoses = Cv10PocketFramePoses.create(context)
                 val manifest = Cv10BundledRuntime.manifestPath(context, "cv10-pocket-runtime.json")
-                nativeRun(activity, context, state, capture, manifest, worldAnchored, wideCanvas, opticalEyeSize)
+                nativeRun(activity, context, state, capture, manifest, worldAnchored, wideCanvas, opticalEyeSize, direct)
             } catch (error: LinkageError) {
                 Log.e(TAG, "OpenXR capture library unavailable", error)
                 error.message ?: error.toString()
@@ -63,6 +63,7 @@ internal class Cv10PocketXrRenderer(
         worldAnchored: Boolean,
         wideCanvas: Boolean,
         opticalEyeSize: Int,
+        direct: Boolean,
     ): String?
 
     @Keep
@@ -81,14 +82,22 @@ internal class Cv10PocketXrRenderer(
                 texture = current
                 current.setDefaultBufferSize(captureWidth ?: width, height)
                 val output = Surface(current)
-                surface = output
-                val poseSource = framePoses?.source
-                activity.runOnUiThread { if (!state.stop && output.isValid) onSurface(output, poseSource) }
-                return true
+                return startStreamCapture(output)
             } catch (error: RuntimeException) {
                 Log.e(TAG, "Cannot create a Pocket XR capture surface", error)
                 return false
             }
+        }
+
+        fun startStreamCapture(output: Surface): Boolean {
+            if (!output.isValid) {
+                output.release()
+                return false
+            }
+            surface = output
+            val poseSource = framePoses?.source
+            activity.runOnUiThread { if (!state.stop && output.isValid) onSurface(output, poseSource) }
+            return true
         }
 
         fun updateCapture(transform: FloatArray, poseTime: LongArray?, rotations: FloatArray?): Long {
@@ -107,6 +116,11 @@ internal class Cv10PocketXrRenderer(
                 }
                 return 0L
             }
+            return latchCaptureTimestamp(timestamp, poseTime, rotations)
+        }
+
+        fun latchCaptureTimestamp(timestamp: Long, poseTime: LongArray?, rotations: FloatArray?): Long {
+            if (timestamp == 0L || timestamp == lastTimestamp) return timestamp
             if (lastTimestamp == 0L) {
                 activity.runOnUiThread { if (!state.stop) onFirstFrame() }
             }

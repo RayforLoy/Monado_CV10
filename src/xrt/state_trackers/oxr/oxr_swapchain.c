@@ -19,6 +19,14 @@
 #include "oxr_swapchain_common.h"
 #include "oxr_xret.h"
 
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER) && defined(OXR_HAVE_KHR_opengl_es_enable)
+#include "oxr_api_funcs.h"
+#include "oxr_api_verify.h"
+#include "util/u_handles.h"
+#include <android/hardware_buffer.h>
+#include <vulkan/vulkan_core.h>
+#endif
+
 
 /*
  *
@@ -139,6 +147,76 @@ destroy_handle(struct oxr_logger *log, struct oxr_handle_base *hb)
 	free(sc);
 	return ret;
 }
+
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER) && defined(OXR_HAVE_KHR_opengl_es_enable)
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCv10ImportAndroidStreamImageMONADO(XrSession session, struct AHardwareBuffer *buffer, XrSwapchain *out_swapchain)
+{
+	struct oxr_session *sess;
+	struct oxr_logger log;
+	OXR_VERIFY_SESSION_AND_INIT_LOG(&log, session, sess, "xrCv10ImportAndroidStreamImageMONADO");
+	OXR_VERIFY_SESSION_NOT_LOST(&log, sess);
+	OXR_VERIFY_ARG_NOT_NULL(&log, buffer);
+	OXR_VERIFY_ARG_NOT_NULL(&log, out_swapchain);
+	*out_swapchain = XR_NULL_HANDLE;
+	if (sess->create_swapchain != oxr_swapchain_gl_create || sess->compositor == NULL ||
+	    sess->compositor->import_swapchain == NULL) {
+		return XR_ERROR_FEATURE_UNSUPPORTED;
+	}
+
+	AHardwareBuffer_Desc desc;
+	AHardwareBuffer_describe(buffer, &desc);
+	struct xrt_swapchain_create_info info = {
+	    .create = XRT_SWAPCHAIN_CREATE_ANDROID_STREAM,
+	    .bits = XRT_SWAPCHAIN_USAGE_SAMPLED,
+	    .format = VK_FORMAT_R8G8B8A8_UNORM,
+	    .sample_count = 1,
+	    .width = desc.width,
+	    .height = desc.height,
+	    .face_count = 1,
+	    .array_size = 1,
+	    .mip_count = 1,
+	};
+	struct oxr_swapchain *sc = NULL;
+	OXR_ALLOCATE_HANDLE_OR_RETURN(&log, sc, OXR_XR_DEBUG_SWAPCHAIN, destroy_handle, &sess->handle);
+	sc->destroy = destroy;
+	sc->sess = sess;
+	sc->width = desc.width;
+	sc->height = desc.height;
+	sc->face_count = 1;
+	sc->array_layer_count = 1;
+	struct xrt_image_native image = {.handle = u_graphics_buffer_ref(buffer)};
+	xrt_result_t xret = xrt_comp_import_swapchain(sess->compositor, &info, &image, 1, &sc->swapchain);
+	if (xret != XRT_SUCCESS) {
+		u_graphics_buffer_unref(&image.handle);
+		oxr_handle_destroy(&log, &sc->handle);
+		return oxr_error(&log, XR_ERROR_RUNTIME_FAILURE, "Android stream image import failed (%d)", xret);
+	}
+
+	// The offscreen producer already controls availability via its acquire and release fences.
+	sc->released.yes = true;
+	sc->released.index = 0;
+	*out_swapchain = oxr_swapchain_to_openxr(sc);
+	return XR_SUCCESS;
+}
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCv10PollAndroidStreamImageMONADO(XrSwapchain swapchain)
+{
+	struct oxr_swapchain *sc;
+	struct oxr_logger log;
+	OXR_VERIFY_SWAPCHAIN_AND_INIT_LOG(&log, swapchain, sc, "xrCv10PollAndroidStreamImageMONADO");
+	if (!sc->swapchain->android_stream) {
+		return XR_ERROR_VALIDATION_FAILURE;
+	}
+	const xrt_result_t xret = xrt_swapchain_wait_image(sc->swapchain, 0, 0);
+	if (xret == XRT_TIMEOUT) {
+		return XR_TIMEOUT_EXPIRED;
+	}
+	OXR_CHECK_XRET(&log, sc->sess, xret, cv10_wait_stream_image);
+	return XR_SUCCESS;
+}
+#endif
 
 
 /*

@@ -173,6 +173,14 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 void
 comp_swapchain_teardown(struct comp_swapchain *sc);
 
+//! Transfer retained stream images between the Android producer and the compositor queue.
+void
+comp_swapchain_android_stream_barriers(struct vk_bundle *vk,
+                                       VkCommandBuffer cmd,
+                                       struct xrt_swapchain *const *streams,
+                                       uint32_t count,
+                                       bool acquire);
+
 
 /*
  *

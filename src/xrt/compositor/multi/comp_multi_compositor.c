@@ -64,6 +64,10 @@ slot_clear_locked(struct multi_compositor *mc, struct multi_layer_slot *slot)
 
 	for (size_t i = 0; i < slot->layer_count; i++) {
 		for (size_t k = 0; k < ARRAY_SIZE(slot->layers[i].xscs); k++) {
+			struct xrt_swapchain *xsc = slot->layers[i].xscs[k];
+			if (xsc && xsc->android_stream && slot->layers[i].data.type == XRT_LAYER_PROJECTION) {
+				xrt_swapchain_dec_image_use(xsc, 0);
+			}
 			xrt_swapchain_reference(&slot->layers[i].xscs[k], NULL);
 		}
 	}
@@ -442,7 +446,13 @@ multi_compositor_import_swapchain(struct xrt_compositor *xc,
 
 	struct multi_compositor *mc = multi_compositor(xc);
 
-	return xrt_comp_import_swapchain(&mc->msc->xcn->base, info, native_images, image_count, out_xsc);
+	xrt_result_t xret = xrt_comp_import_swapchain(&mc->msc->xcn->base, info, native_images, image_count, out_xsc);
+#ifdef XRT_OS_ANDROID
+	if (xret == XRT_SUCCESS && (*out_xsc)->android_stream) {
+		mc->imported_android_stream = true;
+	}
+#endif
+	return xret;
 }
 
 static xrt_result_t
@@ -662,11 +672,19 @@ multi_compositor_layer_projection(struct xrt_compositor *xc,
                                   const struct xrt_layer_data *data)
 {
 	struct multi_compositor *mc = multi_compositor(xc);
-	(void)mc;
+	for (uint32_t i = 0; i < data->view_count; i++) {
+		const struct xrt_sub_image *sub = &data->proj.v[i].sub;
+		if (xsc[i]->android_stream && (sub->image_index != 0 || sub->array_index != 0)) {
+			return XRT_ERROR_INVALID_ARGUMENT;
+		}
+	}
 
 	size_t index = mc->progress.layer_count++;
 	mc->progress.layers[index].xdev = xdev;
 	for (uint32_t i = 0; i < data->view_count; ++i) {
+		if (xsc[i]->android_stream) {
+			xrt_swapchain_inc_image_use(xsc[i], 0);
+		}
 		xrt_swapchain_reference(&mc->progress.layers[index].xscs[i], xsc[i]);
 	}
 	mc->progress.layers[index].data = *data;
@@ -909,6 +927,14 @@ multi_compositor_destroy(struct xrt_compositor *xc)
 	slot_clear_locked(mc, &mc->scheduled);
 	slot_clear_locked(mc, &mc->delivered);
 	os_mutex_unlock(&mc->msc->list_and_timing_lock);
+
+#ifdef XRT_OS_ANDROID
+	if (mc->imported_android_stream) {
+		// This client is now absent from future draws. Wait for any draw that already transferred its layers.
+		os_mutex_lock(&mc->msc->draw_lock);
+		os_mutex_unlock(&mc->msc->draw_lock);
+	}
+#endif
 
 	// Does null checking.
 	u_pa_destroy(&mc->upa);

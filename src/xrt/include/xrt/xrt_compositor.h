@@ -561,6 +561,9 @@ struct xrt_swapchain
 	 */
 	uint32_t image_count;
 
+	//! Native compositor must acquire and release Android queue ownership while sampling image 0.
+	bool android_stream;
+
 	/*!
 	 * @ref dec_image_use must have been called as often as @ref inc_image_use.
 	 */

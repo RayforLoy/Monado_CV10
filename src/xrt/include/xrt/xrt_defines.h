@@ -783,6 +783,8 @@ enum xrt_swapchain_create_flags
 	 * the flag or implicitly by providing the drm format modifier to the receiving API.
 	 */
 	XRT_SWAPCHAIN_CREATE_TILING_MAX_PERFORMANCE = (1u << 3u),
+	//! Private import of a single, externally produced Android RGBA stream image.
+	XRT_SWAPCHAIN_CREATE_ANDROID_STREAM = (1u << 4u),
 };
 
 /*!

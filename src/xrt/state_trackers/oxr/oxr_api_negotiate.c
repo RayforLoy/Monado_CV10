@@ -185,6 +185,10 @@ oxr_xrEnumerateApiLayerProperties(uint32_t propertyCapacityInput,
 static XrResult
 handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *name, PFN_xrVoidFunction *out_function)
 {
+#if defined(XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER) && defined(OXR_HAVE_KHR_opengl_es_enable)
+	ENTRY_IF_EXT(xrCv10ImportAndroidStreamImageMONADO, KHR_opengl_es_enable);
+	ENTRY_IF_EXT(xrCv10PollAndroidStreamImageMONADO, KHR_opengl_es_enable);
+#endif
 	ENTRY(xrGetInstanceProcAddr);
 	ENTRY(xrEnumerateInstanceExtensionProperties);
 	ENTRY(xrCreateInstance);

@@ -4,20 +4,29 @@
 #include <GLES3/gl3.h>
 #include <GLES2/gl2ext.h>
 #include <android/bitmap.h>
+#include <android/hardware_buffer.h>
 #include <android/log.h>
+#include <android/native_window_jni.h>
+#include <dlfcn.h>
 #include <jni.h>
+#include <media/NdkImageReader.h>
+#include <poll.h>
 #include <sys/system_properties.h>
 #include <time.h>
+#include <unistd.h>
 
 #define XR_USE_PLATFORM_ANDROID
 #define XR_USE_GRAPHICS_API_OPENGL_ES
 #define XR_USE_TIMESPEC
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
+#include "xrt/xrt_cv10_android_stream.h"
 
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <chrono>
+#include <cinttypes>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -274,6 +283,195 @@ private:
 	jmethodID controller_mode_method = nullptr;
 };
 
+class AndroidStream
+{
+public:
+	bool
+	initialize(JNIEnv *env, XrInstance instance, uint32_t width, uint32_t height, jobject &surface)
+	{
+		get_buffer_id = reinterpret_cast<GetBufferId>(dlsym(RTLD_DEFAULT, "AHardwareBuffer_getId"));
+		PFN_xrVoidFunction import = nullptr;
+		PFN_xrVoidFunction poll_image = nullptr;
+		if (get_buffer_id == nullptr ||
+		    XR_FAILED(xrGetInstanceProcAddr(instance, "xrCv10ImportAndroidStreamImageMONADO", &import)) ||
+		    XR_FAILED(xrGetInstanceProcAddr(instance, "xrCv10PollAndroidStreamImageMONADO", &poll_image)) ||
+		    import == nullptr || poll_image == nullptr) {
+			return false;
+		}
+		import_image = reinterpret_cast<PFN_xrCv10ImportAndroidStreamImageMONADO>(import);
+		poll_swapchain = reinterpret_cast<PFN_xrCv10PollAndroidStreamImageMONADO>(poll_image);
+		this->width = static_cast<int32_t>(width);
+		this->height = static_cast<int32_t>(height);
+		const uint64_t usage = AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT;
+		ANativeWindow *window = nullptr;
+		if (AImageReader_newWithUsage(this->width, this->height, AIMAGE_FORMAT_RGBA_8888, usage,
+		                             max_images, &reader) != AMEDIA_OK ||
+		    AImageReader_getWindow(reader, &window) != AMEDIA_OK) {
+			return false;
+		}
+		surface = ANativeWindow_toSurface(env, window);
+		return surface != nullptr;
+	}
+
+	~AndroidStream()
+	{
+		// Launcher destroys the OpenXR session synchronously before releasing any held producer image.
+		pending.discard();
+		ready.discard();
+		for (const auto &slot : slots) {
+			if (slot.image != nullptr) {
+				AImage_delete(slot.image);
+			}
+		}
+		if (reader != nullptr) {
+			AImageReader_delete(reader);
+		}
+	}
+
+	int64_t
+	update(XrSession session)
+	{
+		uint32_t held = 0;
+		for (auto &slot : slots) {
+			if (slot.image != nullptr && &slot != current && poll_swapchain(slot.swapchain) == XR_SUCCESS) {
+				AImage_delete(slot.image);
+				slot.image = nullptr;
+			}
+			held += slot.image != nullptr;
+		}
+		promote_ready();
+		// Keep the newest completed image even if the following producer frame is still on the GPU.
+		// Acquire each image individually so that dropping a frame preserves its matching fence.
+		for (uint32_t attempt = 0; attempt < max_images; ++attempt) {
+			const uint32_t acquired = held + (pending.image != nullptr) + (ready.image != nullptr);
+			if (acquired >= max_images) {
+				break;
+			}
+			PendingImage next{};
+			const media_status_t result = AImageReader_acquireNextImageAsync(reader, &next.image, &next.fence);
+			if (result == AMEDIA_IMGREADER_NO_BUFFER_AVAILABLE || result == AMEDIA_IMGREADER_MAX_IMAGES_ACQUIRED) {
+				break;
+			}
+			if (result != AMEDIA_OK) {
+				throw std::runtime_error("Cannot acquire a Pocket XR hardware buffer: " + std::to_string(result));
+			}
+			pending.discard();
+			pending = next;
+			promote_ready();
+		}
+		promote_ready();
+		if (ready.image == nullptr) {
+			return timestamp;
+		}
+
+		AImageCropRect crop{};
+		AHardwareBuffer *buffer = nullptr;
+		int64_t stamp = 0;
+		uint64_t id = 0;
+		if (AImage_getCropRect(ready.image, &crop) != AMEDIA_OK || crop.left != 0 || crop.top != 0 ||
+		    crop.right != width || crop.bottom != height || AImage_getTimestamp(ready.image, &stamp) != AMEDIA_OK ||
+		    AImage_getHardwareBuffer(ready.image, &buffer) != AMEDIA_OK) {
+			throw std::runtime_error("Unexpected crop or metadata in the Pocket XR stream image");
+		}
+		if (get_buffer_id(buffer, &id) != 0 || id == 0) {
+			throw std::runtime_error("Cannot identify the Pocket XR hardware buffer");
+		}
+
+		auto match = std::find_if(slots.begin(), slots.end(), [id](const auto &slot) { return slot.id == id; });
+		if (match == slots.end()) {
+			match = std::find_if(slots.begin(), slots.end(), [](const auto &slot) { return slot.id == 0; });
+			if (match == slots.end()) {
+				match = std::find_if(slots.begin(), slots.end(), [](const auto &slot) { return slot.image == nullptr; });
+			}
+			if (match == slots.end()) {
+				throw std::runtime_error("Pocket XR hardware-buffer cache exhausted");
+			}
+			if (match->swapchain != XR_NULL_HANDLE) {
+				check(xrDestroySwapchain(match->swapchain), "xrDestroySwapchain(stream)");
+				*match = {};
+			}
+			check(import_image(session, buffer, &match->swapchain), "xrCv10ImportAndroidStreamImageMONADO");
+			match->id = id;
+			__android_log_print(ANDROID_LOG_INFO, tag, "CV10_STREAM import buffer=%" PRIu64 " %dx%d", id,
+			                    width, height);
+		}
+		if (match->image != nullptr) {
+			throw std::runtime_error("Pocket XR reused a buffer before release");
+		}
+		match->image = ready.image;
+		ready = {};
+		current = &*match;
+		timestamp = stamp;
+		return timestamp;
+	}
+
+	XrSwapchain
+	swapchain() const
+	{
+		return current != nullptr ? current->swapchain : XR_NULL_HANDLE;
+	}
+
+private:
+	struct PendingImage
+	{
+		AImage *image = nullptr;
+		int fence = -1;
+
+		void
+		discard()
+		{
+			if (image != nullptr) {
+				AImage_deleteAsync(image, fence);
+				*this = {};
+			}
+		}
+	};
+
+	void
+	promote_ready()
+	{
+		if (pending.image == nullptr) {
+			return;
+		}
+		if (pending.fence >= 0) {
+			pollfd fd{pending.fence, POLLIN, 0};
+			const int result = poll(&fd, 1, 0);
+			if (result == 0 || (result < 0 && errno == EINTR)) {
+				return;
+			}
+			if (result < 0 || (fd.revents & POLLIN) == 0) {
+				throw std::runtime_error("Pocket XR acquire fence failed");
+			}
+			close(pending.fence);
+			pending.fence = -1;
+		}
+		ready.discard();
+		ready = pending;
+		pending = {};
+	}
+
+	using GetBufferId = int (*)(const AHardwareBuffer *, uint64_t *);
+	GetBufferId get_buffer_id = nullptr;
+
+	struct Slot
+	{
+		uint64_t id = 0;
+		XrSwapchain swapchain = XR_NULL_HANDLE;
+		AImage *image = nullptr;
+	};
+	static constexpr uint32_t max_images = 5;
+	std::array<Slot, max_images + 1> slots{};
+	AImageReader *reader = nullptr;
+	PendingImage pending{};
+	PendingImage ready{};
+	Slot *current = nullptr;
+	PFN_xrCv10ImportAndroidStreamImageMONADO import_image = nullptr;
+	PFN_xrCv10PollAndroidStreamImageMONADO poll_swapchain = nullptr;
+	int64_t timestamp = 0;
+	int32_t width = 0;
+	int32_t height = 0;
+};
+
 class DisplayCapture
 {
 public:
@@ -294,7 +492,9 @@ public:
 		}
 		jclass cls = env->GetObjectClass(capture);
 		start_method = env->GetMethodID(cls, "startCapture", "(III)Z");
+		start_stream_method = env->GetMethodID(cls, "startStreamCapture", "(Landroid/view/Surface;)Z");
 		update_method = env->GetMethodID(cls, "updateCapture", "([F[J[F)J");
+		latch_method = env->GetMethodID(cls, "latchCaptureTimestamp", "(J[J[F)J");
 		stop_method = env->GetMethodID(cls, "stopCapture", "()V");
 		env->DeleteLocalRef(cls);
 		matrix = env->NewFloatArray(16);
@@ -346,6 +546,28 @@ public:
 		}
 	}
 
+	bool
+	start_stream(AndroidStream &stream, XrInstance instance, uint32_t width, uint32_t height)
+	{
+		jobject surface = nullptr;
+		if (!stream.initialize(env, instance, width, height, surface)) {
+			return false;
+		}
+		started = env->CallBooleanMethod(capture, start_stream_method, surface);
+		env->DeleteLocalRef(surface);
+		return started;
+	}
+
+	jlong
+	update_stream(int64_t timestamp)
+	{
+		if (timestamp != 0 && timestamp != latched_timestamp) {
+			env->CallLongMethod(capture, latch_method, static_cast<jlong>(timestamp), time_array, orientation_array);
+			latch_pose(timestamp);
+		}
+		return timestamp;
+	}
+
 	jlong
 	update(GLint transform_uniform)
 	{
@@ -354,30 +576,39 @@ public:
 			std::array<jfloat, 16> transform{};
 			env->GetFloatArrayRegion(matrix, 0, transform.size(), transform.data());
 			glUniformMatrix4fv(transform_uniform, 1, GL_FALSE, transform.data());
-			latched_timestamp = timestamp;
-			if (time_array != nullptr) {
-				std::array<jlong, 2> time{};
-				env->GetLongArrayRegion(time_array, 0, time.size(), time.data());
-				pose.time_ns = time[0];
-				pose.epoch = time[1];
-				if (pose.time_ns != 0) {
-					std::array<jfloat, 16> q{};
-					env->GetFloatArrayRegion(orientation_array, 0, q.size(), q.data());
-					pose.center = normalize({q[0], q[1], q[2], q[3]});
-					pose.top = normalize({q[4], q[5], q[6], q[7]});
-					pose.bottom = normalize({q[8], q[9], q[10], q[11]});
-					pose.reference = normalize({q[12], q[13], q[14], q[15]});
-				}
-			}
+			latch_pose(timestamp);
 		}
 		return timestamp;
 	}
 
 private:
+	void
+	latch_pose(jlong timestamp)
+	{
+		latched_timestamp = timestamp;
+		if (time_array == nullptr) {
+			return;
+		}
+		std::array<jlong, 2> time{};
+		env->GetLongArrayRegion(time_array, 0, time.size(), time.data());
+		pose.time_ns = time[0];
+		pose.epoch = time[1];
+		if (pose.time_ns != 0) {
+			std::array<jfloat, 16> q{};
+			env->GetFloatArrayRegion(orientation_array, 0, q.size(), q.data());
+			pose.center = normalize({q[0], q[1], q[2], q[3]});
+			pose.top = normalize({q[4], q[5], q[6], q[7]});
+			pose.bottom = normalize({q[8], q[9], q[10], q[11]});
+			pose.reference = normalize({q[12], q[13], q[14], q[15]});
+		}
+	}
+
 	JNIEnv *const env;
 	const jobject capture;
 	jmethodID start_method = nullptr;
+	jmethodID start_stream_method = nullptr;
 	jmethodID update_method = nullptr;
+	jmethodID latch_method = nullptr;
 	jmethodID stop_method = nullptr;
 	jfloatArray matrix = nullptr;
 	jlongArray time_array = nullptr;
@@ -394,11 +625,12 @@ public:
 	         DisplayCapture &capture,
 	         bool capture_world_anchored,
 	         bool capture_wide_canvas,
-	         uint32_t optical_eye_size)
+	         uint32_t optical_eye_size,
+	         bool direct_capture)
 	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored),
 	      capture_cv10_optics(optical_eye_size != 0), capture_width(capture_cv10_optics ? 2 * optical_eye_size : pocket_width),
 	      capture_height(capture_cv10_optics ? optical_eye_size : pocket_height),
-	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size)
+	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size), direct_capture(direct_capture)
 	{
 		if (capture_cv10_optics) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "CV10 stereo projection %u x %u, 95 x 95 degrees per eye",
@@ -420,6 +652,10 @@ public:
 		if (capture_cv10_optics && copied_frames != 0) {
 			__android_log_print(ANDROID_LOG_DEBUG, tag, "Pocket XR optical capture: %u copied, %u reused",
 			                    copied_frames, reused_frames);
+		}
+		if (using_android_stream) {
+			__android_log_print(ANDROID_LOG_INFO, tag, "CV10_STREAM submitted %u new, %u reused, %u copied",
+			                    streamed_frames, reused_frames, copied_frames);
 		}
 		capture.stop();
 		if (swapchain != XR_NULL_HANDLE) {
@@ -467,7 +703,9 @@ public:
 		initialize_xr(activity, application_context, runtime_manifest, use_bundled_runtime);
 		initialize_egl();
 		initialize_session();
-		initialize_drawing();
+		if (!using_android_stream) {
+			initialize_drawing();
+		}
 		while (!state.should_stop() && consume_events()) {
 			if (running) {
 				draw_frame();
@@ -711,6 +949,18 @@ private:
 				initialize_controller();
 			} catch (const std::runtime_error &error) {
 				__android_log_print(ANDROID_LOG_WARN, tag, "Controller actions unavailable: %s", error.what());
+			}
+		}
+
+		char stream_setting[PROP_VALUE_MAX]{};
+		if (direct_capture && capture_cv10_optics && projection_count == 2 &&
+		    __system_property_get("debug.cv10.pocket_zero_copy", stream_setting) > 0 &&
+		    std::strcmp(stream_setting, "1") == 0) {
+			using_android_stream = capture.start_stream(android_stream, instance, capture_width, capture_height);
+			__android_log_print(ANDROID_LOG_INFO, tag, "CV10_STREAM %s",
+			                    using_android_stream ? "enabled" : "unavailable, using GLES copy");
+			if (using_android_stream) {
+				return;
 			}
 		}
 
@@ -1122,7 +1372,7 @@ private:
 			view.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
 			view.pose = views[eye].pose;
 			view.fov = eye < 2 ? cv10_fov : XrFovf{-focus_half_fov, focus_half_fov, focus_half_fov, -focus_half_fov};
-			view.subImage.swapchain = swapchain;
+			view.subImage.swapchain = using_android_stream ? android_stream.swapchain() : swapchain;
 			view.subImage.imageRect = projection_rects[eye];
 		}
 		return true;
@@ -1216,15 +1466,23 @@ private:
 		};
 		XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
 		std::array<XrCompositionLayerProjectionView, 4> projection_views{};
-		const auto capture_timestamp = frame.shouldRender && capture ? capture.update(transform_uniform) : 0;
+		jlong capture_timestamp = 0;
+		if (frame.shouldRender && capture) {
+			capture_timestamp = using_android_stream ? capture.update_stream(android_stream.update(session))
+			                                        : capture.update(transform_uniform);
+		}
 		if (capture_timestamp != 0) {
 			if (capture_cv10_optics) {
 				if (locate_projection_views(frame.predictedDisplayTime, projection_views)) {
 					// OpenXR uses the last released image until a new capture reaches the swapchain.
 					if (capture_timestamp != submitted_capture_timestamp) {
-						draw_panel();
+						if (using_android_stream) {
+							++streamed_frames;
+						} else {
+							draw_panel();
+							++copied_frames;
+						}
 						submitted_capture_timestamp = capture_timestamp;
-						++copied_frames;
 					} else {
 						++reused_frames;
 					}
@@ -1302,6 +1560,9 @@ private:
 	const uint32_t capture_width;
 	const uint32_t capture_height;
 	const XrExtent2Df capture_size;
+	const bool direct_capture;
+	AndroidStream android_stream;
+	bool using_android_stream = false;
 	jlong submitted_capture_timestamp = 0;
 	PFN_xrConvertTimeToTimespecTimeKHR convert_time = nullptr;
 	PFN_xrConvertTimespecTimeToTimeKHR convert_from_monotonic = nullptr;
@@ -1311,6 +1572,7 @@ private:
 	uint32_t unwarped_frames = 0;
 	bool trace_late_projection = false;
 	uint32_t copied_frames = 0;
+	uint32_t streamed_frames = 0;
 	uint32_t reused_frames = 0;
 	XrInstance instance = XR_NULL_HANDLE;
 	XrSystemId system_id = XR_NULL_SYSTEM_ID;
@@ -1365,14 +1627,15 @@ run_launcher(JNIEnv *env,
              bool capture_world_anchored,
              bool capture_wide_canvas,
              uint32_t optical_eye_size,
-             bool use_bundled_runtime)
+             bool use_bundled_runtime,
+             bool direct_capture)
 {
 	try {
 		// A display configuration change can start a new Activity before the old worker exits.
 		std::lock_guard<std::mutex> lock(session_mutex);
 		JavaState state(env, java_state);
 		DisplayCapture capture(env, java_capture);
-		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, optical_eye_size);
+		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, optical_eye_size, direct_capture);
 		if (!state.should_stop()) {
 			std::string runtime_manifest;
 			if (java_runtime_manifest != nullptr) {
@@ -1402,7 +1665,7 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jboolean use_bundled_runtime)
 {
 	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false, 0,
-	                    use_bundled_runtime == JNI_TRUE);
+	                    use_bundled_runtime == JNI_TRUE, false);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -1415,8 +1678,10 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jstring java_runtime_manifest,
                                                                            jboolean world_anchored,
                                                                            jboolean wide_canvas,
-                                                                           jint optical_eye_size)
+                                                                           jint optical_eye_size,
+                                                                           jboolean direct_capture)
 {
 	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
-	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, optical_eye_size, true);
+	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, optical_eye_size, true,
+	                    direct_capture == JNI_TRUE);
 }

@@ -246,6 +246,9 @@ oxr_xrEnumerateSwapchainImages(XrSwapchain swapchain,
 	OXR_VERIFY_SWAPCHAIN_AND_INIT_LOG(&log, swapchain, sc, "xrEnumerateSwapchainImages");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sc->sess);
 	struct xrt_swapchain *xsc = sc->swapchain;
+	if (xsc->android_stream) {
+		return XR_ERROR_FEATURE_UNSUPPORTED;
+	}
 
 	if (imageCountOutput != NULL) {
 		*imageCountOutput = xsc->image_count;
@@ -271,6 +274,9 @@ oxr_xrAcquireSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageAcquire
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sc->sess);
 	OXR_VERIFY_ARG_TYPE_CAN_BE_NULL(&log, acquireInfo, XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO);
 	OXR_VERIFY_ARG_NOT_NULL(&log, index);
+	if (sc->swapchain->android_stream) {
+		return XR_ERROR_CALL_ORDER_INVALID;
+	}
 
 	return sc->acquire_image(&log, sc, acquireInfo, index);
 }
@@ -285,6 +291,9 @@ oxr_xrWaitSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageWaitInfo *
 	OXR_VERIFY_SWAPCHAIN_AND_INIT_LOG(&log, swapchain, sc, "xrWaitSwapchainImage");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sc->sess);
 	OXR_VERIFY_ARG_TYPE_AND_NOT_NULL(&log, waitInfo, XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO);
+	if (sc->swapchain->android_stream) {
+		return XR_ERROR_CALL_ORDER_INVALID;
+	}
 
 	return sc->wait_image(&log, sc, waitInfo);
 }
@@ -299,6 +308,9 @@ oxr_xrReleaseSwapchainImage(XrSwapchain swapchain, const XrSwapchainImageRelease
 	OXR_VERIFY_SWAPCHAIN_AND_INIT_LOG(&log, swapchain, sc, "xrReleaseSwapchainImage");
 	OXR_VERIFY_SESSION_NOT_LOST(&log, sc->sess);
 	OXR_VERIFY_ARG_TYPE_CAN_BE_NULL(&log, releaseInfo, XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO);
+	if (sc->swapchain->android_stream) {
+		return XR_ERROR_CALL_ORDER_INVALID;
+	}
 
 	return sc->release_image(&log, sc, releaseInfo);
 }

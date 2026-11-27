@@ -94,6 +94,10 @@ struct comp_layer_accum
 
 	//! Number of submitted layers.
 	uint32_t layer_count;
+
+	//! Unique Android stream images retained from layer transfer until the draw finishes.
+	struct xrt_swapchain *android_streams[XRT_MAX_LAYERS * XRT_MAX_VIEWS];
+	uint32_t android_stream_count;
 };
 
 /*!
@@ -105,6 +109,10 @@ struct comp_layer_accum
  */
 xrt_result_t
 comp_layer_accum_begin(struct comp_layer_accum *cla, const struct xrt_layer_frame_data *data);
+
+//! Release the images retained for recording and executing this frame.
+void
+comp_layer_accum_release_android_streams(struct comp_layer_accum *cla);
 
 /*!
  * Accumulate swapchains and data for a projection layer for a frame.

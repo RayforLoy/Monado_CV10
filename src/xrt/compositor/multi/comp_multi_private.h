@@ -115,6 +115,11 @@ struct multi_compositor
 	//! Owning system compositor.
 	struct multi_system_compositor *msc;
 
+#ifdef XRT_OS_ANDROID
+	//! Session destruction must drain any transferred Android stream images.
+	bool imported_android_stream;
+#endif
+
 	//! Used to implement wait frame, only used for in process.
 	struct os_precise_sleeper frame_sleeper;
 
@@ -365,6 +370,11 @@ struct multi_system_compositor
 	 * and the rendering timings on it.
 	 */
 	struct os_mutex list_and_timing_lock;
+
+#ifdef XRT_OS_ANDROID
+	//! Held from layer transfer through the native compositor's GPU completion.
+	struct os_mutex draw_lock;
+#endif
 
 	struct
 	{

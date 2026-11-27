@@ -29,6 +29,10 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+#include <android/hardware_buffer.h>
+#endif
+
 
 /*
  *
@@ -94,7 +98,6 @@ swapchain_dec_image_use(struct xrt_swapchain *xsc, uint32_t index)
 
 	sc->images[index].use_count--;
 	if (sc->images[index].use_count == 0) {
-		os_mutex_unlock(&sc->images[index].use_mutex);
 		pthread_cond_broadcast(&sc->images[index].use_cond);
 	}
 
@@ -121,6 +124,12 @@ swapchain_wait_image(struct xrt_swapchain *xsc, int64_t timeout_ns, uint32_t ind
 		os_mutex_unlock(&sc->images[index].use_mutex);
 		SWAPCHAIN_TRACE_END(swapchain_wait_image);
 		return XRT_SUCCESS;
+	}
+
+	if (timeout_ns == 0) {
+		os_mutex_unlock(&sc->images[index].use_mutex);
+		SWAPCHAIN_TRACE_END(swapchain_wait_image);
+		return XRT_TIMEOUT;
 	}
 
 	// on windows pthread_cond_timedwait can not be used with monotonic time
@@ -311,8 +320,8 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 {
 	xrt_result_t xret = XRT_SUCCESS;
 	uint32_t image_count = sc->vkic.image_count;
-	VkCommandBuffer cmd_buffer;
 	VkResult ret;
+	struct vk_cmd_pool *pool = &sc->cscs->pool;
 
 	VkComponentMapping no_alpha_components = {
 	    .r = VK_COMPONENT_SWIZZLE_R,
@@ -320,6 +329,10 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 	    .b = VK_COMPONENT_SWIZZLE_B,
 	    .a = VK_COMPONENT_SWIZZLE_ONE,
 	};
+	VkComponentMapping alpha_components = {0};
+	if (sc->base.base.android_stream) {
+		alpha_components = no_alpha_components;
+	}
 
 	// This is the format for the image view, it's not adjusted.
 	VkFormat image_view_format = (VkFormat)info->format;
@@ -373,13 +386,14 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 			};
 
 			// Create view with only the specific usage we need.
-			ret = vk_create_view_usage(             //
+			ret = vk_create_view_swizzle_usage(     //
 			    vk,                                 // vk
 			    sc->vkic.images[i].handle,          // image
 			    image_view_type,                    // type
 			    image_view_format,                  // format
 			    image_view_usage,                   // image_usage
 			    subresource_range,                  // subresource_range
+			    alpha_components,                   // components
 			    &sc->images[i].views.alpha[layer]); // out_view
 
 			VK_CHK_WITH_GOTO(ret, "vk_create_view_usage", error);
@@ -416,49 +430,36 @@ do_post_create_vulkan_setup(struct vk_bundle *vk,
 	 *
 	 */
 
-	// To reduce the pointer chasing.
-	struct vk_cmd_pool *pool = &sc->cscs->pool;
+	// Android owns stream images until the renderer acquires them. Their pixels are already populated.
+	if (!sc->base.base.android_stream) {
+		VkCommandBuffer cmd_buffer;
+		vk_cmd_pool_lock(pool);
+		ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &cmd_buffer);
+		VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", error_unlock);
+		VK_NAME_COMMAND_BUFFER(vk, cmd_buffer, "comp_swapchain command buffer");
 
-	// First lock.
-	vk_cmd_pool_lock(pool);
-
-	// Now lets create the command buffer.
-	ret = vk_cmd_pool_create_and_begin_cmd_buffer_locked(vk, pool, 0, &cmd_buffer);
-	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_create_and_begin_cmd_buffer_locked", error_unlock);
-
-	// Name it for debugging.
-	VK_NAME_COMMAND_BUFFER(vk, cmd_buffer, "comp_swapchain command buffer");
-
-	VkImageAspectFlagBits image_barrier_aspect = vk_csci_get_barrier_aspect_mask(image_view_format);
-
-	VkImageSubresourceRange subresource_range = {
-	    .aspectMask = image_barrier_aspect,
-	    .baseMipLevel = 0,
-	    .levelCount = 1,
-	    .baseArrayLayer = 0,
-	    .layerCount = info->array_size * info->face_count,
-	};
-
-	for (uint32_t i = 0; i < image_count; i++) {
-		vk_cmd_image_barrier_gpu_locked(              //
-		    vk,                                       //
-		    cmd_buffer,                               //
-		    sc->vkic.images[i].handle,                //
-		    0,                                        //
-		    VK_ACCESS_SHADER_READ_BIT,                //
-		    VK_IMAGE_LAYOUT_UNDEFINED,                //
-		    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, //
-		    subresource_range);                       //
+		VkImageSubresourceRange subresource_range = {
+		    .aspectMask = vk_csci_get_barrier_aspect_mask(image_view_format),
+		    .baseMipLevel = 0,
+		    .levelCount = 1,
+		    .baseArrayLayer = 0,
+		    .layerCount = info->array_size * info->face_count,
+		};
+		for (uint32_t i = 0; i < image_count; i++) {
+			vk_cmd_image_barrier_gpu_locked(              //
+			    vk,                                       //
+			    cmd_buffer,                               //
+			    sc->vkic.images[i].handle,                //
+			    0,                                        //
+			    VK_ACCESS_SHADER_READ_BIT,                //
+			    VK_IMAGE_LAYOUT_UNDEFINED,                //
+			    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, //
+			    subresource_range);                       //
+		}
+		ret = vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked(vk, pool, cmd_buffer);
+		vk_cmd_pool_unlock(pool);
+		VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked", error);
 	}
-
-	// Done writing commands, submit to queue, waits for command to finish.
-	ret = vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked(vk, pool, cmd_buffer);
-
-	// Done submitting commands.
-	vk_cmd_pool_unlock(pool);
-
-	// Check results from submit.
-	VK_CHK_WITH_GOTO(ret, "vk_cmd_pool_end_submit_wait_and_free_cmd_buffer_locked", error);
 
 	// Init all of the threading objects.
 	for (uint32_t i = 0; i < image_count; i++) {
@@ -528,6 +529,9 @@ comp_swapchain_create_init(struct comp_swapchain *sc,
                            const struct xrt_swapchain_create_properties *xsccp)
 {
 	VkResult ret;
+	if (info->create & XRT_SWAPCHAIN_CREATE_ANDROID_STREAM) {
+		return XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED;
+	}
 
 	VK_DEBUG(vk, "CREATE %p %" PRIu32 "x%" PRIu32 " %s (%" PRIu32 ")", //
 	         (void *)sc,                                               //
@@ -588,6 +592,29 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
                            uint32_t native_image_count)
 {
 	VkResult ret;
+	const bool android_stream = (info->create & XRT_SWAPCHAIN_CREATE_ANDROID_STREAM) != 0;
+	if (android_stream) {
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+		if (native_image_count != 1 || !xrt_graphics_buffer_is_valid(native_images[0].handle) ||
+		    info->create != XRT_SWAPCHAIN_CREATE_ANDROID_STREAM || info->bits != XRT_SWAPCHAIN_USAGE_SAMPLED ||
+		    info->format != VK_FORMAT_R8G8B8A8_UNORM || info->array_size != 1 || info->face_count != 1 ||
+		    info->mip_count != 1 || info->sample_count != 1) {
+			return XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED;
+		}
+		AHardwareBuffer_Desc desc;
+		AHardwareBuffer_describe(native_images[0].handle, &desc);
+		const bool rgba_format = desc.format == AHARDWAREBUFFER_FORMAT_R8G8B8A8_UNORM ||
+		                         desc.format == AHARDWAREBUFFER_FORMAT_R8G8B8X8_UNORM;
+		if (desc.width != info->width || desc.height != info->height || desc.layers != 1 || !rgba_format ||
+		    !(desc.usage & AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE)) {
+			VK_WARN(vk, "Unsupported Android stream buffer: %ux%u, %u layers, format=%u, usage=0x%" PRIx64,
+			        desc.width, desc.height, desc.layers, desc.format, desc.usage);
+			return XRT_ERROR_SWAPCHAIN_FORMAT_UNSUPPORTED;
+		}
+#else
+		return XRT_ERROR_SWAPCHAIN_FLAG_VALID_BUT_UNSUPPORTED;
+#endif
+	}
 
 	VK_DEBUG(vk, "IMPORT %p %" PRIu32 "x%" PRIu32 " %s (%" PRIu32 ")", //
 	         (void *)sc,                                               //
@@ -595,6 +622,7 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 	         vk_str_format(info->format), info->format);
 
 	set_common_fields(sc, destroy_func, vk, cscs, native_image_count);
+	sc->base.base.android_stream = android_stream;
 
 	// Use the image helper to get the images.
 	ret = vk_ic_from_natives(vk, info, native_images, native_image_count, &sc->vkic);
@@ -615,6 +643,48 @@ comp_swapchain_import_init(struct comp_swapchain *sc,
 	}
 
 	return XRT_SUCCESS;
+}
+
+void
+comp_swapchain_android_stream_barriers(struct vk_bundle *vk,
+                                       VkCommandBuffer cmd,
+                                       struct xrt_swapchain *const *streams,
+                                       uint32_t count,
+                                       bool acquire)
+{
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+	if (count == 0) {
+		return;
+	}
+
+	const uint32_t local_queue = vk->main_queue->family_index;
+	VkImageMemoryBarrier barriers[XRT_MAX_LAYERS * XRT_MAX_VIEWS];
+	assert(count <= ARRAY_SIZE(barriers));
+	for (uint32_t i = 0; i < count; i++) {
+		barriers[i] = (VkImageMemoryBarrier){
+		    .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		    .srcAccessMask = acquire ? 0 : VK_ACCESS_SHADER_READ_BIT,
+		    .dstAccessMask = acquire ? VK_ACCESS_SHADER_READ_BIT : 0,
+		    .oldLayout = acquire ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		    .newLayout = acquire ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL,
+		    .srcQueueFamilyIndex = acquire ? VK_QUEUE_FAMILY_FOREIGN_EXT : local_queue,
+		    .dstQueueFamilyIndex = acquire ? local_queue : VK_QUEUE_FAMILY_FOREIGN_EXT,
+		    .image = comp_swapchain(streams[i])->vkic.images[0].handle,
+		    .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1},
+		};
+	}
+
+	const VkPipelineStageFlags sampling = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+	const VkPipelineStageFlags src = acquire ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT : sampling;
+	const VkPipelineStageFlags dst = acquire ? sampling : VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	vk->vkCmdPipelineBarrier(cmd, src, dst, 0, 0, NULL, 0, NULL, count, barriers);
+#else
+	(void)vk;
+	(void)cmd;
+	(void)streams;
+	(void)count;
+	(void)acquire;
+#endif
 }
 
 void

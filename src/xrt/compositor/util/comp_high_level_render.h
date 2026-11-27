@@ -18,6 +18,8 @@
 
 #include "comp_render.h"
 #include "comp_high_level_scratch.h"
+#include "comp_layer_accum.h"
+#include "comp_swapchain.h"
 
 
 #ifdef __cplusplus
@@ -123,8 +125,7 @@ chl_frame_state_gfx_set_target(struct chl_frame_state *frame_state,
 static inline void
 chl_frame_state_gfx_default_pipeline(struct chl_frame_state *frame_state,
                                      struct render_gfx *render,
-                                     const struct comp_layer *layers,
-                                     uint32_t layer_count,
+                                     const struct comp_layer_accum *layers,
                                      const struct xrt_pose world_poses_scanout_begin[XRT_MAX_VIEWS],
                                      const struct xrt_pose world_poses_scanout_end[XRT_MAX_VIEWS],
                                      const struct xrt_pose eye_poses[XRT_MAX_VIEWS],
@@ -139,7 +140,7 @@ chl_frame_state_gfx_default_pipeline(struct chl_frame_state *frame_state,
 	    world_poses_scanout_end,   //
 	    eye_poses,                 //
 	    fovs,                      //
-	    layer_count);              //
+	    layers->layer_count);      //
 
 	chl_frame_state_gfx_set_target( //
 	    frame_state,                //
@@ -148,16 +149,20 @@ chl_frame_state_gfx_default_pipeline(struct chl_frame_state *frame_state,
 	    target_viewport_datas,      //
 	    vertex_rots);               //
 
-	// Start the compute pipeline.
+	// Start the graphics pipeline.
 	render_gfx_begin(render);
+	comp_swapchain_android_stream_barriers(render->r->vk, render->r->cmd, layers->android_streams,
+	                                       layers->android_stream_count, true);
 
 	// Build the command buffer.
 	comp_render_gfx_dispatch( //
 	    render,               //
-	    layers,               //
-	    layer_count,          //
+	    layers->layers,       //
+	    layers->layer_count,  //
 	    &frame_state->data);  //
 
+	comp_swapchain_android_stream_barriers(render->r->vk, render->r->cmd, layers->android_streams,
+	                                       layers->android_stream_count, false);
 	// Make the command buffer submittable.
 	render_gfx_end(render);
 }
@@ -205,8 +210,7 @@ chl_frame_state_cs_set_target(struct chl_frame_state *frame_state,
 static inline void
 chl_frame_state_cs_default_pipeline(struct chl_frame_state *frame_state,
                                     struct render_compute *render,
-                                    const struct comp_layer *layers,
-                                    uint32_t layer_count,
+                                    const struct comp_layer_accum *layers,
                                     const struct xrt_pose world_poses_scanout_begin[XRT_MAX_VIEWS],
                                     const struct xrt_pose world_poses_scanout_end[XRT_MAX_VIEWS],
                                     const struct xrt_pose eye_poses[XRT_MAX_VIEWS],
@@ -222,7 +226,7 @@ chl_frame_state_cs_default_pipeline(struct chl_frame_state *frame_state,
 	    world_poses_scanout_end,   //
 	    eye_poses,                 //
 	    fovs,                      //
-	    layer_count);              //
+	    layers->layer_count);      //
 
 	chl_frame_state_cs_set_target( //
 	    frame_state,               //
@@ -233,14 +237,18 @@ chl_frame_state_cs_default_pipeline(struct chl_frame_state *frame_state,
 
 	// Start the compute pipeline.
 	render_compute_begin(render);
+	comp_swapchain_android_stream_barriers(render->r->vk, render->r->cmd, layers->android_streams,
+	                                       layers->android_stream_count, true);
 
 	// Build the command buffer.
 	comp_render_cs_dispatch( //
 	    render,              //
-	    layers,              //
-	    layer_count,         //
+	    layers->layers,      //
+	    layers->layer_count, //
 	    &frame_state->data); //
 
+	comp_swapchain_android_stream_barriers(render->r->vk, render->r->cmd, layers->android_streams,
+	                                       layers->android_stream_count, false);
 	// Make the command buffer submittable.
 	render_compute_end(render);
 }

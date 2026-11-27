@@ -973,8 +973,7 @@ dispatch_graphics(struct comp_renderer *r,
 	VkResult ret;
 
 	// Basics
-	const struct comp_layer *layers = c->base.layer_accum.layers;
-	uint32_t layer_count = c->base.layer_accum.layer_count;
+	const struct comp_layer_accum *layers = &c->base.layer_accum;
 
 	// Resources for the distortion render target.
 	struct render_gfx_target_resources *rtr = &r->rtr_array[r->acquired_buffer];
@@ -1006,7 +1005,6 @@ dispatch_graphics(struct comp_renderer *r,
 	    frame_state,                      //
 	    render,                           //
 	    layers,                           //
-	    layer_count,                      //
 	    world_poses_scanout_begin,        //
 	    world_poses_scanout_end,          //
 	    eye_poses,                        //
@@ -1045,8 +1043,7 @@ dispatch_compute(struct comp_renderer *r,
 	VkResult ret;
 
 	// Basics
-	const struct comp_layer *layers = c->base.layer_accum.layers;
-	uint32_t layer_count = c->base.layer_accum.layer_count;
+	const struct comp_layer_accum *layers = &c->base.layer_accum;
 
 	// Device view information.
 	struct xrt_fov fovs[XRT_MAX_VIEWS];
@@ -1076,7 +1073,6 @@ dispatch_compute(struct comp_renderer *r,
 	    frame_state,                     //
 	    render,                          //
 	    layers,                          //
-	    layer_count,                     //
 	    world_poses_scanout_begin,       //
 	    world_poses_scanout_end,         //
 	    eye_poses,                       //
