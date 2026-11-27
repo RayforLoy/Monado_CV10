@@ -198,6 +198,8 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 `dumpsys SurfaceFlinger --comp-displays` 里，`HUAWEIAV03` 的 3200×1600 `FramebufferSurface` 计数在约 2.6 秒内从 33737 增至 33883。两次 `dumpsys android.hardware.graphics.composer3.IComposer/default` 采样中，HWC 显示 1 均使用 3200×1600、90 Hz 的全幅 `GPU_TARGET`。同一 SurfaceView 对应的缓冲和客户端合成目标缓冲均发生变化。可以确认黑屏期间 Fold7 仍在合成和更新 CV10 外显缓冲。逐图层 `--latency` 只返回主屏周期，没有提供 CV10 的呈现记录。物理链路即时状态及镜片出画仍需独立证据。[提取后的计数和 HWC 读数](evidence/fold7-hwc-black-optical.log) · [同轮外显与右镜对照](evidence/fold7-hwc-black-optical.png) · [AOSP 的逐图层统计实现](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-qpr2-release/services/surfaceflinger/SurfaceFlinger.cpp#6403)
 
+14:10，用户重接眼镜端后，用 `e8b1ef7` 预览回归。退出 Pocket XR 空间并恢复 **Monado CV10 Preview** Broker。内置 3D 启动器进入 `FOCUSED`，手机底部上滑并停留触发置中，点按后原版 `hello_xr` 进入 `FOCUSED` 并在返回时完成 `xrDestroyInstance`。CV10 开屏命令收到 `OK`，外显截图两眼都有蓝块，同期右镜相机仍未拍到蓝块。该轮只检验了固定相机对准的右镜。[外显与右镜对照](evidence/fold7-launcher-hello-after-eye-reconnect.jpg) · [筛选日志](evidence/fold7-pocket-panel-routing.log)
+
 ### 2D USB 授权后继续启动
 
 2026-11-27 13:28–13:30 香港时间，在同一台 Fold7 上保留 C9.53.6 原厂线、外接 5 V、三星镜像及右镜相机位置。源码提交 `463702b` 在 USB 权限对话框关闭、启动器重新获得焦点后，检查仍连接的 CV10 和它的授权状态。允许后继续启动刚才点选的应用。拒绝或眼镜已断开时留在列表。此流程依赖 Android 在关闭系统对话框前授予 USB 设备访问权。[AOSP USB 授权对话框](https://android.googlesource.com/platform/frameworks/base/%2B/c231302191e6/packages/SystemUI/src/com/android/systemui/usb/UsbPermissionActivity.java)

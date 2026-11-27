@@ -1,0 +1,72 @@
+Fold7 SM-F9660 / original C9.53.6 cable + 5 V / Samsung mirrored / 2026-11-27 HKT
+
+Baseline 5a92592e79d0d6e1fe6b4545ebc5a32171bf3ee3c45bb6a05cf5e08bef912770. Original Pocket XR automatically restored hello_xr as an ordinary panel.
+11-27 13:59:00.698 13424 19886 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 13:59:00.698 13424 19886 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 13:59:00.700 13424 19886 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 13:59:00.700 13424 19886 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 13:59:00.700 13424 19886 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 13:59:01.119 13424 19886 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 0)
+11-27 13:59:01.121 13424 13424 I Cv10PocketXrPreview: First virtual display frame available on display 281
+11-27 13:59:01.915 13424 19886 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 13:59:01.917 13424 19886 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 13:59:01.919 13874 20183 V hello_xr: [13:59:01.919][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598370080 time=2521491498280
+
+New preview: first trial. Original restored panel rejected. Warm reopening the same app process from 2D stalled.
+11-27 14:05:22.000
+Stock Pocket XR 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337; original hello_xr 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, existing Shizuku PID 19056
+Installed Preview SHA-256 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281
+11-27 14:05:42.099 22613 22613 I Cv10PocketXrPreview: First virtual display frame available on display 285
+11-27 14:05:41.889 22613 23204 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 14:05:42.098 22613 23204 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 0)
+11-27 14:05:42.879 23388 23417 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+11-27 14:05:41.648 22613 23211 I MonadoCV10: CV10 valid IMU samples=1 deviceNs=4331046270618
+Unmodified Pocket XR TrackpadActivity reached physical display 0.
+11-27 14:05:48.186 22613 23204 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 1)
+Stopped the preview, released display 285.
+11-27 14:05:42.879 23388 23417 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+11-27 14:05:42.882 23388 23417 E hello_xr: [14:05:42.882][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 14:05:59.789  2961  5867 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=260273361) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 14:06:04.304  2961  3284 W ActivityTaskManager: Activity destroy timeout for ActivityRecord{88797007 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34831 f}}
+
+New preview: repeated the space and recenter tests, then stopped the lingering sample process before the 2D launch.
+11-27 14:07:19.000
+Stock Pocket XR 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337; original hello_xr 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, existing Shizuku PID 19056
+Installed Preview SHA-256 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281
+11-27 14:07:39.588 25817 25817 I Cv10PocketXrPreview: First virtual display frame available on display 289
+11-27 14:07:39.376 25817 26226 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 14:07:39.590 25817 26226 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 0)
+11-27 14:07:40.846 26461 26480 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+11-27 14:07:39.070 25817 26235 I MonadoCV10: CV10 valid IMU samples=1 deviceNs=4650717249043
+Unmodified Pocket XR TrackpadActivity reached physical display 0.
+11-27 14:07:46.174 25817 26226 I Cv10SpatialLauncher: Anchored Pocket XR canvas (recenter 1)
+Stopped the preview, released display 289. This comparison starts a fresh hello_xr process.
+11-27 14:07:57.262 26985 27005 V hello_xr: [14:07:57.262][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520306474844
+11-27 14:07:58.974 26985 27005 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final Preview 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281, runtime Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+ACTIVATE_VPN: ignore
+
+Independent Pocket XR runtime application screen.
+11-27 14:08:19.000
+Installed preview SHA-256 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281, companion SHA-256 043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:08:37.184 25817 25817 I Cv10PocketXrPreview: First virtual display frame available on display 293
+11-27 14:08:45.330 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 297
+11-27 14:08:45.728 27953 27971 V hello_xr: [14:08:45.728][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2827379261058
+Round 1 game screen 297 released. Space 293 kept.
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+11-27 14:08:54.052 27953 27971 V hello_xr: [14:08:54.052][Info   ]     APP_CMD_DESTROY
+11-27 14:08:54.280  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [27953] reason: Bg-buff
+11-27 14:09:03.771  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [27953] reason: ActivityDestroyTimeout
+
+Launch from the Monado CV10 3D menu after closing the Pocket XR space.
+11-27 14:10:29.000
+11-27 14:10:35.454 29656 29682 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 14:10:40.631 29656 29682 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 14:10:41.274 29818 29843 V hello_xr: [14:10:41.274][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2526123788591
+11-27 14:10:45.309 29818 29843 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+11-27 14:10:35.209 25817 29719 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK

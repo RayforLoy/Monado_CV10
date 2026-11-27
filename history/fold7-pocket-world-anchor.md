@@ -26,3 +26,15 @@ Galaxy Z Fold7（SM-F9660）、C9.53.6 原厂线和外接 5 V。三星外接显�
 两包均用 `-Pcv10LauncherPreview=true -Pcv10Abi=arm64-v8a` 构建，v2 签名、16 KiB ZIP 对齐及五个原生库的 15 个 ELF `PT_LOAD` 段通过检查。[诊断补丁](pocket-world-anchor-diagnostic.patch)仅用于复测。诊断中点 **显示左右眼测试卡** 后，用已授权的 ADB 在日志记录的显示 ID 上启动原版 `com.hayeco.flipspaces/.spatial.SpaceActivity`，传入 `--es test_card eyes`。诊断属性 `debug.cv10.anchor_test` 的 0、1、2 分别对应实时姿态、实时姿态加偏航、实时姿态加俯仰。测试结束后清空属性。
 
 04:07 用普通预览确认选中固定模式时本机 VPN 选项保持关闭。首次回归遇到 Windows ADB 服务超时。无线 ADB 恢复后，用同一 APK 从 2D 启动器打开原版 `hello_xr`，会话进入 `FOCUSED`，右镜拍到蓝方块，按返回后进入 `STOPPING`。普通预览安装在 Fold7，APK 摘要一致，Broker 已恢复为稳定版。[普通预览右镜实拍](evidence/fold7-pocket-world-anchor-preview-hello-right.jpg)
+
+## 原版 Pocket XR 恢复旧面板
+
+2026-11-27 13:59–14:10 香港时间。同一 Fold7、C9.53.6 原厂线、5 V 供电和三星外屏镜像。原版 Pocket XR 1.6.28 与 Khronos OpenGLES `hello_xr` 均保留原 APK。沿用既有 Shizuku 授权，未开启本机 VPN 或注入诊断姿态。
+
+在 Broker 选 **Monado CV10 Preview** 并从手机点 **打开 Pocket XR 空间**。旧版预览已跟踪 CV10 的实际 USB 姿态并显示双目画面。原版随后恢复旧的计算器、时钟和 `hello_xr` 普通面板。样例接入 Monado 直出并进入 `FOCUSED` 后，空间会话失去焦点，点按置中没有提交新的画面锚点。
+
+`e8b1ef7` 让 Monado CV10 和 Preview 在建立连接前辨认 Pocket XR 的普通应用虚拟屏。样例收到 `XR_ERROR_RUNTIME_UNAVAILABLE`，空间恢复或保持 `FOCUSED`，两轮点按置中均成功提交 `recenter 1`。同轮外显帧有双目时钟面板，固定右镜相机仍未拍到面板。第一轮关闭空间后直接启动样例时，系统复用之前失败的进程，未进入 `FOCUSED`。第二轮结束该样例进程后，从 Monado 2D 列表点选，新的样例进程进入 `FOCUSED` 并完成 `xrDestroyInstance`。[实机筛选日志](evidence/fold7-pocket-panel-routing.log) · [双目外显和右镜对照](evidence/fold7-pocket-panel-routing.jpg)
+
+保留原样例和同一预览包，Broker 改选 **Pocket XR (Monado CV10)**。从 **在 Pocket XR 中打开 OpenXR 应用** 选择样例，独立应用屏收到画面，样例进入 `FOCUSED`。关闭独立应用屏释放该屏并保留原空间。三星 Freecess 随后冻结样例，约十秒后因 `ActivityDestroyTimeout` 解冻，该轮关闭应用屏时未观察到 `xrDestroyInstance`。结束整个预览后，Broker 恢复为 **Monado CV10 Preview**，外加的虚拟屏全部释放。[实机筛选日志](evidence/fold7-pocket-panel-routing.log)
+
+本轮的 ARM64 预览 APK SHA-256 为 `2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281`。APK 签名及 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 ELF `PT_LOAD` 段均按 16 KiB 对齐。此轮验证了正式入口下的实时 IMU 与置中流程，佩戴转头、左镜实拍及 Fold7 上原版应用接收本机 VPN 姿态仍待验收。
