@@ -22,6 +22,7 @@ import android.os.Looper;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.Display;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import androidx.annotation.Keep;
@@ -183,6 +184,11 @@ public class Client implements ServiceConnection {
     public int blockingConnect(Context context_, String packageName) {
         Log.i(TAG, "blockingConnect");
 
+        if (isPocketXrAppPanel(context_, packageName)) {
+            Log.i(TAG, "Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.");
+            return -1;
+        }
+
         synchronized (binderSync) {
             if (!bind(context_, packageName)) {
                 Log.e(TAG, "Bind failed immediately");
@@ -270,6 +276,21 @@ public class Client implements ServiceConnection {
         fd = ours;
         Log.i(TAG, "Socket fd " + fd.getFd());
         return fd.getFd();
+    }
+
+    private static boolean isPocketXrAppPanel(Context context, String runtimePackage) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !(context instanceof Activity)) {
+            return false;
+        }
+        if (!runtimePackage.equals("org.cv10.monado.out_of_process")
+                && !runtimePackage.equals("org.cv10.monado.out_of_process.launcher_preview")) {
+            return false;
+        }
+        // Pocket XR restores ordinary panels with CATEGORY_LAUNCHER. Its XR app screen is separate.
+        Display display = context.getDisplay();
+        return display != null
+                && display.getDisplayId() != Display.DEFAULT_DISPLAY
+                && display.getName().startsWith("Pocket XR: ");
     }
 
     /**
