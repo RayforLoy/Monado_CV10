@@ -6,6 +6,7 @@
 #extension GL_GOOGLE_include_directive : require
 
 #include "srgb.inc.glsl"
+#include "cv10_enhanced.inc.glsl"
 
 
 // The size of the distortion texture dimensions in texels.
@@ -29,6 +30,7 @@ layout(set = 0, binding = 3, std140) uniform restrict Config
 	vec4 post_transform[2];
 	mat4 transform_timewarp_scanout_begin[2];
 	mat4 transform_timewarp_scanout_end[2];
+	vec4 enhanced_render_mode;
 }ubo;
 
 
@@ -134,6 +136,10 @@ void main()
 	    texture(source[iz], g_uv).g, //
 	    texture(source[iz], b_uv).b, //
 	    1);                          //
+
+	if (ubo.enhanced_render_mode.x > 0.0) {
+		colour.rgb = cv10_enhance(source[iz], colour.rgb, r_uv, g_uv, b_uv, ubo.post_transform[iz]);
+	}
 
 	// Do colour correction here since there are no automatic conversion in hardware available.
 	colour = vec4(from_linear_to_srgb(colour.rgb), 1);

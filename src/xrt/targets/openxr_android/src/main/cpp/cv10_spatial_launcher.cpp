@@ -35,7 +35,6 @@ constexpr uint32_t canvas_width = 2048;
 constexpr uint32_t canvas_height = 1280;
 constexpr uint32_t pocket_width = 3840;
 constexpr uint32_t pocket_height = 1080;
-constexpr uint32_t cv10_eye_size = 1600;
 // The Pocket XR companion uses the symmetric OEM CV10 frustum at 47.5 degrees per side.
 constexpr float cv10_half_fov = 47.5f * 0.017453292519943295f;
 constexpr XrFovf cv10_fov = {-cv10_half_fov, cv10_half_fov, cv10_half_fov, -cv10_half_fov};
@@ -289,10 +288,10 @@ public:
 	         DisplayCapture &capture,
 	         bool capture_world_anchored,
 	         bool capture_wide_canvas,
-	         bool capture_cv10_optics)
+	         uint32_t optical_eye_size)
 	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored),
-	      capture_cv10_optics(capture_cv10_optics), capture_width(capture_cv10_optics ? 2 * cv10_eye_size : pocket_width),
-	      capture_height(capture_cv10_optics ? cv10_eye_size : pocket_height),
+	      capture_cv10_optics(optical_eye_size != 0), capture_width(capture_cv10_optics ? 2 * optical_eye_size : pocket_width),
+	      capture_height(capture_cv10_optics ? optical_eye_size : pocket_height),
 	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size)
 	{
 		if (capture_cv10_optics) {
@@ -541,6 +540,13 @@ private:
 		chain_info.sampleCount = 1;
 		chain_info.width = capture ? capture_width : canvas_width;
 		chain_info.height = capture ? capture_height : canvas_height;
+		if (capture_cv10_optics) {
+			GLint texture_size = 0;
+			glGetIntegerv(GL_MAX_TEXTURE_SIZE, &texture_size);
+			if (texture_size <= 0 || chain_info.width > static_cast<uint32_t>(texture_size)) {
+				throw std::runtime_error("CV10 optical render size exceeds the GPU texture limit");
+			}
+		}
 		chain_info.faceCount = 1;
 		chain_info.arraySize = 1;
 		chain_info.mipCount = 1;
@@ -1011,7 +1017,7 @@ run_launcher(JNIEnv *env,
              jstring java_runtime_manifest,
              bool capture_world_anchored,
              bool capture_wide_canvas,
-             bool capture_cv10_optics,
+             uint32_t optical_eye_size,
              bool use_bundled_runtime)
 {
 	try {
@@ -1019,7 +1025,7 @@ run_launcher(JNIEnv *env,
 		std::lock_guard<std::mutex> lock(session_mutex);
 		JavaState state(env, java_state);
 		DisplayCapture capture(env, java_capture);
-		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, capture_cv10_optics);
+		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas, optical_eye_size);
 		if (!state.should_stop()) {
 			std::string runtime_manifest;
 			if (java_runtime_manifest != nullptr) {
@@ -1048,7 +1054,7 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jstring java_runtime_manifest,
                                                                                   jboolean use_bundled_runtime)
 {
-	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false, false,
+	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false, 0,
 	                    use_bundled_runtime == JNI_TRUE);
 }
 
@@ -1062,8 +1068,8 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jstring java_runtime_manifest,
                                                                            jboolean world_anchored,
                                                                            jboolean wide_canvas,
-                                                                           jboolean cv10_optics)
+                                                                           jint optical_eye_size)
 {
 	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
-	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, cv10_optics == JNI_TRUE, true);
+	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, optical_eye_size, true);
 }

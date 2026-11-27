@@ -1093,6 +1093,20 @@ compositor_get_view_config(struct xrt_compositor_native *xcn,
 	for (uint32_t i = 0; i < c->view_config_count; i++) {
 		if (c->view_configs[i].view_type == view_type) {
 			*out_view_config = c->view_configs[i];
+#ifdef XRT_OS_ANDROID
+			if (c->is_cv10 && view_type == XRT_VIEW_TYPE_STEREO) {
+				int eye_size = android_globals_get_cv10_render_eye_size();
+				if (eye_size > 0) {
+					for (uint32_t view = 0; view < out_view_config->view_count; view++) {
+						struct xrt_view_config_properties *props = &out_view_config->views[view];
+						props->recommended.width_pixels =
+						    MIN((uint32_t)eye_size, props->max.width_pixels);
+						props->recommended.height_pixels =
+						    MIN((uint32_t)eye_size, props->max.height_pixels);
+					}
+				}
+			}
+#endif
 			return XRT_SUCCESS;
 		}
 	}
@@ -1124,6 +1138,9 @@ comp_main_create_system_compositor(struct xrt_device *xdev,
 	c->frame.waited.id = -1;
 	c->frame.rendering.id = -1;
 	c->xdev = xdev;
+#ifdef XRT_OS_ANDROID
+	c->is_cv10 = strcmp(xdev->serial, "Huawei-CV10-USB") == 0;
+#endif
 
 	xrt_result_t xret = XRT_SUCCESS;
 

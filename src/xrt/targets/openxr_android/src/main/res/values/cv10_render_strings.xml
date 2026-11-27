@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_render_title">CV10 render quality</string>
+    <string name="cv10_render_description">Supersampling changes the resolution before lens correction. Reopen the OpenXR app or Pocket XR optical session after changing the size. Higher resolutions use more GPU time and memory.</string>
+    <string name="cv10_render_off">Supersampling off</string>
+    <string name="cv10_render_oem">Huawei center density (%1$d px per eye)</string>
+    <string name="cv10_render_custom">Custom supersampling</string>
+    <string name="cv10_render_size_hint">Square render size per eye (pixels)</string>
+    <string name="cv10_render_size_error">Enter a size from %1$d to %2$d pixels.</string>
+    <string name="cv10_render_enhanced">Enable enhanced render mode (center sharpening)</string>
+</resources>

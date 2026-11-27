@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import org.freedesktop.monado.auxiliary.Cv10ExternalPresentation
 import org.freedesktop.monado.auxiliary.Cv10PocketXrDisplayService
+import org.freedesktop.monado.auxiliary.Cv10RenderSettings
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_CV10_OPTICS
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_PC_SCREEN_SBS
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_SPACE
@@ -385,15 +386,21 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
 
         status.setText(R.string.cv10_pocket_preview_starting)
         val cv10Optics = mode == MODE_CV10_OPTICS
+        val opticalEyeSize = if (cv10Optics) {
+            Cv10RenderSettings.readSupersamplingEyeSize(Cv10RenderSettings.preferences(this))
+                .coerceAtLeast(Cv10RenderSettings.BASELINE_EYE_SIZE)
+        } else {
+            0
+        }
         val space = mode == MODE_SPACE || cv10Optics
         activePocketPackage = if (cv10Optics) Cv10PocketXrDisplayService.POCKET_CV10_PACKAGE
             else Cv10PocketHeadLinkService.POCKET_PACKAGE
         var displayId: Int? = null
         var hasFrame = false
         lateinit var nextTransport: Cv10PocketXrTransport
-        nextTransport = Cv10PocketXrTransport(applicationContext, mode = mode, onInterrupted = { error ->
+        nextTransport = Cv10PocketXrTransport(applicationContext, mode, opticalEyeSize) { error ->
             if (transport === nextTransport) showError(error)
-        })
+        }
         fun updateStatus() {
             val id = displayId ?: return
             if (transport !== nextTransport) return
@@ -411,7 +418,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             captureWidth = if (mode == MODE_PC_SCREEN_SBS) PC_SCREEN_WIDTH else null,
             worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS && !cv10Optics,
             wideCanvas = wideCanvas.isChecked && mode == MODE_SPACE,
-            cv10Optics = cv10Optics,
+            opticalEyeSize = opticalEyeSize,
             onSurface = { surface ->
                 if (transport === nextTransport) {
                     nextTransport.start(surface) { result ->

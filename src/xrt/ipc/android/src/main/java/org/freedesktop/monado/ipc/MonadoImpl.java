@@ -20,6 +20,7 @@ import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import java.io.IOException;
 import org.freedesktop.monado.auxiliary.Cv10IpdSettings;
+import org.freedesktop.monado.auxiliary.Cv10RenderSettings;
 import org.freedesktop.monado.auxiliary.MonadoView;
 
 /**
@@ -51,6 +52,10 @@ public class MonadoImpl extends IMonado.Stub {
                 if (key == null || Cv10IpdSettings.IPD_MM.equals(key)) {
                     nativeSetCv10IpdMm(Cv10IpdSettings.readOverride(preferences));
                 }
+                if (key == null || Cv10RenderSettings.SUPERSAMPLING_EYE_SIZE.equals(key)
+                        || Cv10RenderSettings.ENABLE_ENHANCED_RENDER_MODE.equals(key)) {
+                    updateRenderSettings(preferences);
+                }
             };
 
     public MonadoImpl(@NonNull Context context, Runnable onAccepted) {
@@ -59,7 +64,13 @@ public class MonadoImpl extends IMonado.Stub {
         cv10Optics = Cv10IpdSettings.preferences(this.context);
         cv10Optics.registerOnSharedPreferenceChangeListener(cv10OpticsListener);
         nativeSetCv10IpdMm(Cv10IpdSettings.readOverride(cv10Optics));
+        updateRenderSettings(cv10Optics);
         nativeStartServer(this.context);
+    }
+
+    private static void updateRenderSettings(SharedPreferences preferences) {
+        nativeSetCv10RenderSettings(Cv10RenderSettings.readSupersamplingEyeSize(preferences),
+                Cv10RenderSettings.readEnhancedRenderMode(preferences));
     }
 
     @Override
@@ -112,6 +123,9 @@ public class MonadoImpl extends IMonado.Stub {
 
     @SuppressWarnings("JavaJniMissingFunction")
     private static native void nativeSetCv10IpdMm(int ipdMm);
+
+    @SuppressWarnings("JavaJniMissingFunction")
+    private static native void nativeSetCv10RenderSettings(int renderEyeSize, boolean enhancedRenderMode);
 
     /**
      * Native method that starts server.

@@ -349,6 +349,9 @@ struct render_resources
 	//! The count of views that we are rendering to.
 	uint32_t view_count;
 
+	//! Apply the optional CV10 center enhancement during final lens correction.
+	bool enable_enhanced_render_mode;
+
 	//! Vulkan resources.
 	struct vk_bundle *vk;
 
@@ -913,6 +916,8 @@ struct render_gfx_mesh_ubo_data
 	struct xrt_normalized_rect pre_transform;
 	struct xrt_matrix_4x4 transform_scanout_begin;
 	struct xrt_matrix_4x4 transform_scanout_end;
+	//! X component enables the CV10 enhancement, packed as std140 vec4.
+	float enhanced_render_mode[4];
 };
 
 /*!
@@ -1391,6 +1396,8 @@ struct render_compute_distortion_ubo_data
 	struct xrt_normalized_rect post_transforms[XRT_MAX_VIEWS];
 	struct xrt_matrix_4x4 transform_timewarp_scanout_begin[XRT_MAX_VIEWS];
 	struct xrt_matrix_4x4 transform_timewarp_scanout_end[XRT_MAX_VIEWS];
+	//! X component enables the CV10 enhancement, packed as std140 vec4.
+	float enhanced_render_mode[4];
 };
 
 /*!

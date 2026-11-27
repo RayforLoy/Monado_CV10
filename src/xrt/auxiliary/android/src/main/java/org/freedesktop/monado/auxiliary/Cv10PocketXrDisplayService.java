@@ -48,7 +48,6 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             "com.hayeco.flipspaces", ".pcscreen.PcScreenActivity");
     private static final int SPACE_WIDTH = 3840;
     private static final int HEIGHT = 1080;
-    private static final int CV10_EYE_SIZE = 1600;
     private static final int DENSITY_DPI = 240;
     private static final int CLIENT_WIDTH = 1280;
     private static final int CLIENT_HEIGHT = 720;
@@ -93,7 +92,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     }
 
     @Override
-    public synchronized int start(Surface surface, IBinder clientLife, int mode)
+    public synchronized int start(Surface surface, IBinder clientLife, int mode, int opticalEyeSize)
             throws RemoteException {
         verifyCaller();
         if (surface == null) throw new IllegalArgumentException("Missing Pocket XR output Surface");
@@ -111,8 +110,11 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             if (mode != MODE_SPACE && mode != MODE_TEST_CARD && mode != MODE_PC_SCREEN_SBS && !cv10Optics) {
                 throw new IllegalArgumentException("Unknown Pocket XR display mode");
             }
-            int width = cv10Optics ? 2 * CV10_EYE_SIZE : (mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH);
-            int height = cv10Optics ? CV10_EYE_SIZE : HEIGHT;
+            if (cv10Optics && !Cv10RenderSettings.isSupportedEyeSize(opticalEyeSize)) {
+                throw new IllegalArgumentException("Invalid CV10 optical render size");
+            }
+            int width = cv10Optics ? 2 * opticalEyeSize : (mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH);
+            int height = cv10Optics ? opticalEyeSize : HEIGHT;
             String name = cv10Optics ? CV10_DISPLAY_NAME : "Monado CV10 Pocket XR";
             if (currentLease != null) throw new IllegalStateException("Pocket XR display is already running");
             lease = new Lease(clientLife, surface, mode);

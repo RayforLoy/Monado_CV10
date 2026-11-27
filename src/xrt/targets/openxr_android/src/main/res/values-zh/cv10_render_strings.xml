@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: BSL-1.0 -->
+<resources>
+    <string name="cv10_render_title">CV10 渲染质量</string>
+    <string name="cv10_render_description">超分辨率调整镜片校正前的渲染分辨率。修改尺寸后请重新打开 OpenXR 应用或 Pocket XR 光学会话。分辨率越高，GPU 和内存开销越大。</string>
+    <string name="cv10_render_off">关闭超分辨率</string>
+    <string name="cv10_render_oem">华为默认中心密度（每眼 %1$d 像素）</string>
+    <string name="cv10_render_custom">自定义超分辨率</string>
+    <string name="cv10_render_size_hint">单眼正方形画面的边长（像素）</string>
+    <string name="cv10_render_size_error">请输入 %1$d 到 %2$d 之间的像素数。</string>
+    <string name="cv10_render_enhanced">启用增强渲染模式（中心锐化）</string>
+</resources>

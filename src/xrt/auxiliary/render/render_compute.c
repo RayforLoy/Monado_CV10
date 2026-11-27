@@ -299,6 +299,7 @@ dispatch_project_pipeline(struct render_compute *render,
 
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.distortion.ubo.mapped;
+	data->enhanced_render_mode[0] = r->enable_enhanced_render_mode ? 1.0f : 0.0f;
 	for (uint32_t i = 0; i < render->r->view_count; ++i) {
 		data->views[i] = views[i];
 		data->post_transforms[i] = src_norm_rects[i];
