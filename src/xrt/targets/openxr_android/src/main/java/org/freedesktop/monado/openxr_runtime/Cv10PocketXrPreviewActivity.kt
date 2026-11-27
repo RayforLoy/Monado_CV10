@@ -40,6 +40,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var test: Button
     private lateinit var controls: Button
     private lateinit var openXrApp: Button
+    private lateinit var closeXrApp: Button
     private lateinit var stop: Button
     private lateinit var headLink: CheckBox
     private lateinit var worldAnchor: CheckBox
@@ -51,7 +52,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private var pendingVpn = false
     private var headLinkStarted = false
     private var controlsAvailable = false
-    private var openingClient = false
+    private var clientDisplayOpen = false
+    private var changingClientDisplay = false
     override var keepSessionWhilePaused = false
         private set
 
@@ -123,6 +125,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             setText(R.string.cv10_pocket_open_xr_app)
             setOnClickListener { chooseOpenXrApp() }
         }
+        closeXrApp = Button(this).apply {
+            setText(R.string.cv10_pocket_close_xr_app)
+            setOnClickListener { closeClientDisplay() }
+        }
         stop = Button(this).apply {
             setText(R.string.cv10_pocket_preview_stop)
             setOnClickListener { stopPreview(getString(R.string.cv10_pocket_preview_intro)) }
@@ -146,6 +152,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         panel.addView(recenter)
         panel.addView(controls)
         panel.addView(openXrApp)
+        panel.addView(closeXrApp)
         panel.addView(pcSetup)
         panel.addView(pcScreen)
         panel.addView(test)
@@ -210,7 +217,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
 
     private fun openClientApp(entry: Cv10AppEntry) {
         val session = transport ?: return
-        if (!controlsAvailable || openingClient) return
+        if (!controlsAvailable || changingClientDisplay) return
         when (activeBrokerPackage()) {
             Cv10PocketHeadLinkService.POCKET_PACKAGE -> Unit
             POCKET_CLIENT_PACKAGE -> {
@@ -224,18 +231,18 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 return
             }
         }
-        openingClient = true
+        changingClientDisplay = true
         updateButtons()
         session.openClientDisplay { result ->
             if (transport !== session) return@openClientDisplay
-            openingClient = false
-            updateButtons()
+            changingClientDisplay = false
             result.onSuccess { displayId ->
+                clientDisplayOpen = true
                 if (!Cv10AppCatalog.launch(this, entry, displayId)) {
-                    session.closeClientDisplay()
                     status.text = getString(R.string.cv10_app_launch_failed, entry.label)
+                    closeClientDisplay()
                 } else if (!openPhoneControls()) {
-                    session.closeClientDisplay()
+                    closeClientDisplay()
                 } else {
                     Log.i(TAG, "Requested Pocket XR client ${entry.component.flattenToShortString()} on display $displayId")
                 }
@@ -243,6 +250,22 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 Log.w(TAG, "Could not create the Pocket XR client display", error)
                 status.setText(R.string.cv10_pocket_client_display_failed)
             }
+            updateButtons()
+        }
+    }
+
+    private fun closeClientDisplay() {
+        val session = transport ?: return
+        if (!clientDisplayOpen || changingClientDisplay) return
+        changingClientDisplay = true
+        updateButtons()
+        session.closeClientDisplay clientClosed@{ result ->
+            if (transport !== session) return@clientClosed
+            changingClientDisplay = false
+            result.onSuccess { clientDisplayOpen = false }.onFailure {
+                status.setText(R.string.cv10_pocket_client_display_close_failed)
+            }
+            updateButtons()
         }
     }
 
@@ -423,7 +446,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         transport = null
         renderer = null
         controlsAvailable = false
-        openingClient = false
+        clientDisplayOpen = false
+        changingClientDisplay = false
         leavePhoneControls()
         if (headLinkStarted) {
             Cv10PocketHeadLinkService.stop(this)
@@ -451,9 +475,11 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         pcSetup.isEnabled = available
         pcScreen.isEnabled = available
         test.isEnabled = available
-        controls.isEnabled = controlsAvailable && !openingClient
+        controls.isEnabled = controlsAvailable && !changingClientDisplay
         openXrApp.visibility = if (controlsAvailable) View.VISIBLE else View.GONE
-        openXrApp.isEnabled = controlsAvailable && !openingClient
+        openXrApp.isEnabled = controlsAvailable && !changingClientDisplay
+        closeXrApp.visibility = if (clientDisplayOpen) View.VISIBLE else View.GONE
+        closeXrApp.isEnabled = !changingClientDisplay
         recenter.visibility = if (renderer?.worldAnchored == true) View.VISIBLE else View.GONE
         stop.isEnabled = renderer != null
     }

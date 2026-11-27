@@ -126,14 +126,18 @@ internal class Cv10PocketXrTransport(
         }
     }
 
-    fun closeClientDisplay() {
-        val service = remote ?: return
+    fun closeClientDisplay(onResult: (Result<Unit>) -> Unit) {
+        val service = remote
+        if (closing || service == null) {
+            onResult(Result.failure(IllegalStateException("The Pocket XR display service is unavailable")))
+            return
+        }
         worker.execute {
-            try {
-                service.closeClientDisplay(clientLife)
-            } catch (error: Exception) {
+            val result = runCatching { service.closeClientDisplay(clientLife) }
+            result.onFailure { error ->
                 Log.w(TAG, "Pocket XR client display release failed", error)
             }
+            main.post { if (!closing) onResult(result) }
         }
     }
 
