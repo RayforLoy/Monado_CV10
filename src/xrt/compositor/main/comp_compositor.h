@@ -99,6 +99,7 @@ struct comp_compositor
 
 	//! The device we are displaying to.
 	struct xrt_device *xdev;
+	bool is_cv10;
 
 	//! Vulkan shaders that the compositor (renderer) uses.
 	struct render_shaders shaders;

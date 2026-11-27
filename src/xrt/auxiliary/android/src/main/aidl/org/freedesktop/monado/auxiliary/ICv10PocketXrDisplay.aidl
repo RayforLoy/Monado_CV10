@@ -11,7 +11,7 @@ interface ICv10PocketXrDisplay {
     const int PC_SCREEN_WIDTH = 1920;
 
     void destroy() = 16777114;
-    int start(in Surface surface, IBinder clientLife, int mode) = 1;
+    int start(in Surface surface, IBinder clientLife, int mode, int opticalEyeSize) = 1;
     void stop(IBinder clientLife) = 2;
     int openClientDisplay(IBinder clientLife) = 3;
     void closeClientDisplay(IBinder clientLife) = 4;

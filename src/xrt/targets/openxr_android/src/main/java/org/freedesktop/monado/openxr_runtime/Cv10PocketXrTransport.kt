@@ -25,6 +25,7 @@ import rikka.shizuku.Shizuku
 internal class Cv10PocketXrTransport(
     context: Context,
     private val mode: Int,
+    private val opticalEyeSize: Int,
     private val onInterrupted: (Throwable) -> Unit = {},
 ) : AutoCloseable {
     private val context = context.applicationContext
@@ -36,7 +37,7 @@ internal class Cv10PocketXrTransport(
             .tag("cv10_pocket_xr_display")
             .processNameSuffix("cv10_pocket_xr_display")
             .daemon(false)
-            .version(7)
+            .version(8)
     private var connection: ServiceConnection? = null
     private var remote: ICv10PocketXrDisplay? = null
     private var startupResult: ((Result<Int>) -> Unit)? = null
@@ -77,7 +78,7 @@ internal class Cv10PocketXrTransport(
                         remote = service
                         worker.execute {
                             val result = try {
-                                Result.success(service.start(surface, clientLife, mode))
+                                Result.success(service.start(surface, clientLife, mode, opticalEyeSize))
                             } catch (e: Exception) {
                                 Result.failure(e)
                             }

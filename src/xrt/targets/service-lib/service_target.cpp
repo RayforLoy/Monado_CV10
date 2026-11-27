@@ -187,6 +187,15 @@ Java_org_freedesktop_monado_ipc_MonadoImpl_nativeSetCv10IpdMm(JNIEnv *, jclass, 
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_org_freedesktop_monado_ipc_MonadoImpl_nativeSetCv10RenderSettings(JNIEnv *,
+                                                                    jclass,
+                                                                    jint eye_size,
+                                                                    jboolean enhanced_render_mode)
+{
+	android_globals_set_cv10_render_settings(eye_size, enhanced_render_mode == JNI_TRUE);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_org_freedesktop_monado_ipc_MonadoImpl_nativeStartServer(JNIEnv *env, jobject thiz, jobject context)
 {
 	JavaVM *jvm = nullptr;

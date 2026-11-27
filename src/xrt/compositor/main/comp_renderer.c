@@ -46,6 +46,10 @@
 #include "vk/vk_image_readback_to_xf_pool.h"
 #include "vk/vk_submit_helpers.h"
 
+#ifdef XRT_OS_ANDROID
+#include "android/android_globals.h"
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -1123,6 +1127,9 @@ comp_renderer_draw(struct comp_renderer *r)
 
 	// Hardcoded for now.
 	const uint32_t view_count = c->nr.view_count;
+#ifdef XRT_OS_ANDROID
+	c->nr.enable_enhanced_render_mode = c->is_cv10 && android_globals_get_cv10_enhanced_render_mode();
+#endif
 	enum comp_target_fov_source fov_source = COMP_TARGET_FOV_SOURCE_DISTORTION;
 
 	bool fast_path = c->base.frame_params.one_projection_layer_fast_path;

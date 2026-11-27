@@ -36,6 +36,7 @@ class AboutMenuWithCardboard @Inject constructor(private val scanner: ScannerPro
         menu.findItem(R.id.cv10_app_launcher).isVisible = !BuildConfig.inProcess
         menu.findItem(R.id.cv10_controller).isVisible = !BuildConfig.inProcess
         menu.findItem(R.id.cv10_ipd).isVisible = !BuildConfig.inProcess
+        menu.findItem(R.id.cv10_render_quality).isVisible = !BuildConfig.inProcess
         menu.findItem(R.id.cv10_external_compatibility).apply {
             setTitle(org.freedesktop.monado.auxiliary.R.string.cv10_external_compatibility_title)
             isVisible = !BuildConfig.inProcess
@@ -54,6 +55,10 @@ class AboutMenuWithCardboard @Inject constructor(private val scanner: ScannerPro
         }
         if (item.itemId == R.id.cv10_ipd && context is Activity) {
             showCv10Ipd(context)
+            return true
+        }
+        if (item.itemId == R.id.cv10_render_quality && context is Activity) {
+            showCv10RenderSettings(context)
             return true
         }
         if (item.itemId == R.id.cv10_external_compatibility && context is Activity) {

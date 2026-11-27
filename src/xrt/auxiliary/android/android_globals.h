@@ -75,6 +75,16 @@ android_globals_get_cv10_ipd_mm(void);
 void
 android_globals_set_cv10_ipd_mm(int ipd_mm);
 
+//! Overrides the CV10 stereo render recommendation when nonzero.
+int
+android_globals_get_cv10_render_eye_size(void);
+
+bool
+android_globals_get_cv10_enhanced_render_mode(void);
+
+void
+android_globals_set_cv10_render_settings(int render_eye_size, bool enhanced_render_mode);
+
 //! Take ownership of the supplied ANativeWindow reference.
 void
 android_globals_store_window(struct _ANativeWindow *window);

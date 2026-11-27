@@ -18,6 +18,7 @@ layout (binding = 1, std140) uniform Config
 	vec4 pre_transform;
 	mat4 transform_scanout_begin;
 	mat4 transform_scanout_end;
+	vec4 enhanced_render_mode;
 } ubo;
 
 layout (location = 0)  in vec4 in_pos_ruv;

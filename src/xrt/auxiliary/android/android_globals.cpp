@@ -29,6 +29,8 @@ static struct
 static std::mutex window_mutex;
 static ANativeWindow *cached_window = nullptr;
 static std::atomic<int> cv10_ipd_mm{0};
+static std::atomic<int> cv10_render_eye_size{0};
+static std::atomic<bool> cv10_enhanced_render_mode{false};
 
 int
 android_globals_get_cv10_ipd_mm(void)
@@ -40,6 +42,25 @@ void
 android_globals_set_cv10_ipd_mm(int ipd_mm)
 {
 	cv10_ipd_mm.store(ipd_mm, std::memory_order_relaxed);
+}
+
+int
+android_globals_get_cv10_render_eye_size(void)
+{
+	return cv10_render_eye_size.load(std::memory_order_relaxed);
+}
+
+bool
+android_globals_get_cv10_enhanced_render_mode(void)
+{
+	return cv10_enhanced_render_mode.load(std::memory_order_relaxed);
+}
+
+void
+android_globals_set_cv10_render_settings(int render_eye_size, bool enhanced_render_mode)
+{
+	cv10_render_eye_size.store(render_eye_size, std::memory_order_relaxed);
+	cv10_enhanced_render_mode.store(enhanced_render_mode, std::memory_order_relaxed);
 }
 
 void

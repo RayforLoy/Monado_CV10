@@ -534,6 +534,7 @@ crg_distortion_common(struct render_gfx *render,
 		struct render_gfx_mesh_ubo_data data = {
 		    .vertex_rot = d->views[i].target.gfx.vertex_rot,
 		    .post_transform = md->views[i].src_norm_rect,
+		    .enhanced_render_mode = {render->r->enable_enhanced_render_mode ? 1.0f : 0.0f},
 		};
 
 		// Extra arguments for timewarp.
