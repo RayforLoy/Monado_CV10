@@ -28,7 +28,7 @@ class Cv10PocketHeadLinkService : VpnService() {
             stopSelf(startId)
             return START_NOT_STICKY
         }
-        if (intent?.action != START || !BuildConfig.cv10LauncherPreview || BuildConfig.inProcess) {
+        if (intent?.action != START || BuildConfig.inProcess) {
             stopSelf(startId)
             return START_NOT_STICKY
         }

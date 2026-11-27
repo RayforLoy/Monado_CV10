@@ -108,18 +108,19 @@
         <activity
             android:name=".Cv10PocketXrPreviewActivity"
             android:configChanges="keyboardHidden|orientation|screenSize|screenLayout"
+            android:enabled="${cv10PocketXrEnabled}"
             android:exported="false" />
 
         <service
             android:name=".Cv10PocketControlsService"
-            android:enabled="${cv10LauncherPreview}"
+            android:enabled="${cv10PocketXrEnabled}"
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
             android:stopWithTask="true" />
 
         <service
             android:name=".Cv10PocketHeadLinkService"
-            android:enabled="${cv10LauncherPreview}"
+            android:enabled="${cv10PocketXrEnabled}"
             android:exported="true"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>

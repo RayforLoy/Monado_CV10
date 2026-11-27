@@ -81,7 +81,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (!BuildConfig.cv10LauncherPreview || BuildConfig.inProcess) {
+        if (BuildConfig.inProcess) {
             finish()
             return
         }

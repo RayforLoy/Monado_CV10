@@ -123,7 +123,7 @@ public final class Cv10UsbReader {
                 imu[i+3]=(float)Math.toRadians(packet.getFloat(32+4*i));
                 if (!Float.isFinite(imu[i]) || !Float.isFinite(imu[i+3])) return 0;
             }
-            if (BuildConfig.cv10LauncherPreview) Cv10PocketImu.publish(ns, imu);
+            if (!BuildConfig.inProcess) Cv10PocketImu.publish(ns, imu);
             deadline=SystemClock.elapsedRealtime()+2500;
             if (frames++==0 || frames%5000==0) Log.i(TAG,"CV10 valid IMU samples="+frames+" deviceNs="+ns);
             return ns;

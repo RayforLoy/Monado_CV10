@@ -183,8 +183,6 @@ android {
     def cv10Abi = project.findProperty('cv10Abi')
     defaultConfig {
         applicationId cv10ApplicationId
-        buildConfigField "boolean", "cv10LauncherPreview", cv10LauncherPreview.toString()
-        manifestPlaceholders += [cv10LauncherPreview: cv10LauncherPreview.toString()]
         ndk {
             if (cv10Abi == null) {
                 abiFilters 'arm64-v8a', 'armeabi-v7a'
@@ -195,8 +193,8 @@ android {
         minSdkVersion project.sharedMinSdk
         targetSdkVersion project.sharedTargetSdk
 
-        versionCode = 103
-        versionName = '0.1.3'
+        versionCode = 104
+        versionName = '0.1.4-rc.1'
 
         println versionName
         println versionCode
@@ -253,6 +251,7 @@ android {
         flavor.externalNativeBuild.cmake.arguments += "-DXRT_FEATURE_SERVICE=OFF"
         flavor.externalNativeBuild.cmake.targets "openxr_monado", "cv10-kit-slam"
         flavor.buildConfigField "boolean", "inProcess", "true"
+        flavor.manifestPlaceholders += [cv10PocketXrEnabled: 'false']
         flavor.resValue "string", "app_name", appName
     }
 
@@ -267,6 +266,7 @@ android {
         ]
         flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service", "cv10-spatial-launcher", "cv10-kit-slam"
         flavor.buildConfigField "boolean", "inProcess", "false"
+        flavor.manifestPlaceholders += [cv10PocketXrEnabled: 'true']
         flavor.resValue "string", "app_name", appName
     }
 

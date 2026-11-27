@@ -282,8 +282,7 @@ public class Client implements ServiceConnection {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !(context instanceof Activity)) {
             return false;
         }
-        if (!runtimePackage.equals("org.cv10.monado.out_of_process")
-                && !runtimePackage.equals("org.cv10.monado.out_of_process.launcher_preview")) {
+        if (!isCv10RuntimePackage(runtimePackage)) {
             return false;
         }
         // Pocket XR restores ordinary panels with CATEGORY_LAUNCHER. Its XR app screen is separate.
@@ -291,6 +290,11 @@ public class Client implements ServiceConnection {
         return display != null
                 && display.getDisplayId() != Display.DEFAULT_DISPLAY
                 && display.getName().startsWith("Pocket XR: ");
+    }
+
+    private static boolean isCv10RuntimePackage(String packageName) {
+        return "org.cv10.monado.out_of_process".equals(packageName)
+                || "org.cv10.monado.out_of_process.launcher_preview".equals(packageName);
     }
 
     /**
@@ -326,7 +330,7 @@ public class Client implements ServiceConnection {
         Intent intent = new Intent(BuildConfig.SERVICE_ACTION).setPackage(packageName);
         runtimeWakeEnabled = Build.VERSION.SDK_INT >= 36
                 && "samsung".equalsIgnoreCase(Build.MANUFACTURER)
-                && "org.cv10.monado.out_of_process.launcher_preview".equals(packageName)
+                && isCv10RuntimePackage(packageName)
                 && !packageName.equals(context.getPackageName());
         if (runtimeWakeEnabled) {
             runtimeWakeIntent = intent;
