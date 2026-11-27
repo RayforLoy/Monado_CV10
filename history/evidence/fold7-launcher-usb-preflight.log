@@ -30,3 +30,27 @@
 # The next 3D repeat was not scored: another Android activity appeared after the 2D return.
 # Installed APK restored to aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e.
 # Broker stayed on Monado CV10 Preview. Minimum refresh rate returned to null.
+
+# Earlier timeout: Samsung froze the sample PID after the session had reached IDLE.
+11-27 12:49:04.883  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [17609] reason: Bg-buff
+11-27 12:49:15.428  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [17609] reason: ActivityDestroyTimeout
+
+# Follow-up: real Fold7, same USB preflight APK and wiring after the physical reconnect.
+# Wait durations below count from the return of the injected Android Back event.
+11-27 12:54:11.000
+Preview SHA-256 18220C62C54343A7F7212979E03717AEEA2C63D0E3ED27E57531ECA16860AD0E
+11-27 12:54:22.691 22508 22583 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 12:54:25.954 22508 22583 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 12:54:26.648 22979 23013 V hello_xr: [12:54:26.648][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2524346929374
+cold 3D pid=22979 destroyed in 1787ms: 11-27 12:54:30.592 22979 23013 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 12:54:35.702 22979 23371 V hello_xr: [12:54:35.702][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2520306263281
+2D control pid=22979 destroyed in 1462ms: 11-27 12:54:39.182 22979 23371 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 12:54:44.796 22508 23552 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 12:54:48.303 22508 23552 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 12:54:49.035 22979 23762 V hello_xr: [12:54:49.035][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598510048 time=2524513704217
+warm 3D pid=22979 destroyed in 1789ms: 11-27 12:54:53.094 22979 23762 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 12:54:58.341 22508 24023 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 12:55:01.494 22508 24023 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 12:55:02.071 22979 24233 V hello_xr: [12:55:02.071][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2524000532655
+warm 3D longer dwell pid=22979 destroyed in 1336ms: 11-27 12:55:12.762 22979 24233 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Restored preview aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e and minimum refresh rate null

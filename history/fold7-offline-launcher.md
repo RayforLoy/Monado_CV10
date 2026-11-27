@@ -172,6 +172,8 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 12:48，用户只重接眼镜端，保留手机端和 5 V 供电。CV10 HID 从 USB 地址 004 重新枚举为 009，Android 的外显逻辑编号由 246 变为 247。保持同一个 APK，3D 启动器再次在 USB 授权后自行打开。用手机置中手势瞄准并点选 `hello_xr` 后，右镜拍到蓝块。该轮按返回后样例会话进入 `IDLE`，随后 Android 记录 Activity 销毁超时。12:50 的 2D 直启对照也在右镜拍到蓝块，返回后完成 `xrDestroyInstance`。测试结束后恢复原预览 APK，Broker 保持 **Monado CV10 Preview**，系统最低刷新率为 `null`。
 
+12:54–12:55 用同一 APK 核对退出与重进。先后执行 3D 冷启动、2D 直启、3D 点选及延长停留后的 3D 点选。四轮都由样例 PID 22979 进入 `FOCUSED`，按返回后均完成 `xrDestroyInstance`。复核先前超时的日志，三星 Freecess 在会话进入 `IDLE` 约一秒后冻结了样例 PID 17609，并在 Activity 销毁超时后解冻。该轮冻结与退出超时的先后顺序已确认，后续四轮未复现超时。
+
 [授权与会话日志](evidence/fold7-launcher-usb-preflight.log) · [重接前的双目外显帧](evidence/fold7-launcher-usb-before-reconnect-stereo.png) · [重接前的右镜实拍](evidence/fold7-launcher-usb-before-reconnect-right.jpg) · [重接后 3D 入口的右镜实拍](evidence/fold7-launcher-usb-after-reconnect-right.jpg) · [重接后 2D 入口的右镜实拍](evidence/fold7-launcher-usb-after-reconnect-direct-right.jpg)
 
 ## 华为 VR 桌面的源码与许可
