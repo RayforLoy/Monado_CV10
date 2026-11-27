@@ -81,7 +81,7 @@
             android:configChanges="keyboardHidden|orientation|screenSize|screenLayout"
             android:exported="false"
             android:process=":spatialLauncher"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="portrait" />
 
         <activity
             android:name=".Cv10PocketXrPreviewActivity"
