@@ -82,7 +82,7 @@ android_prober_autoprobe(struct xrt_auto_prober *xap,
 		if (right) out_xdevs[count++] = right;
 		return count;
 	}
-	out_xdevs[1] = cv10_controller_create();
+	out_xdevs[1] = cv10_controller_create(out_xdevs[0]);
 	return out_xdevs[1] != NULL ? 2 : 1;
 }
 

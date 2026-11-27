@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <stdbool.h>
+#include <stdatomic.h>
 #include "cv10_device.h"
+#include "cv10_pose_models.h"
 #include "android/android_custom_surface.h"
 #include "android/android_globals.h"
 #include "math/m_api.h"
@@ -27,6 +29,8 @@ struct cv10_device
 	struct m_imu_3dof fusion;
 	struct os_thread_helper kit_worker;
 	struct m_relation_history *kit_history;
+	bool use_kit;
+	_Atomic float eye_height;
 };
 
 static bool
@@ -148,8 +152,13 @@ cv10_worker(void *ptr)
 	if (!output) goto done;
 	jobject reader = (*env)->NewObject(env, cls, ctor, context);
 	if (jni_error(env) || !reader) goto done;
+	jclass sim = cv10_load_java_class(env, context, "org.freedesktop.monado.openxr_runtime.Cv10SimulationSettings");
+	jmethodID head_sample = jni_error(env) || !sim ? NULL :
+	    (*env)->GetStaticMethodID(env, sim, "headSample", "(Landroid/content/Context;JFFFF)F");
+	jni_error(env);
 
 	int64_t previous = 0, offset = 0, last_mapped = 0, last_log = 0;
+	int64_t last_calibration_sample = 0;
 	unsigned long long sample_count = 0;
 	float peak_rad_s = 0;
 	while (os_thread_helper_is_running(&d->worker)) {
@@ -188,6 +197,14 @@ cv10_worker(void *ptr)
 		rel.relation_flags = XRT_SPACE_RELATION_ORIENTATION_VALID_BIT | XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
 		                     XRT_SPACE_RELATION_ANGULAR_VELOCITY_VALID_BIT | XRT_SPACE_RELATION_POSITION_VALID_BIT;
 		m_relation_history_push(d->history, &rel, mapped);
+		if (head_sample && !d->use_kit && arrival - last_calibration_sample >= 20000000) {
+			struct xrt_quat q = rel.pose.orientation;
+			jfloat height = (*env)->CallStaticFloatMethod(env, sim, head_sample, context, (jlong)mapped,
+			                                            (jdouble)q.x, (jdouble)q.y, (jdouble)q.z, (jdouble)q.w);
+			if (jni_error(env)) head_sample = NULL;
+			else atomic_store_explicit(&d->eye_height, height, memory_order_relaxed);
+			last_calibration_sample = arrival;
+		}
 		if (!previous) U_LOG_I("CV10 3DoF tracking initialized from USB, first mapped sample %lld ns", (long long)mapped);
 		sample_count++;
 		float speed = sqrtf(gyro.x*gyro.x + gyro.y*gyro.y + gyro.z*gyro.z);
@@ -234,8 +251,10 @@ cv10_pose(struct xrt_device *xdev, enum xrt_input_name name, int64_t at_ns, stru
 		return XRT_SUCCESS;
 	// Cap prediction even if a client requests a distant future pose.
 	int64_t query = at_ns > latest + 50000000 ? latest + 50000000 : at_ns;
-	m_relation_history_get(d->history, query, out);
-	if (d->kit_history) out->relation_flags &= ~XRT_SPACE_RELATION_POSITION_VALID_BIT;
+	if (m_relation_history_get(d->history, query, out) != M_RELATION_HISTORY_RESULT_INVALID) {
+		if (d->kit_history) out->relation_flags &= ~XRT_SPACE_RELATION_POSITION_VALID_BIT;
+		else cv10_head_model_apply(atomic_load_explicit(&d->eye_height, memory_order_relaxed), out);
+	}
 	return XRT_SUCCESS;
 }
 
@@ -319,6 +338,10 @@ cv10_device_create(void)
 	xdev->inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 	xdev->supported.orientation_tracking = true;
 	xdev->supported.position_tracking = false;
+	// The simulated pose already has floor-relative height, so there is no nominal origin lift.
+	u_tracking_origin_init(xdev->tracking_origin, XRT_TRACKING_TYPE_OTHER, "Huawei CV10 IMU");
+	atomic_init(&d->eye_height, CV10_DEFAULT_EYE_HEIGHT_M);
+	d->use_kit = cv10_kit_mode("trackingRequested");
 	xdev->hmd->view_count = 2;
 	// The stock CV10 runtime reports a symmetric 95-degree field of view for each eye.
 	const struct u_device_simple_info optics = {
@@ -349,7 +372,7 @@ cv10_device_create(void)
 		cv10_destroy(xdev);
 		return NULL;
 	}
-	if (cv10_kit_mode("trackingRequested") && os_thread_helper_init(&d->kit_worker) == 0) {
+	if (d->use_kit && os_thread_helper_init(&d->kit_worker) == 0) {
 		m_relation_history_create(&d->kit_history);
 		if (d->kit_history && os_thread_helper_start(&d->kit_worker, cv10_kit_worker, d) == 0) {
 			xdev->supported.position_tracking = true;

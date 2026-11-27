@@ -511,6 +511,7 @@ if(XRT_BUILD_DRIVER_ANDROID)
 		drv_android STATIC android/android_prober.c android/android_prober.h
 				   android/cv10_device.c android/cv10_device.h
 				   android/cv10_controller.c android/cv10_controller.h
+				   android/cv10_pose_models.c android/cv10_pose_models.h
 		)
 	target_link_libraries(
 		drv_android
