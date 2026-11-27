@@ -1,0 +1,42 @@
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.cpp b/services/surfaceflinger/Scheduler/Scheduler.cpp
+index 18e6fcc..8d3b6fd 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.cpp
++++ b/services/surfaceflinger/Scheduler/Scheduler.cpp
+@@ -436,6 +436,11 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+
+         const bool followerDisplayBackpressure =
+                 FlagManager::getInstance().follower_display_backpressure();
++        static const bool deferPendingSlowerFollowers =
++                base::GetBoolProperty("debug.sf.cv10_defer_pending_slower_followers", false);
++        const Fps pacesetterVsyncRate = deferPendingSlowerFollowers
++                ? pacesetterPtr->selectorPtr->getActiveMode().modePtr->getVsyncRate()
++                : Fps{};
+         if (!followerDisplayBackpressure) {
+             expectedVsyncTime = pacesetterPtr->targeterPtr->target().expectedPresentTime();
+         }
+@@ -443,12 +448,24 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+         for (const auto& [id, display] : mDisplays) {
+             if (id == pacesetterPtr->displayId) continue;
+
++            FrameTargeter& targeter = *display.targeterPtr;
++            if (pacesetterVsyncRate.isValid()) {
++                const Fps followerVsyncRate =
++                        display.selectorPtr->getActiveMode().modePtr->getVsyncRate();
++                // A busy, slower follower can hold up the pacesetter's hardware commit.
++                if (followerVsyncRate.isValid() &&
++                    followerVsyncRate.getPeriod() > pacesetterVsyncRate.getPeriod() &&
++                    targeter.countPresentFencesPendingAt(TimePoint::now()) > 0) {
++                    SFTRACE_FORMAT_INSTANT("Deferring slower follower display %lu", id.value);
++                    continue;
++                }
++            }
++
+             auto followerBeginFrameArgs = beginFrameArgs;
+             const TimePoint nextFollowerVsync =
+                     display.schedulePtr->vsyncDeadlineAfter(expectedVsyncTime);
+             followerBeginFrameArgs.expectedVsyncTime = nextFollowerVsync;
+
+-            FrameTargeter& targeter = *display.targeterPtr;
+             if (followerDisplayBackpressure) {
+                 const size_t pendingFenceCount =
+                         targeter.countPresentFencesPendingAt(beginFrameArgs.frameBeginTime);

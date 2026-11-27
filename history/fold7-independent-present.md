@@ -53,7 +53,7 @@ Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这�
 
 AOSP 的 `Output::beginFrame` 会根据损伤区决定是否重画。物理输出仍可在后续的 `prepareFrame` 中进入 `presentOrValidate`，即使应用画面保持静止。实现跳过静置手机提交的实验，应在 `prepareFrame` 前检查该输出是否还有内容、配置、颜色、光标或缓冲释放事务，并仅对真实的新硬件 present 更新该输出的栅栏和帧统计。[AOSP Output](https://android.googlesource.com/platform/frameworks/native/+/58bca588b79f339a2ae26f4348b88ac93084e038/services/surfaceflinger/CompositionEngine/src/Output.cpp#1135)
 
-上游 `follower_display_backpressure` 在跟随输出已有待完成栅栏时，可以把它排除出当轮目标集合。同步 HAL 仍可在把新栅栏返回给 SurfaceFlinger 之前阻塞。Fold7 的系统配置查询没有显示该标志的覆盖值。三组已采集的 CV10 时钟追踪里均未找到上游的 `Avoiding backpressure for follower display` 事件，且两路 `HwcPresentOrValidateDisplay` 次数分别为 360/360、420/420、421/420。量产二进制是否包含这条分支仍未核实。[AOSP Scheduler](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/Scheduler/Scheduler.cpp#432)
+上游 `follower_display_backpressure` 在跟随输出已有待完成栅栏时，可以把它排除出当轮目标集合。同步 HAL 仍可在把新栅栏返回给 SurfaceFlinger 之前阻塞。三组已采集的 CV10 时钟追踪里均未找到上游的 `Avoiding backpressure for follower display` 事件，且两路 `HwcPresentOrValidateDisplay` 次数分别为 360/360、420/420、421/420。量产 Fold7 的 `dumpsys SurfaceFlinger` 确认该标志为 `false`。[AOSP Scheduler](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/Scheduler/Scheduler.cpp#432)
 
 ### 每块物理屏的帧周期提示
 
@@ -71,6 +71,21 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 [系统实验补丁](aosp-android16-per-display-present-interval.patch) 基于 `platform/frameworks/native@fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103`，默认关闭。在含补丁的系统构建中，启动 SurfaceFlinger 前设置 `debug.sf.cv10_per_display_frame_interval=true`，把各物理跟随输出的帧周期取自各自的 VSync 跟踪器和预计呈现时间。虚拟输出及缺少有效单屏周期的输出沿用主时钟的值。补丁已在指定上游文件上通过正反向应用检查。Fold7 使用量产系统，这轮未编译或部署修改后的 SurfaceFlinger。
 
 有系统构建时先固定 CV10 为调度时钟，仅切换此属性，确认 HWC 1 收到约 11.11 ms 周期、HWC 3 收到约 16.67 ms 周期。先测原版 Hello XR，再在同一 Pocket XR 工作区测静止和持续转头。同时记录 CV10 图层实呈、手机 DRM 等待与温控。若周期已分开但仍低于 90 次实呈/秒，应再比较跟随屏的提交调度和 Qualcomm DRM 完成等待。
+
+### 手机提交在上一帧完成前进入 DRM
+
+把内建屏的 `atomic_commit`、子区间 `sde_kms_prepare_fence` 和 CRTC 288 的 `complete_commit` 对齐。强制 CV10 节拍时，359 次采样完整的手机 DRM 调用全部在上一帧的 CRTC 工作尚未完成时进入。本帧的栅栏平均在上一帧工作结束后 0.037 ms 才创建，且有 356 次本帧的 CRTC 工作在 DRM 调用返回后的 0.3 ms 内才开始。系统自动选手机时钟时，361 次调用进入时上一帧均已完成。[Perfetto 查询](fold7-drm-pending-commit.sql)
+
+| 合成时钟 | 手机调用进入时上一帧未完成 | 进入 DRM 到本帧准备栅栏 | 准备栅栏到返回 |
+| --- | ---: | ---: | ---: |
+| 自动选手机 | 0/361 | 0.001 ms | 0.008 ms |
+| 强制 CV10 | 359/359 | 15.965 ms | 0.011 ms |
+
+长等待发生在提交本帧栅栏以前。公开的同平台 DRM 内核代码在等同 CRTC 或同一平面的待完成提交前取得共享 `connection_mutex`，然后才准备栅栏和派发新工作。这与手机等待上一帧、CV10 同时被拖住的时间顺序相符。量产内核的具体锁和提交标志仍缺直接读数。[同平台 DRM 源码](https://github.com/LineageOS/android_kernel_qcom_sm8750-modules/blob/5d27ace07b893b611cf3ce1c301b760f32d59892/qcom/opensource/display-drivers/msm/msm_atomic.c#L871)
+
+现有系统的 `debug.sf.follower_display_backpressure` 属性可临时写入，但写成 `true` 后，正在运行的 SurfaceFlinger 仍报告对应标志为 `false`。上游实现首次读入时缓存属性。从手机读取的分区 aconfig 名单也没有该标志，因此没有证据支持用运行中的 DeviceConfig 开启。实测已还原属性。[AOSP FlagManager](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/common/FlagManager.cpp#227)
+
+[跟随屏调度实验补丁](aosp-android16-defer-pending-slower-follower.patch) 基于同一 AOSP 提交，可独立应用。启动 SurfaceFlinger 前设置 `debug.sf.cv10_defer_pending_slower_followers=true`，使较慢的跟随屏在仍有未完成的呈现栅栏时跳过当前批次，下批检查就绪状态。原有背压策略继续按各自开关运行。补丁通过正反向应用检查。验收应分别对照上游背压开关、较慢跟随屏延后和逐屏周期提示。若跟随屏的 present fence 早于 CRTC 释放排队资源，延后策略仍可能错过真正的忙碌区间。需核对新追踪里的延后标记、两路 CRTC 及真实呈现。此补丁尚未在 Fold7 系统上运行。
 
 ## Pocket 工作区性能对照
 
