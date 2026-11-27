@@ -187,17 +187,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         updateButtons()
     }
 
-    override fun onResume() {
-        super.onResume()
-        leavePhoneControls()
-    }
-
     override fun onStop() {
         if (usbLaunch.isWaiting) {
             usbLaunch.cancel()
             updateButtons()
         }
-        if (renderer != null && !keepSessionWhilePaused) {
+        if (renderer != null && (!keepSessionWhilePaused || isFinishing)) {
             stopPreview(getString(R.string.cv10_pocket_preview_intro))
         }
         super.onStop()
@@ -221,12 +216,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         if (!controlsAvailable) return false
         try {
             val launch = checkNotNull(packageManager.getLaunchIntentForPackage(activePocketPackage))
-            keepSessionForPhoneControls()
             startActivity(launch)
             Log.i(TAG, "Opened Pocket XR phone controls with the external session active")
             return true
         } catch (error: RuntimeException) {
-            leavePhoneControls()
             Log.w(TAG, "Could not open Pocket XR phone controls", error)
             status.setText(R.string.cv10_pocket_controls_launch_failed)
             return false
@@ -320,13 +313,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         )
     }
 
-    private fun keepSessionForPhoneControls() {
-        if (keepSessionWhilePaused) return
+    private fun keepSpaceSession() {
         startForegroundService(Cv10PocketControlsService.intent(this))
         keepSessionWhilePaused = true
     }
 
-    private fun leavePhoneControls() {
+    private fun releaseSpaceSession() {
         if (!keepSessionWhilePaused) return
         keepSessionWhilePaused = false
         stopService(Cv10PocketControlsService.intent(this))
@@ -444,8 +436,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         renderer = nextRenderer
         if (space) {
             try {
-                // The original SpaceActivity can open its phone trackpad before the first frame.
-                keepSessionForPhoneControls()
+                // Space uses the external display while the phone switches between apps and controls.
+                keepSpaceSession()
                 if (headLink.isChecked) {
                     startForegroundService(Cv10PocketHeadLinkService.intent(this, activePocketPackage))
                     headLinkStarted = true
@@ -472,7 +464,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         controlsAvailable = false
         clientDisplayOpen = false
         changingClientDisplay = false
-        leavePhoneControls()
+        releaseSpaceSession()
         if (headLinkStarted) {
             Cv10PocketHeadLinkService.stop(this)
             headLinkStarted = false

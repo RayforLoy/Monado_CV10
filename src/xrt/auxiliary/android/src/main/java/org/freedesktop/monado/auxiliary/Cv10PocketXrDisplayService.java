@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
+import android.hardware.display.VirtualDisplayConfig;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Binder;
@@ -117,7 +118,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             lease = new Lease(clientLife, surface, mode);
             clientLife.linkToDeath(lease, 0);
             currentLease = lease;
-            lease.display = createDisplay(name, surface, width, height, FLAGS);
+            lease.display = createDisplay(name, surface, width, height, FLAGS, cv10Optics);
             int displayId = lease.display.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
@@ -125,7 +126,8 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             launchPocketXr(displayId, mode);
             started = true;
             Log.i(TAG, "Pocket XR mode " + mode + " start accepted on " + displayId
-                    + " (" + width + "x" + height + ", " + DENSITY_DPI + " dpi)");
+                    + " (" + width + "x" + height + " @ " + lease.display.getDisplay().getRefreshRate()
+                    + " Hz, " + DENSITY_DPI + " dpi)");
             return displayId;
         } catch (InvocationTargetException e) {
             throw platformFailure(e.getCause());
@@ -145,13 +147,23 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
 
     @RequiresApi(34)
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
-    private VirtualDisplay createDisplay(String name, Surface surface, int width, int height, int flags)
-            throws ReflectiveOperationException {
+    private VirtualDisplay createDisplay(String name, Surface surface, int width, int height, int flags,
+            boolean matchCv10RefreshRate) throws ReflectiveOperationException {
         // A normal package Context would pass Monado's package name with the shell UID.
         Constructor<DisplayManager> constructor = DisplayManager.class.getDeclaredConstructor(Context.class);
         constructor.setAccessible(true);
         DisplayManager manager = constructor.newInstance(new ShellDisplayContext(context));
-        VirtualDisplay display = manager.createVirtualDisplay(name, width, height, DENSITY_DPI, surface, flags);
+        VirtualDisplayConfig.Builder config = new VirtualDisplayConfig.Builder(name, width, height, DENSITY_DPI)
+                .setSurface(surface).setFlags(flags);
+        if (matchCv10RefreshRate) {
+            for (Display connected : manager.getDisplays()) {
+                if (connected.isValid() && "HUAWEIAV03".equalsIgnoreCase(connected.getName().trim())) {
+                    config.setRequestedRefreshRate(connected.getRefreshRate());
+                    break;
+                }
+            }
+        }
+        VirtualDisplay display = manager.createVirtualDisplay(config.build());
         if (display == null) throw new IllegalStateException("Android rejected the Pocket XR virtual display");
         return display;
     }
@@ -179,7 +191,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
                     | TRUSTED | DESTROY_CONTENT_ON_REMOVAL;
             if (Build.VERSION.SDK_INT >= 36) flags |= OWN_FOCUS | STEAL_TOP_FOCUS_DISABLED;
             lease.clientDisplay = createDisplay("Monado CV10 OpenXR Client", lease.clientReader.getSurface(),
-                    CLIENT_WIDTH, CLIENT_HEIGHT, flags);
+                    CLIENT_WIDTH, CLIENT_HEIGHT, flags, false);
             int displayId = lease.clientDisplay.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("The OpenXR client display was lost during startup");

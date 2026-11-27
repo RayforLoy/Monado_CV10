@@ -11,7 +11,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 
-/** Keeps the external display client running while the original Pocket XR app controls it. */
+/** Keeps the Pocket XR space running while the user switches phone activities. */
 class Cv10PocketControlsService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 

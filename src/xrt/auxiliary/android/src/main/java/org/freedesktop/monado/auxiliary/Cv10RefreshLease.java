@@ -59,7 +59,9 @@ public final class Cv10RefreshLease implements DisplayManager.DisplayListener {
 
 
     public static boolean supportedPhone(Context context) {
-        return "org.cv10.monado.out_of_process".equals(context.getPackageName())
+        String runtimePackage = context.getPackageName();
+        return ("org.cv10.monado.out_of_process".equals(runtimePackage)
+                || "org.cv10.monado.out_of_process.launcher_preview".equals(runtimePackage))
                 && "samsung".equalsIgnoreCase(Build.MANUFACTURER) && "SM-F9660".equals(Build.MODEL)
                 && context.getSystemService(UserManager.class).isSystemUser();
     }
