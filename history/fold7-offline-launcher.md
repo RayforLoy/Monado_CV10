@@ -176,6 +176,18 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 [授权与会话日志](evidence/fold7-launcher-usb-preflight.log) · [重接前的双目外显帧](evidence/fold7-launcher-usb-before-reconnect-stereo.png) · [重接前的右镜实拍](evidence/fold7-launcher-usb-before-reconnect-right.jpg) · [重接后 3D 入口的右镜实拍](evidence/fold7-launcher-usb-after-reconnect-right.jpg) · [重接后 2D 入口的右镜实拍](evidence/fold7-launcher-usb-after-reconnect-direct-right.jpg)
 
+### 整合包的镜片黑屏复现
+
+2026-11-27 13:11–13:14 香港时间，使用同一台 Fold7、C9.53.6 原厂线、5 V 供电和 `ef8a0ae` ARM64 预览包，保持接线及右镜相机位置。预览包沿用两项已有的 Shizuku 授权。Monado 的 **在 Pocket XR 中打开 OpenXR 应用** 经 **Pocket XR (Monado CV10)** 客户端，在原版 Pocket XR 1.6.28 空间两次启动未修改的 `hello_xr`。同一 PID 两次进入 `FOCUSED`，先后释放应用屏 274 和 275，并保留空间屏 270。第一轮正常完成 `xrDestroyInstance`。第二轮应用屏释放后，三星 Freecess 再次冻结样例，约十秒后因 `ActivityDestroyTimeout` 解冻。结束整个空间时样例完成 `xrDestroyInstance`，之后所有实验虚拟屏均已释放。本机 VPN 全程关闭。
+
+切回 **Monado CV10 Preview** 后，同一个 `ef8a0ae` APK 的 2D 直启和 3D 点选都成功进入 `FOCUSED`，也正常销毁实例。再换回试验前安装的 `f439234`，2D 直启对照同样成功。五次启动的外显帧均有双目蓝块，相机在右镜均未拍到画面。直接启动两组预览 APK 时，佩戴传感器均报 `state=1`，开屏命令也收到 `OK`。结束时恢复 `f439234` 及 Preview Broker，最低刷新率为 `null`。
+
+对照图每行左侧为外显帧，右侧为同期右镜实拍。自上而下对应两轮 Pocket XR、同包 2D 直启、同包 3D 点选、旧预览 2D 直启。[同机对照图](evidence/fold7-integrated-preview-optical-recurrence.jpg) · [应用、冻结及开屏日志](evidence/fold7-integrated-preview-optical-recurrence.log)
+
+13:20–13:21 在相同接线下安装只增加 PCUI 状态读取的诊断包。五个 ARM64 原生库与 `ef8a0ae` 预览 APK 逐字节一致。诊断包通过同证书签名及 ZIP 16 KiB 对齐校验，SHA-256 为 `fb27f5e62169916e719ad3df7685043c9d2ef188dd1bd97b34315cda157f1efa`。通过 2D 列表启动样例后，外显有双目蓝块，右镜继续黑屏。样例正常销毁，手机随后恢复原预览包。
+
+头显读取的来源为手机 `0`，`AT^TYPECSTATE?` 返回 `2`，佩戴状态为 `1`，开屏收到 `OK`。延长读取窗口后，逐眼命令实际都收到头显字符串 `READ LCD timeout!`。此前 Fold7 普通 C-C 直连且镜片可见图案时也收到相同回显，因此 LCD 查询不能区分这次故障。现有对照将复现范围缩小到 Android 已提交外显画面之后，仍需同机、同版本的原厂线与直连对照才能判断链路和头显各自的影响。[诊断补丁](fold7-panel-status-probe.patch) · [读数日志](evidence/fold7-panel-status-probe.log) · [该轮外显和右镜](evidence/fold7-panel-status-probe.jpg) · [主项目直连对照](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/d41cad9/docs/cv10-original-cable-overnight-20261126.md)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。

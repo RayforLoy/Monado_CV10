@@ -1,0 +1,56 @@
+11-27 13:11:26.000
+Stock Pocket XR SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Stock hello_xr SHA-256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Pocket XR companion SHA-256 043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a
+Preview APK SHA-256 18220c62c54343a7f7212979e03717aeea2c63d0e3ed27e57531eca16860ad0e
+Row: 0 package_name=org.cv10.monado.pocket_client
+Pocket XR VPN option unchecked.
+11-27 13:11:46.851 14533 14533 I Cv10PocketXrPreview: First virtual display frame available on display 270
+11-27 13:11:59.519 14533 14533 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 274
+11-27 13:11:59.532 15207 15233 V hello_xr: [13:11:59.532][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2829864001524
+topResumedActivity=ActivityRecord{78816612 u0 com.hayeco.flipspaces/.TrackpadActivity t33931}
+Round 1 game screen 274 released. Space 270 kept.
+11-27 13:12:08.672 15207 15233 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 13:12:14.815 14533 14533 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 275
+11-27 13:12:15.358 15207 16686 V hello_xr: [13:12:15.358][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819920941616
+topResumedActivity=ActivityRecord{78816612 u0 com.hayeco.flipspaces/.TrackpadActivity t33931}
+Round 2 game screen 275 released. Space 270 kept.
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Restored preview aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e and minimum refresh rate null
+Remaining logical displays: 0, 247
+Pocket XR second close and cleanup:
+11-27 13:12:19.557  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [15207] reason: Bg-buff
+11-27 13:12:24.430 15207 16686 V hello_xr: [13:12:24.430][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2828993226664
+11-27 13:12:24.430 15207 16686 V hello_xr: [13:12:24.430][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2828993551195
+11-27 13:12:24.681 15207 16686 V hello_xr: [13:12:24.681][Info   ] onDestroy()
+11-27 13:12:24.902  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [15207] reason: Bg-buff
+11-27 13:12:34.394  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [15207] reason: ActivityDestroyTimeout
+11-27 13:12:48.811 15207 16686 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Monado Preview direct and spatial controls:
+11-27 13:13:31.000
+Preview SHA-256 18220C62C54343A7F7212979E03717AEEA2C63D0E3ED27E57531ECA16860AD0E
+11-27 13:13:39.457 18492 18513 V hello_xr: [13:13:39.457][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520422163125
+topResumedActivity=ActivityRecord{249415522 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34690}
+topResumedActivity=ActivityRecord{249415522 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34690}
+11-27 13:13:53.465 18492 18513 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 13:13:57.334 18871 18903 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 13:14:00.799 18871 18903 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 13:14:01.302 18492 19027 V hello_xr: [13:14:01.302][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2524319142810
+topResumedActivity=ActivityRecord{110243792 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34692}
+topResumedActivity=ActivityRecord{110243792 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34692}
+11-27 13:14:14.940 18492 19027 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Original preview SHA-256 aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e
+11-27 13:14:23.474 18492 19571 V hello_xr: [13:14:23.474][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2520378330938
+topResumedActivity=ActivityRecord{80251779 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34696}
+topResumedActivity=ActivityRecord{80251779 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34696}
+11-27 13:14:36.928 18492 19571 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; minimum refresh rate null
+11-27 13:13:39.073 18266 18527 I MonadoCV10: CV10 proximity enabled=true, state=1
+11-27 13:13:39.115 18266 18532 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 13:13:39.117 18266 18532 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11-27 13:13:56.994 18266 18918 I MonadoCV10: CV10 proximity enabled=true, state=1
+11-27 13:13:57.036 18266 18926 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 13:13:57.038 18266 18926 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11-27 13:14:23.107 19382 19585 I MonadoCV10: CV10 proximity enabled=true, state=1
+11-27 13:14:23.150 19382 19592 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 13:14:23.152 19382 19592 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK

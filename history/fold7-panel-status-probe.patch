@@ -1,0 +1,53 @@
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
+index 7e15746..9143eb3 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
+@@ -84,6 +84,10 @@ final class Cv10PanelWake {
+                     String reply = query(port, in, out, "AT^SWITCHSCREEN=1");
+                     if (!hasLine(reply, "OK")) throw new IOException("panel command rejected");
+                     Log.i(TAG, "CV10 PCUI AT^SWITCHSCREEN=1 OK");
++                    logStatus(port, in, out, "AT^GETSOURCE?");
++                    logStatus(port, in, out, "AT^TYPECSTATE?");
++                    logStatus(port, in, out, "AT^LCDINFO=L");
++                    logStatus(port, in, out, "AT^LCDINFO=R");
+                     return;
+                 } finally {
+                     port.releaseInterface(iface);
+@@ -95,6 +99,15 @@ final class Cv10PanelWake {
+         Log.w(TAG, "CV10 PCUI runtime interface or endpoints missing");
+     }
+
++    private static void logStatus(UsbDeviceConnection port, UsbEndpoint in, UsbEndpoint out, String command) {
++        try {
++            String status = query(port, in, out, command).trim().replaceAll("[\\r\\n]+", " | ");
++            Log.i(TAG, "CV10 panel probe " + command + ": " + status);
++        } catch (IOException error) {
++            Log.w(TAG, "CV10 panel probe " + command + ": " + error.getMessage());
++        }
++    }
++
+     private static void selectMobileSource(UsbDeviceConnection port, UsbEndpoint in, UsbEndpoint out) {
+         try {
+             String info = query(port, in, out, "AT^CABLEINFO?");
+@@ -130,7 +143,8 @@ final class Cv10PanelWake {
+         if (port.bulkTransfer(out, request, request.length, 1000) != request.length) {
+             throw new IOException(command + " send incomplete");
+         }
+-        long end = SystemClock.elapsedRealtime() + 2000;
++        boolean lcd = command.startsWith("AT^LCDINFO=");
++        long end = SystemClock.elapsedRealtime() + (lcd ? 8000 : 2000);
+         ByteArrayOutputStream collected = new ByteArrayOutputStream();
+         byte[] packet = new byte[in.getMaxPacketSize()];
+         while (SystemClock.elapsedRealtime() < end && collected.size() < 4096) {
+@@ -140,6 +154,11 @@ final class Cv10PanelWake {
+             String reply = collected.toString("US-ASCII");
+             if (hasLine(reply, "OK") || hasLine(reply, "ERROR")) return reply;
+         }
++        if (lcd) {
++            String received = collected.toString("US-ASCII").trim().replaceAll("[\\r\\n]+", " | ");
++            throw new IOException(command + " incomplete terminal response after 8 s, bytes="
++                    + collected.size() + (received.isEmpty() ? "" : ", reply=" + received));
++        }
+         throw new IOException(command + " reply timeout");
+     }
+ }

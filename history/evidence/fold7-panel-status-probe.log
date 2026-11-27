@@ -1,0 +1,14 @@
+11-27 13:20:38.000
+Probe APK SHA-256 FB27F5E62169916E719AD3DF7685043C9D2EF188DD1BD97B34315CDA157F1EFA
+11-27 13:20:45.524 18492 21480 V hello_xr: [13:20:45.524][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598510048 time=2520312488437
+11-27 13:21:01.374 21258 21495 W MonadoCV10: CV10 panel probe AT^LCDINFO=R: AT^LCDINFO=R incomplete terminal response after 8 s, bytes=24, reply=READ LCD timeout!
+11-27 13:20:45.224 21258 21491 I MonadoCV10: CV10 proximity enabled=true, state=1
+11-27 13:20:45.267 21258 21495 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 13:20:45.268 21258 21495 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11-27 13:20:45.269 21258 21495 I MonadoCV10: CV10 panel probe AT^GETSOURCE?: ^SOURCE TYPE(0:phone, 1:PC):0 | OK
+11-27 13:20:45.270 21258 21495 I MonadoCV10: CV10 panel probe AT^TYPECSTATE?: ^TYPECSTATE:2 | OK
+11-27 13:20:53.350 21258 21495 W MonadoCV10: CV10 panel probe AT^LCDINFO=L: AT^LCDINFO=L incomplete terminal response after 8 s, bytes=24, reply=READ LCD timeout!
+11-27 13:21:01.374 21258 21495 W MonadoCV10: CV10 panel probe AT^LCDINFO=R: AT^LCDINFO=R incomplete terminal response after 8 s, bytes=24, reply=READ LCD timeout!
+topResumedActivity=ActivityRecord{203510252 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34704}
+11-27 13:21:05.581 18492 21480 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Restored preview aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e and minimum refresh rate null
