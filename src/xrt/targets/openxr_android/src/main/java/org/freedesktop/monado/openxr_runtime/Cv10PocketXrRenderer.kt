@@ -81,11 +81,13 @@ internal class Cv10PocketXrRenderer(
             }
         }
 
-        fun updateCapture(transform: FloatArray): Boolean {
-            val current = texture ?: return false
+        fun updateCapture(transform: FloatArray): Long {
+            val current = texture ?: return 0L
+            val timestamp: Long
             try {
                 current.updateTexImage()
-                if (current.timestamp == 0L) return false
+                timestamp = current.timestamp
+                if (timestamp == 0L) return 0L
                 current.getTransformMatrix(transform)
             } catch (error: RuntimeException) {
                 if (!state.stop) {
@@ -93,13 +95,13 @@ internal class Cv10PocketXrRenderer(
                     failure = error.message ?: error.toString()
                     state.stop = true
                 }
-                return false
+                return 0L
             }
             if (!hasFrame) {
                 hasFrame = true
                 activity.runOnUiThread { if (!state.stop) onFirstFrame() }
             }
-            return true
+            return timestamp
         }
 
         fun stopCapture() {

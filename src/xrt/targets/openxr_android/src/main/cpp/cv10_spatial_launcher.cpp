@@ -243,7 +243,7 @@ public:
 		}
 		jclass cls = env->GetObjectClass(capture);
 		start_method = env->GetMethodID(cls, "startCapture", "(III)Z");
-		update_method = env->GetMethodID(cls, "updateCapture", "([F)Z");
+		update_method = env->GetMethodID(cls, "updateCapture", "([F)J");
 		stop_method = env->GetMethodID(cls, "stopCapture", "()V");
 		env->DeleteLocalRef(cls);
 		matrix = env->NewFloatArray(16);
@@ -278,16 +278,17 @@ public:
 		}
 	}
 
-	bool
+	jlong
 	update(GLint transform_uniform)
 	{
-		if (!env->CallBooleanMethod(capture, update_method, matrix)) {
-			return false;
+		const auto timestamp = env->CallLongMethod(capture, update_method, matrix);
+		if (timestamp != 0 && timestamp != latched_timestamp) {
+			std::array<jfloat, 16> transform{};
+			env->GetFloatArrayRegion(matrix, 0, transform.size(), transform.data());
+			glUniformMatrix4fv(transform_uniform, 1, GL_FALSE, transform.data());
+			latched_timestamp = timestamp;
 		}
-		std::array<jfloat, 16> transform{};
-		env->GetFloatArrayRegion(matrix, 0, transform.size(), transform.data());
-		glUniformMatrix4fv(transform_uniform, 1, GL_FALSE, transform.data());
-		return true;
+		return timestamp;
 	}
 
 private:
@@ -297,6 +298,7 @@ private:
 	jmethodID update_method = nullptr;
 	jmethodID stop_method = nullptr;
 	jfloatArray matrix = nullptr;
+	jlong latched_timestamp = 0;
 	bool started = false;
 };
 
@@ -326,6 +328,10 @@ public:
 	~Launcher()
 	{
 		state.set_ready(false);
+		if (capture_cv10_optics && copied_frames != 0) {
+			__android_log_print(ANDROID_LOG_DEBUG, tag, "Pocket XR optical capture: %u copied, %u reused",
+			                    copied_frames, reused_frames);
+		}
 		capture.stop();
 		if (swapchain != XR_NULL_HANDLE) {
 			xrDestroySwapchain(swapchain);
@@ -949,10 +955,18 @@ private:
 		};
 		XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
 		std::array<XrCompositionLayerProjectionView, 2> projection_views{};
-		if (frame.shouldRender && capture && capture.update(transform_uniform)) {
+		const auto capture_timestamp = frame.shouldRender && capture ? capture.update(transform_uniform) : 0;
+		if (capture_timestamp != 0) {
 			if (capture_cv10_optics) {
 				if (locate_projection_views(frame.predictedDisplayTime, projection_views)) {
-					draw_panel();
+					// OpenXR uses the last released image until a new capture reaches the swapchain.
+					if (capture_timestamp != submitted_capture_timestamp) {
+						draw_panel();
+						submitted_capture_timestamp = capture_timestamp;
+						++copied_frames;
+					} else {
+						++reused_frames;
+					}
 					projection.space = view_space;
 					projection.viewCount = static_cast<uint32_t>(projection_views.size());
 					projection.views = projection_views.data();
@@ -1011,6 +1025,9 @@ private:
 	const uint32_t capture_width;
 	const uint32_t capture_height;
 	const XrExtent2Df capture_size;
+	jlong submitted_capture_timestamp = 0;
+	uint32_t copied_frames = 0;
+	uint32_t reused_frames = 0;
 	XrInstance instance = XR_NULL_HANDLE;
 	XrSystemId system_id = XR_NULL_SYSTEM_ID;
 	XrSession session = XR_NULL_HANDLE;
