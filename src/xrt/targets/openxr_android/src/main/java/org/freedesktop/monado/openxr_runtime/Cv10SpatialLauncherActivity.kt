@@ -5,8 +5,10 @@ package org.freedesktop.monado.openxr_runtime
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -15,6 +17,9 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
 import android.text.TextPaint
 import android.text.TextUtils
 import android.util.Log
@@ -227,11 +232,29 @@ class Cv10SpatialLauncherActivity : Activity() {
         if (closing) return
         val state = renderState
         if (state != null) {
+            if (app?.isXr == true) holdRuntimeDuringLaunch()
             closing = true
             pendingLaunch = app
             state.stop = true
         } else {
             finish()
+        }
+    }
+
+    private fun holdRuntimeDuringLaunch() {
+        val context = applicationContext
+        val service = Intent().setClassName(packageName, "org.freedesktop.monado.ipc.MonadoService")
+        val connection = object : ServiceConnection {
+            override fun onServiceConnected(name: ComponentName, binder: IBinder) = Unit
+
+            override fun onServiceDisconnected(name: ComponentName) = Unit
+        }
+        // Keep the runtime foreground service bound across the gap between the two XR clients.
+        if (context.bindService(service, connection, Context.BIND_AUTO_CREATE)) {
+            Handler(Looper.getMainLooper()).postDelayed(
+                { context.unbindService(connection) },
+                XR_APP_HANDOFF_MILLIS,
+            )
         }
     }
 
@@ -356,6 +379,7 @@ class Cv10SpatialLauncherActivity : Activity() {
         private const val PANEL_HEIGHT = 720
         private const val PAGE_SIZE = 6
         private const val STARTUP_NOTICE_MILLIS = 15_000L
+        private const val XR_APP_HANDOFF_MILLIS = 3_000L
         private val BACKGROUND = Color.rgb(18, 24, 36)
         private val PHONE_BACKGROUND = Color.rgb(14, 19, 28)
         private val TILE = Color.rgb(42, 55, 77)

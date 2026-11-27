@@ -18,7 +18,7 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.sqrt
 
-/** Turns the foreground phone into a pointer. Aim is in [-1, 1], with right and down positive. */
+/** Turns the foreground phone into a pointer. The menu spans [-1, 1], with right and down positive. */
 internal class Cv10LaserInput(
     private val view: View,
     private val onAim: (Float, Float) -> Unit,
