@@ -1,0 +1,7 @@
+11-27 10:40:01.239 11627 14815 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 10:40:01.496  2961  4528 I ActivityTaskManager: START u0 {flg=0x10008000 cmp=com.hayeco.flipspaces/.pcscreen.PcScreenActivity} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+11-27 10:40:01.496 14831 14844 I Cv10PocketXrDisplay: Pocket XR mode 2 start accepted on 202 (1920x1080, 240 dpi)
+11-27 10:40:01.674 11627 11627 I Cv10PocketXrPreview: First virtual display frame available on display 202
+11-27 10:40:01.711 14868 14868 E ShizukuServiceStarter: provider is null moe.shizuku.privileged.api.shizuku 0
+11-27 10:40:03.890 12754 14892 I PcScreen: connecting to [LAN], app Desktop, 1920x1080@120 (auto), 60 Mbps (auto), 0 other PC screens streaming, window 1920x1080, virtual display false, codec auto, formats 0x1101
+11-27 10:40:07.360 12754 14943 I PcScreen: streaming

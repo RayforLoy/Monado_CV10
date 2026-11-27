@@ -88,6 +88,8 @@
 
 ## Fold7 的 3D 点选与后台冻结对照
 
+10:41，`00d383b` 从 2D 列表直启原版 `hello_xr` 约 0.52 秒进入 `FOCUSED`。按返回后马上由 3D 菜单点选同一个仍存活的样例，三星 Freecess 在启动请求约 0.24 秒后冻结 Preview 约 9.8 秒，随后解冻。样例这轮在点选后约 10.43 秒进入 `FOCUSED`，CV10 两眼区最终正常出画。Preview 的后台运行已允许。2D 直启后迅速切到 3D 的延迟待修。[筛选日志](evidence/fold7-launcher-warm-2d-to-3d.log)
+
 2026-11-27 香港时间。沿用同一台 Fold7、原厂线、供电及原版 `hello_xr`。经手机菜单打开 2D 列表后等待 40 秒，避免 ADB 启动产生的临时豁免覆盖 2D 直启。先在 2D 列表直启并退出样例，再从 3D 菜单点选同一个样例。记录 `FOCUSED`、SurfaceFlinger 呈现计数、右镜画面及返回后的 `xrDestroyInstance`。前三轮预览包的 `RUN_ANY_IN_BACKGROUND` 为 `ignore`。
 
 - 基线 `76ad245` 经 2D 直启后持续出帧至第 78 秒，外屏图层约 60 次不同的呈现时间戳每秒，CV10 面板模式为 90 Hz。3D 点选于 07:28:46.252 进入 `FOCUSED`，Freecess 随后以 `Bg-buff` 冻结预览包的两个进程。第 2 秒右镜为黑色，`ActivityDestroyTimeout` 约十秒后解冻并恢复出图，样例可退出。[第 2 秒右镜](evidence/fold7-launcher-76ad245-handoff-black-right.jpg) · [第 38 秒右镜](evidence/fold7-launcher-76ad245-handoff-recovered-right.jpg)

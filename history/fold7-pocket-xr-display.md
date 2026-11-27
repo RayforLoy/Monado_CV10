@@ -28,6 +28,12 @@
 
 返回预览页点按 **停止预览** 后，原版空间与面板虚拟屏均已释放。随后用同一 APK 从 Monado 内置 3D 菜单冷启动原版 `hello_xr`，约 0.45 秒进入 `FOCUSED`，CV10 外屏两眼区都抓到蓝色方块。[该次双目外屏截图](evidence/fold7-launcher-handoff-pocket-build.png)
 
+### Fold7 原版应用面板的实时画面
+
+10:22 至 10:26 香港时间，沿用 `951f570`、两项 Shizuku 授权及手机默认 Adreno GLES 驱动。原版空间创建虚拟屏 197，恢复时钟面板的虚拟屏 198。时钟的独立虚拟屏可见秒表在走，双目源画布起初仍黑。用原版触控板的 Home 打开原版菜单并选择 **计算器**，原版创建虚拟屏 199。向计算器虚拟屏发送触摸输入后，两眼显示 `7 + 5` 的结果 `12`，右镜实拍也拍到 `12`。
+
+再从原版菜单选中 **时钟**，保留原有虚拟屏 198，时钟窗口回到视野。两只眼的 CV10 外显先后读到 `00:09.31` 和 `00:13.67`，右镜随后拍到 `00:14.51`。这轮验证了场景和 CV10 外显都能显示持续更新的普通应用面板。恢复旧会话后若窗口不可见，可在原版启动器重新选中。测试未改变系统驱动或 Pocket XR APK。点击 **停止预览** 后，空间屏和两个应用屏均已释放。[CV10 双眼对照](evidence/fold7-pocket-live-panels-stereo.png) · [右镜计算器](evidence/fold7-pocket-live-calculator-right.jpg) · [右镜秒表](evidence/fold7-pocket-live-clock-right.jpg)
+
 ### 早期整合预览
 
 2026-11-27 02:40 香港时间，同一台 Fold7 和接线。ARM64 整合预览来自 `6e536a4`，包含内置 2D、3D 启动器及 Pocket XR 外显和头踪实验。正式预览包 SHA-256 为 `94fc866acb33f0def30ec4d3f03ffd11a09e918e44b30604635ea850c110f21c`。签名与 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 `PT_LOAD` 段均对齐到 16 KiB。本机页大小为 4 KiB。内置 3D 菜单进入 `XR_SESSION_STATE_FOCUSED`，右镜拍到应用卡片和手机指针。[内置 3D 菜单右镜实拍](evidence/fold7-pocket-integrated-menu-right.jpg)
