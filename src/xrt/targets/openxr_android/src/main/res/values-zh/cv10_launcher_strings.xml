@@ -14,7 +14,7 @@
     <string name="cv10_xr_apps_only">仅显示 XR 应用</string>
     <string name="cv10_no_matching_apps">没有匹配的应用。可关闭 XR 筛选或修改搜索内容。</string>
     <string name="cv10_app_launch_failed">无法打开 %1$s</string>
-    <string name="cv10_direct_pocket_warning">当前选中的是 Pocket XR。要在 CV10 上直接打开此应用，请在 Runtime Broker 中选择 Monado CV10 或 Monado CV10 Preview。</string>
+    <string name="cv10_direct_pocket_warning">当前选中的是 Pocket XR。要在 CV10 上直接打开此应用，请在 Runtime Broker 中选择 Monado CV10。</string>
     <string name="cv10_direct_usb_retry">无法通过 USB 访问 CV10。再次点选 XR 应用可重试。</string>
     <string name="cv10_launch_anyway">仍然启动</string>
     <string name="cv10_pocket_preview_title">Pocket XR 外显预览</string>
@@ -32,13 +32,13 @@
     <string name="cv10_pocket_close_xr_app">关闭 OpenXR 应用屏</string>
     <string name="cv10_pocket_no_xr_apps">当前未安装带有 OpenXR 入口的应用。</string>
     <string name="cv10_pocket_choose_runtime">在 OpenXR Runtime Broker 中选择 Pocket XR 或 Pocket XR (Monado CV10)，再从这里打开应用。</string>
-    <string name="cv10_pocket_client_incompatible">Pocket XR (Monado CV10) 需要官方 Pocket XR 1.6.28 或 1.6.31，且客户端须与本预览包使用相同签名。</string>
+    <string name="cv10_pocket_client_incompatible">Pocket XR (Monado CV10) 需要官方 Pocket XR 1.6.28 或 1.6.31，且客户端须与当前的 Monado CV10 安装包使用相同签名。</string>
     <string name="cv10_pocket_client_display_failed">无法为 OpenXR 应用创建显示屏。</string>
     <string name="cv10_pocket_client_display_close_failed">无法关闭 OpenXR 应用的显示屏。</string>
     <string name="cv10_pocket_controls_notification">在手机上使用 Pocket XR 时，CV10 会继续显示预览。</string>
     <string name="cv10_pocket_controls_launch_failed">无法在手机上打开 Pocket XR。</string>
     <string name="cv10_pocket_preview_needs_shizuku">需要先启动 Shizuku 才能为 Pocket XR 创建虚拟显示屏。</string>
-    <string name="cv10_pocket_preview_shizuku_denied">请在 Shizuku 中允许 Monado CV10 Preview 创建虚拟显示屏。</string>
+    <string name="cv10_pocket_preview_shizuku_denied">请在 Shizuku 中允许 Monado CV10 创建虚拟显示屏。</string>
     <string name="cv10_pocket_preview_starting">正在启动 OpenXR 会话和虚拟显示屏…</string>
     <string name="cv10_pocket_preview_receiving">正在接收显示屏 %1$d 的虚拟屏画面。</string>
     <string name="cv10_pocket_preview_failure">Pocket XR 外显预览失败：%1$s</string>

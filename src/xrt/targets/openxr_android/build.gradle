@@ -255,7 +255,7 @@ android {
         flavor.resValue "string", "app_name", appName
     }
 
-    def outOfProcessBaseConfig = { flavor, appName ->
+    def outOfProcessBaseConfig = { flavor ->
         def packageSuffix = cv10LauncherPreview ? '.out_of_process.launcher_preview' : '.out_of_process'
         flavor.dimension 'deployment'
         flavor.applicationIdSuffix packageSuffix
@@ -267,7 +267,7 @@ android {
         flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service", "cv10-spatial-launcher", "cv10-kit-slam"
         flavor.buildConfigField "boolean", "inProcess", "false"
         flavor.manifestPlaceholders += [cv10PocketXrEnabled: 'true']
-        flavor.resValue "string", "app_name", appName
+        flavor.resValue "string", "app_name", "Monado CV10"
     }
 
     flavorDimensions = ['deployment']
@@ -276,7 +276,7 @@ android {
             inProcessBaseConfig(it, "Monado In Process (Debugging)")
         }
         outOfProcess {
-            outOfProcessBaseConfig(it, cv10LauncherPreview ? 'Monado CV10 Preview' : 'Monado CV10')
+            outOfProcessBaseConfig(it)
         }
     }
     hilt {

@@ -14,7 +14,7 @@
     <string name="cv10_xr_apps_only">XR apps only</string>
     <string name="cv10_no_matching_apps">No matching apps. Turn off the XR filter or change the search.</string>
     <string name="cv10_app_launch_failed">Could not open %1$s</string>
-    <string name="cv10_direct_pocket_warning">Pocket XR is selected. To open this app directly on the CV10, select Monado CV10 or Monado CV10 Preview in Runtime Broker.</string>
+    <string name="cv10_direct_pocket_warning">Pocket XR is selected. To open this app directly on the CV10, select Monado CV10 in Runtime Broker.</string>
     <string name="cv10_direct_usb_retry">USB access to the CV10 is unavailable. Select the XR app again to retry.</string>
     <string name="cv10_launch_anyway">Launch anyway</string>
     <string name="cv10_pocket_preview_title">Pocket XR display preview</string>
@@ -32,13 +32,13 @@
     <string name="cv10_pocket_close_xr_app">Close OpenXR app display</string>
     <string name="cv10_pocket_no_xr_apps">No OpenXR launcher activities are installed.</string>
     <string name="cv10_pocket_choose_runtime">In OpenXR Runtime Broker, select Pocket XR or Pocket XR (Monado CV10) before opening an app here.</string>
-    <string name="cv10_pocket_client_incompatible">Pocket XR (Monado CV10) requires the official Pocket XR 1.6.28 or 1.6.31 app and must be signed with the same key as this preview.</string>
+    <string name="cv10_pocket_client_incompatible">Pocket XR (Monado CV10) requires the official Pocket XR 1.6.28 or 1.6.31 app and must be signed with the same key as this Monado CV10 installation.</string>
     <string name="cv10_pocket_client_display_failed">Could not create the display for the OpenXR app.</string>
     <string name="cv10_pocket_client_display_close_failed">Could not close the display for the OpenXR app.</string>
     <string name="cv10_pocket_controls_notification">The CV10 preview stays on while you use Pocket XR on the phone.</string>
     <string name="cv10_pocket_controls_launch_failed">Could not open Pocket XR on the phone.</string>
     <string name="cv10_pocket_preview_needs_shizuku">Start Shizuku to create a virtual display for Pocket XR.</string>
-    <string name="cv10_pocket_preview_shizuku_denied">Allow Monado CV10 Preview in Shizuku to create a virtual display.</string>
+    <string name="cv10_pocket_preview_shizuku_denied">Allow Monado CV10 in Shizuku to create a virtual display.</string>
     <string name="cv10_pocket_preview_starting">Opening the OpenXR session and virtual display…</string>
     <string name="cv10_pocket_preview_receiving">Receiving virtual display frames on display %1$d.</string>
     <string name="cv10_pocket_preview_failure">Pocket XR display preview failed: %1$s</string>
