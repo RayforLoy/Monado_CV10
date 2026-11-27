@@ -114,6 +114,12 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 移除临时回环映射后，从 2D 列表直启和 3D 菜单点选 `hello_xr`。同一 PID 11235 两次进入 `FOCUSED` 并正常退出。3D 点选第 24 秒仍有约 60.32 次/秒的不同呈现时间戳，右镜拍到蓝块。手机 Wi-Fi 保持打开以维持无线 ADB。结束后确认稳定 Broker、后台 `ignore`、最低刷新率 `null` 和原预览 APK 已恢复。[隔离测试日志](evidence/fold7-launcher-a05f274-isolated.txt) · [第 24 秒右镜](evidence/fold7-launcher-a05f274-isolated-24s-right.jpg)
 
+### Pocket XR 测试卡修订版的 Fold7 安装回归
+
+08:30–08:39，使用同一 Fold7、C9.53.6 原厂线和 5 V 供电。源码 `a3d86e5` 的 ARM64 预览 APK SHA-256 为 `7b4c258ada835cc6f07882231aa9d9ae99504676e52c5a38bb1413c633b1e216`。v2 签名、16 KiB ZIP 对齐及 15 个 ELF `PT_LOAD` 段检查均通过。Fold7 覆盖安装后能打开 **应用启动器** 和启动原版 `hello_xr` 的 Activity。尝试在 Broker 选择 **Monado CV10 Preview** 时，自动化读回仍为稳定版 v0.1.2。
+
+使用稳定版作对照时，2D 启动路径两次都已加载稳定运行时。IPC 服务绑定失败，`xrCreateInstance` 返回 `XR_ERROR_RUNTIME_UNAVAILABLE`。第二次在卸载后还出现 `__cxa_thread_finalize` 崩溃。在两次对照之间，先打开稳定 Monado 再启动同一原版样例，可从手机进入 `FOCUSED`。该修订包的两路预览运行时复测未完成。原预览 APK、稳定 Broker、后台 `ignore` 和最低刷新率 `null` 已恢复。[修订版安装与稳定运行时对照](evidence/fold7-launcher-a3d86e5-install.txt)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。

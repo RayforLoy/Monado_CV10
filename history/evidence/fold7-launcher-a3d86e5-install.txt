@@ -1,0 +1,32 @@
+2026-11-27 08:30–08:39 HKT | Fold7 SM-F9660, Android 16, PAGE_SIZE=4096
+CV10 HUAWEIAV03, C9.53.6 original cable, auxiliary 5 V, mirrored
+Monado CV10 preview a3d86e5 ARM64
+APK SHA-256 7b4c258ada835cc6f07882231aa9d9ae99504676e52c5a38bb1413c633b1e216
+APK v2 signature and ZIP 16 KiB alignment passed, all 15 ELF PT_LOAD segments p_align=0x4000
+
+Candidate APK installed and About / application list opened.
+Runtime Broker still reported the stable org.cv10.monado.out_of_process after selecting the preview row by ADB UI.
+Both FOCUSED and optical launcher results for the previous integrated 39250d1 build remain documented separately.
+
+2D launcher with stable runtime v0.1.2 selected
+11-27 08:36:47.530 24175 24202 I OpenXR-Loader: RuntimeInterface::LoadRuntime succeeded
+11-27 08:36:47.579 24175 24202 E monado-ipc-client: bindService: Service Intent { act=org.freedesktop.monado.ipc.CONNECT xflg=0x4 pkg=org.cv10.monado.out_of_process } could not be found to bind!
+11-27 08:36:47.581 24175 24202 E hello_xr: XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+
+Control starting the stable AboutActivity and original hello_xr NativeActivity from ADB
+11-27 08:37:50.188 24818 24818 D MonadoService: onBind
+11-27 08:37:50.188 24818 24818 D MonadoService: onStartCommand
+11-27 08:37:50.640 24903 24935 V hello_xr: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+
+2D launcher after opening stable Monado AboutActivity
+11-27 08:38:37.731 27164 27184 I OpenXR-Loader: RuntimeInterface::LoadRuntime succeeded
+11-27 08:38:37.769 27164 27184 E monado-ipc-client: bindService: Service Intent { act=org.freedesktop.monado.ipc.CONNECT xflg=0x4 pkg=org.cv10.monado.out_of_process } could not be found to bind!
+11-27 08:38:37.770 27164 27184 I OpenXR-Loader: RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 08:38:37.771 27164 27184 E hello_xr: XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 08:38:37.771 27164 27184 F libc: Fatal signal 11 in Thread-2
+11-27 08:38:37.965 27206 27206 F DEBUG: #01 libc.so (__cxa_thread_finalize+80)
+
+Restored preview APK SHA-256 8d1bbb5bc75e24e8d225872e0def4ecbc5768ad0cd849c5d21e00af50c4713db
+Broker provider row package_name=org.cv10.monado.out_of_process
+Preview RUN_ANY_IN_BACKGROUND=ignore, min_refresh_rate=null, Wi-Fi=1, battery 75% USB powered.
+Home screen shown. No Shizuku or VPN grant added, camera and physical cabling left in place.
