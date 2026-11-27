@@ -1,0 +1,50 @@
+2026-11-27 09:33–09:41 HKT | Isolated Android 16 Google APIs x86_64 emulator
+Emulator 37.4.2.0, swangle. ro.kernel.qemu=1, PAGE_SIZE=16384, wifi_on=0, mobile_data=0.
+Vulkan graphics compositor, COLOR_ATTACHMENT presentation, FIFO, per-app native GLES.
+Monado production APK (a3d86e5) SHA-256 e739338fc1568ecc83f0586366b5212466d85fb09024d9d946bad2a90a3a74a7.
+Stock Pocket XR 1.6.28 SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337.
+All diagnostic installs used adb install --no-incremental -r. Fold7 was not used.
+
+A/B test, exact same diagnostic APK SHA-256 ed1b3d62466af7b4948bf3b0819ff4845928a68d708be6bc723b9e58f724c670.
+Only libmonado-service.so differed from production, excluding signatures and zip alignment.
+Toggling debug.xrt.CV10_SCRATCH_NO_STORAGE changes scratch image usage and its UNORM view usage, leaving application and present image usages unchanged.
+Each FOCUSED trial captured an Android screenshot. FFmpeg YMIN=YMAX=16 in all four screenshots.
+Time (FOCUSED) | Workload | Scratch no-storage property | Host AHardwareBuffer STORAGE usage warnings
+09:33:08.617 | standard 3D launcher | false | 8
+09:33:18.076 | standard 3D launcher | true | 0
+09:33:29.878 | Pocket XR stereo test card | false | 8
+09:33:41.981 | Pocket XR stereo test card | true | 0
+Host diagnostic text: VkImageCreateInfo to import AHardwareBuffer contains unsupported VkImageUsageFlags: VK_IMAGE_USAGE_STORAGE_BIT.
+Both capture trials received a first virtual display frame (09:33:30.825, 09:33:42.878).
+
+09:38 compositor-only readback, APK SHA-256 3ef415f2aef2fc958a45142d28ba0dd4c92de8fa54bedf1d6a86bea11448b863.
+At frames 1 and 30 of the submitted Pocket XR layer, both 2240x2240 Vulkan scratch images and the 1080x1920 presentation image had zero pixels with nonzero RGB. Their centers were 0/0/0/255. The first virtual display frame arrived before the first readback.
+09:39 readback of the Vulkan shared image and the GLES framebuffer, APK SHA-256 88e7ba40ee206128c847be490b3417dd49d9b85201d937373af37555df6a6bc3.
+The default device builder was 'legacy'. The 3D launcher reported first anchor location flags 0x0 and recorded no GLES draws or Vulkan layer probe in the four-second sample window.
+In the capture trial the GLES framebuffer sample was 51/255/51/255 at frame 30, error 0. The Vulkan image imported for the submitted layer had zero nonblack RGB pixels and center 0/0/0/0. Both scratch images and the present image had zero nonblack RGB pixels and center 0/0/0/255.
+
+09:40 comparison with SIMULATED_ENABLE=true and an explicit transfer-write-to-host-read barrier.
+APK SHA-256 0c8dcbd22eae7e0f49a69cca8d28c34acdd35969b43a1277a43059f5a07b8134; diagnostic patch in ../android16-vulkan-readback-diagnostic.patch.
+Compared with production outside signatures, this APK only changes libmonado-service.so and libcv10-spatial-launcher.so.
+Vulkan reads run in a one-shot graphics-queue command buffer after graphics submission and before presentation. The full four-channel image is transferred to coherent host-visible memory. The log counts RGB across the image and reports the central pixel. Client and compositor sample by their own frame counters.
+The simulated device builder reports valid orientation (first anchor flags 0x7); the standard 3D menu now submits a layer. Both client and compositor complete their samples:
+09:40:38.308 standard launcher enters FOCUSED
+09:40:38.316 first anchor flags 0x7
+09:40:39.001 GLES frame 30: panel sample 6/10/19/255, error 0
+09:40:39.363 Vulkan compositor frame 30: shared image 1280x720, rgb_nonzero=0, center=0/0/0/0
+09:40:39.364 Vulkan compositor frame 30: left 896x1007, rgb_nonzero=0, center=0/0/0/255
+09:40:39.365 Vulkan compositor frame 30: right 896x1007, rgb_nonzero=0, center=0/0/0/255
+09:40:39.367 Vulkan compositor frame 30: present 1080x1920, rgb_nonzero=0, center=0/0/0/255
+The Vulkan image counts and colors were identical at composited frames 1 and 150.
+09:40:49.973 Pocket XR capture enters FOCUSED
+09:40:50.860 first virtual display frame, display 6
+09:40:52.277 GLES frame 30: test card sample 51/255/51/255, error 0
+09:40:52.508 Vulkan compositor frame 30: shared image 3840x1080, rgb_nonzero=0, center=0/0/0/0
+09:40:52.523 Vulkan compositor frame 30: left 896x1007, rgb_nonzero=0, center=0/0/0/255
+09:40:52.525 Vulkan compositor frame 30: right 896x1007, rgb_nonzero=0, center=0/0/0/255
+09:40:52.537 Vulkan compositor frame 30: present 1080x1920, rgb_nonzero=0, center=0/0/0/255
+
+Standard launcher screenshot SHA-256 05377a96972306b771d4474d00222af062992f86ab1a12b2688f0cf8da5ba55b.
+Capture screenshot SHA-256 4afb293f262964138b1d2e2a08733ad4d4216150e508b9f62e4610e47e0cb930.
+Both screenshots measured YMIN=YMAX=16. The original production APK was reinstalled and its SHA-256 verified after each run. The testing properties were reset.
+The first unreadable image observed in the rendering chain is the GLES/Vulkan shared image. This experiment does not distinguish import, synchronization, or emulator implementation effects or establish a cause on other GPUs or 16 KiB devices.

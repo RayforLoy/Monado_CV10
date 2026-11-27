@@ -1,0 +1,150 @@
+diff --git a/src/xrt/compositor/main/comp_renderer.c b/src/xrt/compositor/main/comp_renderer.c
+index 1445678..2356f91 100644
+--- a/src/xrt/compositor/main/comp_renderer.c
++++ b/src/xrt/compositor/main/comp_renderer.c
+@@ -35,0 +36 @@
++#include "util/comp_swapchain.h"
+@@ -55,0 +57 @@ DEBUG_GET_ONCE_LOG_OPTION(comp_frame_lag_level, "XRT_COMP_FRAME_LAG_LOG_AS_LEVEL
++DEBUG_GET_ONCE_BOOL_OPTION(pixel_probe, "CV10_VULKAN_PIXEL_PROBE", false)
+@@ -589 +591 @@ renderer_ensure_images_and_renderings(struct comp_renderer *r, bool force_recrea
+-	if (c->peek) {
++	if (c->peek || debug_get_bool_option_pixel_probe()) {
+@@ -1082,0 +1085,64 @@ dispatch_compute(struct comp_renderer *r,
++static void
++probe_image(struct comp_renderer *r,
++            const char *label,
++            VkImage image,
++            VkImageLayout layout,
++            uint32_t width,
++            uint32_t height,
++            unsigned int frame)
++{
++	struct vk_bundle *vk = &r->c->base.vk;
++	struct vk_cmd_pool *pool = &r->c->nr.distortion_pool;
++	struct vk_buffer readback = {0};
++	size_t size = (size_t)width * height * 4;
++	if (!vk_buffer_init(vk, size, VK_BUFFER_USAGE_TRANSFER_DST_BIT,
++	                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
++	                    &readback.handle, &readback.memory)) {
++		COMP_ERROR(r->c, "CV10 pixels %s buffer allocation failed", label);
++		return;
++	}
++
++	VkCommandBuffer cmd;
++	VkResult ret = vk_cmd_pool_create_and_begin_cmd_buffer(vk, pool, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, &cmd);
++	if (ret == VK_SUCCESS) {
++		VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
++		vk_cmd_image_barrier_locked(vk, cmd, image, VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT,
++		                            VK_ACCESS_TRANSFER_READ_BIT, layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
++		                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, range);
++		VkBufferImageCopy region = {
++		    .imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1},
++		    .imageExtent = {width, height, 1},
++		};
++		vk->vkCmdCopyImageToBuffer(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readback.handle, 1, &region);
++		VkMemoryBarrier host_read = {
++		    .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
++		    .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
++		    .dstAccessMask = VK_ACCESS_HOST_READ_BIT,
++		};
++		vk->vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1,
++		                         &host_read, 0, NULL, 0, NULL);
++		vk_cmd_image_barrier_locked(vk, cmd, image, VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
++		                            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, layout, VK_PIPELINE_STAGE_TRANSFER_BIT,
++		                            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, range);
++		ret = vk_cmd_pool_end_submit_wait_and_free_cmd_buffer(vk, pool, cmd);
++	}
++	void *mapped = NULL;
++	if (ret == VK_SUCCESS) {
++		ret = vk->vkMapMemory(vk->device, readback.memory, 0, size, 0, &mapped);
++	}
++	if (ret == VK_SUCCESS) {
++		const uint8_t *pixels = mapped;
++		size_t count = 0;
++		for (size_t i = 0; i < size; i += 4) {
++			count += (pixels[i] | pixels[i + 1] | pixels[i + 2]) != 0;
++		}
++		const uint8_t *center = pixels + ((size_t)(height / 2) * width + width / 2) * 4;
++		COMP_ERROR(r->c, "CV10 pixels %s frame=%u bounds=%ux%u rgb_nonzero=%zu center=%u/%u/%u/%u", label,
++		           frame, width, height, count, center[0], center[1], center[2], center[3]);
++		vk->vkUnmapMemory(vk->device, readback.memory);
++	} else {
++		COMP_ERROR(r->c, "CV10 pixels %s readback failed: %s", label, vk_str_result(ret));
++	}
++	vk_buffer_destroy(&readback, vk);
++}
++
+@@ -1159,0 +1226,26 @@ comp_renderer_draw(struct comp_renderer *r)
++	if (!use_compute && debug_get_bool_option_pixel_probe() && frame_state.scratch_state.views[0].used) {
++		static unsigned int probe_frame;
++		++probe_frame;
++		if (probe_frame == 1 || probe_frame == 30 || probe_frame == 150) {
++			const struct comp_layer *layer = &c->base.layer_accum.layers[0];
++			if (layer->data.type == XRT_LAYER_QUAD) {
++				struct comp_swapchain *source = comp_swapchain(comp_layer_get_swapchain(layer, 0));
++				if (source->vkic.info.bits & XRT_SWAPCHAIN_USAGE_TRANSFER_SRC) {
++					uint32_t index = layer->data.quad.sub.image_index;
++					probe_image(r, "shared", source->vkic.images[index].handle,
++					            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, source->vkic.info.width,
++					            source->vkic.info.height, probe_frame);
++				}
++			}
++			for (uint32_t eye = 0; eye < view_count; ++eye) {
++				uint32_t index = frame_state.scratch_state.views[eye].index;
++				struct comp_scratch_single_images *view = &c->scratch.views[eye].cssi;
++				probe_image(r, eye == 0 ? "left" : "right", view->images[index].image,
++				            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, view->info.width, view->info.height,
++				            probe_frame);
++			}
++			probe_image(r, "present", ct->images[r->acquired_buffer].handle, ct->final_layout,
++			            ct->width, ct->height, probe_frame);
++		}
++	}
++
+diff --git a/src/xrt/compositor/util/comp_scratch.c b/src/xrt/compositor/util/comp_scratch.c
+index 4521b87..d870855 100644
+--- a/src/xrt/compositor/util/comp_scratch.c
++++ b/src/xrt/compositor/util/comp_scratch.c
+@@ -14,0 +15 @@
++#include "util/u_debug.h"
+@@ -27,0 +29,2 @@
++DEBUG_GET_ONCE_BOOL_OPTION(scratch_no_storage, "CV10_SCRATCH_NO_STORAGE", false)
++
+@@ -40,2 +43,4 @@ fill_info(VkExtent2D extent, VkFormat srgb_format, VkFormat unorm_format, struct
+-	    XRT_SWAPCHAIN_USAGE_TRANSFER_DST |    //
+-	    XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS; //
++	    XRT_SWAPCHAIN_USAGE_TRANSFER_DST;    //
++	if (!debug_get_bool_option_scratch_no_storage()) {
++		bits |= XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS;
++	}
+@@ -175 +180,3 @@ tmp_init_and_create(struct tmp *t,
+-	const VkImageUsageFlags unorm_usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
++	const bool use_storage = (info->bits & XRT_SWAPCHAIN_USAGE_UNORDERED_ACCESS) != 0;
++	const VkImageUsageFlags unorm_usage = VK_IMAGE_USAGE_SAMPLED_BIT |
++	                                   (use_storage ? VK_IMAGE_USAGE_STORAGE_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+diff --git a/src/xrt/targets/openxr_android/src/main/cpp/cv10_spatial_launcher.cpp b/src/xrt/targets/openxr_android/src/main/cpp/cv10_spatial_launcher.cpp
+index af7ae85..07703a6 100644
+--- a/src/xrt/targets/openxr_android/src/main/cpp/cv10_spatial_launcher.cpp
++++ b/src/xrt/targets/openxr_android/src/main/cpp/cv10_spatial_launcher.cpp
+@@ -467 +467,2 @@ private:
+-		chain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
++		chain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_SAMPLED_BIT |
++		                        XR_SWAPCHAIN_USAGE_TRANSFER_SRC_BIT;
+@@ -573,0 +575,6 @@ private:
++		static bool logged_flags = false;
++		if (!logged_flags) {
++			logged_flags = true;
++			__android_log_print(ANDROID_LOG_INFO, tag, "First anchor location flags=0x%llx",
++			                    static_cast<unsigned long long>(head.locationFlags));
++		}
+@@ -655,0 +663,10 @@ private:
++		static unsigned int probe_frame = 0;
++		++probe_frame;
++		if (probe_frame == 1 || probe_frame == 30 || probe_frame == 150) {
++			GLubyte pixel[4]{};
++			const int width = capture ? pocket_width : panel_width;
++			const int height = capture ? pocket_height : panel_height;
++			glReadPixels(width / 4, height / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
++			__android_log_print(ANDROID_LOG_INFO, tag, "GLES pixel frame=%u center=%u/%u/%u/%u error=%u",
++			                    probe_frame, pixel[0], pixel[1], pixel[2], pixel[3], glGetError());
++		}
