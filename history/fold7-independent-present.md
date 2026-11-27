@@ -17,11 +17,21 @@
 
 临时的每显示器 60 Hz 模式偏好与撤销系统峰值限制组合会将手机物理模式切到 120 Hz，已排除该组读数并恢复原设置。
 
-用直接渲染的工作区再次采集时，手机一直亮屏 60 Hz，采样前后两张手机屏幕截图的 SHA-256 相同。七秒内仍有 419 次手机屏 HWC 调用，平均 12.51 ms，CV10 HWC 为 60.32 次/秒。将手机控制界面静置也会复现。
+用直接渲染的工作区再次采集时，手机一直亮屏 60 Hz，采样前后两张手机屏幕截图的 SHA-256 相同。七秒内仍有 419 次手机屏 HWC 调用，平均 12.51 ms，CV10 HWC 为 60.32 次/秒。
+
+### HWC 快速返回时的对照
+
+另一次直出采集在完全静置手机界面时仍复现约 60.3 次实呈/秒。图层追踪的 395 个有效快照中，手机前台始终为缓冲帧 73，CV10 有 395 个不同的帧。两路 `HwcPresentOrValidateDisplay` 平均分别为 0.33 ms（手机）和 0.35 ms（CV10）。CV10 合成调用中有 398 次 `drawLayersInternal for HUAWEIAV03`。Composer dump 显示外屏的全屏 `SurfaceView` 被分配为 `CLIENT`，DPU 扫描的是 SurfaceFlinger 的 `GPU_TARGET`。
+
+此时应用 VSync 节拍接近 90 Hz，SurfaceFlinger 的间隔混合了约 11.1 ms 和 22.2 ms。CV10 的 `PrevGpuFrameMissed` 为 171/397，`PrevHwcFrameMissed` 为 0/397，手机两项均为零。较早采集的 Qualcomm DRM 同步等待并非快速返回这组追踪中的主要耗时。Android 16 QPR2 上游会根据 pacesetter 的上一帧栅栏决定是否推迟本轮提交；本机 `debug.sf.enable_gl_backpressure` 为 `1`。这些数据说明还要追查 CV10 客户端合成的栅栏和截止时间。仅凭计数无法区分 GPU 工作本身太长、等待上游缓冲区以及合成调度相位不匹配。[AOSP SurfaceFlinger commit](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-qpr2-release/services/surfaceflinger/SurfaceFlinger.cpp#2894)
+
+进一步核对 SurfaceFlinger 主线程，常规时间戳的 Hello XR 七秒内调用了 421 次 `commit`、421 次 `composite` 和 421 次 `present`，跳拍在这些调用之前已经出现。直接工作区也只有 397 次完整的 `commit`。尽早呈现的路径把 CV10 的 `PrevGpuFrameMissed` 从 133/421 增至 391/421，两边进入 `commit` 的次数相同。这支持优先追查 VSync 预报与 SurfaceFlinger 唤醒时间，同时保留对提交完成栅栏的核对。单凭 `PrevGpuFrameMissed` 不能认定 SurfaceFlinger 已进入 `commit` 并从栅栏分支返回。
+
+同一原版 Hello XR 在手机 ON/60、CV10 作为调度时钟时，分别用 Vulkan MAILBOX、FIFO 和 IMMEDIATE 复测，外屏均约 60.3 次实呈/秒。还在同一实验 APK、默认 MAILBOX 和电池温度 34.6°C 下取消 `desiredPresentTime`，保留 present ID 和实际时间反馈。对照两次均为约 60.3 次实呈/秒。记录验证了实验组有效反馈的 `desired` 为零。未将该选项纳入正常构建。[Vulkan present time](https://docs.vulkan.org/refpages/latest/refpages/source/VkPresentTimeGOOGLE.html)
 
 系统修复需保证当手机保持 ON/60 时，外屏可以按自身 90 Hz 的节拍提交。应检查当只有 CV10 有新内容时，SurfaceFlinger 是否仍把手机纳入同批 Present/Validate，以及 Qualcomm Composer 能否异步处理不同显示器的提交和栅栏。AOSP 的并行路径需要所有参与的 HWC 输出都声明支持，SurfaceFlinger 还会等待当批输出完成。单独并行化可能仍受超过 11.1 ms 的等待限制，需用同一亮屏对照验证。[AOSP Scheduler](https://android.googlesource.com/platform/frameworks/native/+/9095117f55f3a44a62cb249ab1b952fcb4ca8a42/services/surfaceflinger/Scheduler/Scheduler.cpp#204) · [AOSP CompositionEngine](https://android.googlesource.com/platform/frameworks/native/+/1fc9e7f03d5719e8043a4c0b415278860f94badd/services/surfaceflinger/CompositionEngine/src/CompositionEngine.cpp#97)
 
-Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这条路径仍将物理显示放在同一组。可在系统树做两个可独立回退的对照。先按输出的损伤和待处理事务跳过静置内屏的不必要提交，再将需要更新的内屏和 CV10 提交从共同的同步等待中拆开，分别处理本输出的 present fence。验收应覆盖静置和持续操作内屏两种情况，同时看内屏物理模式、两路 HWC 调用和 CV10 实际呈现。上述系统改动尚未部署到 Fold7。[AOSP SurfaceFlinger](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-qpr2-release/services/surfaceflinger/SurfaceFlinger.cpp#3050)
+Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这条路径仍将物理显示放在同一组。可在系统树做两个可独立回退的对照。先按输出的损伤和待处理事务跳过静置内屏的不必要提交，再将需要更新的内屏和 CV10 提交从共同的同步等待中拆开，分别处理本输出的 present fence。对快速返回的路径，还需检查 CV10 图层转为 HWC 设备合成的条件，以及保持客户端合成时栅栏触发相对 90 Hz 截止时间的位置。验收应覆盖静置和持续操作内屏两种情况，同时看内屏物理模式、两路 HWC 调用和 CV10 实际呈现。上述系统改动尚未部署到 Fold7。[AOSP SurfaceFlinger](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-qpr2-release/services/surfaceflinger/SurfaceFlinger.cpp#3050)
 
 本机 `sfdo` 可指定时钟和强制 GPU 合成。已列出的命令没有针对单个物理输出拆分 Present 的选项。量产系统要求 root 才能读取 `aflags list`，无线 ADB 也无法读取 Composer 服务和 `libsdmcore.so`、`libsdedrm.so` 的文件内容。现有 Perfetto 证据能定位同步等待链。此固件是否在 HAL 对各物理显示声明 `MULTI_THREADED_PRESENT`、以及内部调用使用的 DRM flags，仍需用可读的同版固件或系统构建核对。[Composer AIDL 能力定义](https://android.googlesource.com/platform/hardware/interfaces/+/48fc7fb9ac330141c352b293f36c7c23fa00ae37/graphics/composer/aidl/android/hardware/graphics/composer3/DisplayCapability.aidl)
 
@@ -37,6 +47,8 @@ Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这�
 | OFF | EGL 直接提交到 Monado 消费端 | 89.73 | 85.93 | 47.7 ms | 3.03 ms |
 
 直出保留运行 Android 窗口的工作区显示，省去的是整个双目输出的额外虚拟显示合成。熄屏直出时，有效 Vulkan 实际呈现和 SurfaceFlinger 的时间戳 2504/2504 对齐。被消费的 2367 个唯一帧时间戳都找到了对应的 EGL 提交。模拟转头期间，EGL 提交完成到 CV10 实呈的 p50/p95 为 35.70/36.01 ms。省掉最后一段虚拟显示还保住了源帧时间戳，可用作下一步绑定真实入画姿态的键。
+
+手机 ON/60 的追加对照保持工作区、每眼 2240×2240、GLES FFR、后期投影和模拟头动，尝试省掉 Pocket XR 的首个全幅清屏，让最后的双眼重投影完全覆盖输出。转头期间两边实际呈现均为 60.36 次/秒。有清屏与省清屏时，EGL 提交至 CV10 实呈的 p50 分别为 46.98 和 47.34 ms，p95 分别为 58.10 和 59.14 ms。两轮热状态分别为 0→1 和 1→2，Bilibili 动态内容也有变动，因此不能从本轮推断省清屏的纯 GPU 成本。正常版保留原有清屏顺序。Pocket XR 另外修正了 32 位 GPU 计时读数饱和时污染统计的问题，单独报告饱和计数。
 
 ## 直出帧的姿态记录
 
@@ -88,6 +100,9 @@ The final build also displayed the workspace through the original cable with the
 
 - `hello-composer-{lit-auto,lit-forced,off-forced}.perfetto-trace`、`composer-waits-summary.txt` 和 `trace-fold7-composer.ps1`，记录 Qualcomm DRM 工作线程及 Composer Binder 等待的对照。
 - `pocket-policy-static-phone-summary.txt` 和 `hello-policy-static-phone-hashes.txt`，记录工作区直出时静置的手机界面。
+- `pocket-lit-layer-state.perfetto-trace`、`lit-layer-present-mode-comparison.txt`、`hello-present-asap-comparison.txt`、`fold7-backpressure-stages.txt` 和对应 `*-monado.log`，记录快返回的 HWC 调用、图层与 Vulkan 调度对照。尽早呈现实验 APK SHA-256 为 `d377c303c99109361a5d5f3f6145253abca9ccc2714f322a25c0c973092a410d`。
+- `window-clear-ab-lit-{0,1}-2-summary.txt`、`*-submit.txt` 和 `*-thermal-*.txt`，记录清屏对照。用于两组的 Pocket XR APK SHA-256 为 `e3c5139228b39ecc9e28c7a66ce16c3ad38eaea8aaa83d8f464936170699c06c`。
+- `gpu-timer-device.log` 和 `gpu-timer-device-right.jpg`，记录 GPU 计时修正版的 GLES FFR 与右眼画面。一个 5 秒日志窗口的有效 GPU 查询总时间为 p50 1.10 ms、p99 2.32 ms，当时累计排除了 105 个饱和样本。APK SHA-256 为 `818e885e76fcc5fb62041d1e2806ffe429579e916808678c1bc65136c061a260`。
 - `compare-lit-vd-yaw-summary.txt`、`compare-lit-direct-retry-yaw-summary.txt` 和 `resume2-off-{vd,direct}-yaw-summary.txt`，记录模拟转头和逐帧匹配。
 - `panel-lease-visual-{before,active,client-death,lifecycle}.txt`、`panel-lease-visual-right.jpg`，记录实验开关的画面与回收。
 
