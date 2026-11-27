@@ -34,7 +34,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 从 Pocket XR 外显模式切回内置启动器时，如果 Broker 仍选中 **Pocket XR** 或 **Pocket XR (Monado CV10)**，点选 OpenXR 应用会提示切回 Monado。可以从提示直接打开 Broker，选好后返回启动器。普通 Android 应用仍可直接打开。
 
-- 首次使用或重新插入眼镜后，可先从 Monado 菜单选择 **CV10 USB access**，允许访问 **HUAWEI GLASS HID**，再进入应用启动器。
+- 首次使用或重新插入眼镜后，可从 Monado 菜单选择 **CV10 USB access**，预先允许访问 **HUAWEI GLASS HID**。3D 启动器也会在开启会话前请求权限，允许后会自动打开菜单。若在 2D 列表中直接点选 XR 应用触发了权限提示，允许后再点一次。
 - 应用列表默认筛选声明了 OpenXR 沉浸式入口的应用，并直接启动该入口。另有一些应用从普通界面进入 XR，例如 PiliPlus，可关闭 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。
 - 3D 菜单使用手机姿态控制激光指向。激光可以越过菜单边框，指向菜单按钮时点按屏幕确认，从手机两侧的蓝色标记向内滑动返回。从底部蓝色标记向上滑并停留约 350 毫秒，可将菜单和激光指向一起置中。标记位于 Android 的系统手势区内侧，屏幕外沿仍用于系统返回和 Home。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
@@ -42,6 +42,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 连接 CV10 时，内置 3D 菜单使用预览包自带的 Monado CV10，以适配镜片的双目方向。未连接 CV10 时，菜单先使用 Broker 选中的运行时，系统 Loader 报告不可用时再用内置运行时重试。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
 
 Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条路径。先从 2D 列表启动未修改的 Khronos `hello_xr` OpenGLES，返回后从 3D 菜单重进，同一个应用进程两次达到 `FOCUSED`，外屏截图和右镜均有画面。结束样例进程后，3D 菜单也能启动新的样例进程并出图。运行时在 Android 12 或更新版本直接管理 CV10 的 Presentation，覆盖 3D 菜单关闭时眼镜失去画面的故障。[Fold7 验收记录](history/fold7-offline-launcher.md)
+
+如果 Fold7 的外显截图已有双目蓝块，而镜片仍黑，可保持手机端和 5 V 供电，仅拔下眼镜端约 5 秒再接回。系统重新询问时允许访问 **HUAWEI GLASS HID**。同一 APK 的重接前后对照确认右镜恢复出图。[Fold7 重接对照](history/fold7-offline-launcher.md#在启动-openxr-前确认-cv10-usb-授权)
 
 Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正、左右指向和上滑停留置中。早期两路外显截图与右镜实拍一致。后续在 Fold7 竖屏控制页手持转动手机，确认光点离开菜单后仍可见，菜单外点按不触发操作。[激光笔方向与越界复测](history/fold7-phone-laser-axis.md)
 

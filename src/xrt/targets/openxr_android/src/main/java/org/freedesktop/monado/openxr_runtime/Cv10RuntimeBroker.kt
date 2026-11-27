@@ -13,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import org.freedesktop.monado.android_common.Cv10UsbAccess
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -78,6 +79,8 @@ internal class Cv10DirectLaunch(private val activity: Activity) {
                     selected == Cv10RuntimeBroker.POCKET_CLIENT_PACKAGE
                 ) {
                     showPocketWarning(launch)
+                } else if (selected == activity.packageName && !Cv10UsbAccess.readyForLaunch(activity, true)) {
+                    Toast.makeText(activity, R.string.cv10_direct_usb_retry, Toast.LENGTH_LONG).show()
                 } else {
                     launch()
                 }

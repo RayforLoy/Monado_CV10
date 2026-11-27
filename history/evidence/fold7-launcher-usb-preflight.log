@@ -1,0 +1,32 @@
+# Fold7 SM-F9660, 2026-11-27 HKT. C9.53.6 original cable, 5 V, Samsung mirror.
+# Same preview APK before and after moving the connector at the glasses end.
+# ARM64 APK SHA-256 18220c62c54343a7f7212979e03717aeea2c63d0e3ed27e57531eca16860ad0e
+# Operator authorization: one-time HUAWEI GLASS HID access only.
+# Before reconnect: display 246, 3200x1600@90 Hz. Android frames contained both blue cubes.
+# Right-eye camera saw no rendered content in either launch path.
+11-27 12:47:05.472  2961  5828 I ActivityTaskManager: START u0 {flg=0x10000000 xflg=0x4 cmp=com.android.systemui/.usb.UsbPermissionActivity (has extras)} with LAUNCH_MULTIPLE from uid 1000 (android) (BAL_ALLOW_ALLOWLISTED_UID) result code=0
+11-27 12:47:20.313  2961  5254 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=false, r=ActivityRecord{163728207 u0 com.android.systemui/.usb.UsbPermissionActivity t34532 f}}
+11-27 12:47:20.745 14188 14952 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : LoaderInstance::CreateInstance succeeded with 0 layers enabled and runtime interface - created instance = 0xb4000077381883a0
+11-27 12:47:20.794 14188 14952 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 12:47:24.126 15131 15156 V hello_xr: [12:47:24.126][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2523715533436
+11-27 12:47:33.685 15434 15459 V hello_xr: [12:47:33.685][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520281021250
+11-27 12:47:37.229 15434 15459 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+# Reconnect: HID address changed; external logical display 247.
+11-27 12:48:19.442  2961  5030 D UsbHostManager: Removed device at /dev/bus/usb/001/004: HUAWEI GLASS HID
+11-27 12:48:28.098  2961  5030 D UsbHostManager: Added device UsbDevice[mName=/dev/bus/usb/001/009,mVendorId=4817,mProductId=4222,mClass=0,mSubclass=0,mProtocol=0,mManufacturerName=HUAWEI,mProductName=HUAWEI GLASS HID,mVersion=2.00 ]
+11-27 12:48:54.300  2961  3045 I ActivityTaskManager: START u0 {flg=0x10000000 xflg=0x4 cmp=com.android.systemui/.usb.UsbPermissionActivity (has extras)} with LAUNCH_MULTIPLE from uid 1000 (android) (BAL_ALLOW_ALLOWLISTED_UID) result code=0
+11-27 12:48:56.792  2961  8142 D ActivityManager: Received BROADCAST intent 0xf57e1ae Key{broadcastIntent pkg=org.cv10.monado.out_of_process.launcher_preview intent=act=org.cv10.monado.out_of_process.launcher_preview.CV10_USB xflg=0x4 pkg=org.cv10.monado.out_of_process.launcher_preview flags=0x4000000 u=0} requestCode=0 sent=0 from uid 10050
+11-27 12:48:57.253 17317 17471 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 12:49:00.002 17317 17471 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 12:49:00.689 17609 17636 V hello_xr: [12:49:00.689][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598510048 time=2523803931301
+11-27 12:49:03.865 17609 17636 V hello_xr: [12:49:03.865][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598510048 time=2526979603227
+11-27 12:49:15.424  2961  3284 W ActivityTaskManager: Activity destroy timeout for ActivityRecord{41356472 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34544 f}}
+11-27 12:50:19.180 19490 19523 V hello_xr: [12:50:19.180][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520325960312
+11-27 12:50:22.222 19490 19523 V hello_xr: [12:50:22.222][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2523368589947
+11-27 12:50:23.184 19490 19523 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+# Right-eye images after reconnect: blue cube on 3D point-and-select, and in an independent 2D direct launch.
+# The next 3D repeat was not scored: another Android activity appeared after the 2D return.
+# Installed APK restored to aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e.
+# Broker stayed on Monado CV10 Preview. Minimum refresh rate returned to null.

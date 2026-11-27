@@ -10,6 +10,7 @@
     <string name="cv10_no_matching_apps">没有匹配的应用。可关闭 XR 筛选或修改搜索内容。</string>
     <string name="cv10_app_launch_failed">无法打开 %1$s</string>
     <string name="cv10_direct_pocket_warning">当前选中的是 Pocket XR。要在 CV10 上直接打开此应用，请在 Runtime Broker 中选择 Monado CV10 或 Monado CV10 Preview。</string>
+    <string name="cv10_direct_usb_retry">允许通过 USB 访问 CV10 后，请再次点选 XR 应用。</string>
     <string name="cv10_launch_anyway">仍然启动</string>
     <string name="cv10_pocket_preview_title">Pocket XR 外显预览</string>
     <string name="cv10_pocket_preview_intro">请允许访问 CV10 USB 设备。浏览双目空间时，从 Pocket XR 的「空间窗口」打开启动器，再选择「深度（3D 左右并排）」。</string>

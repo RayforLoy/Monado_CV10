@@ -160,6 +160,20 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 12:30 将 Broker 切到原版 Pocket XR 后，在同一 3D 菜单点选 `hello_xr` 显示切换提示，样例进程未启动。从提示打开 Khronos Broker 并切回 **Monado CV10 Preview**，按返回回到 3D 启动器，菜单会话重新到达 `FOCUSED`。测试后恢复 `f439234` APK 和原先的 Preview Broker 选择，最低刷新率为 `null`。[筛选日志](evidence/fold7-launcher-broker-handoff.log)
 
+## 在启动 OpenXR 前确认 CV10 USB 授权
+
+Fold7（SM-F9660）保持 C9.53.6 原厂线、外接 5 V 与三星外屏镜像。一次 USB 数据重新枚举后，`hello_xr` 成功创建 OpenXR 实例，系统 USB 对话框仍在前台，会话在等待窗口内未进入 `FOCUSED`。[USB 重枚举与 OpenXR 日志](evidence/fold7-usb-data-reenumeration.log)
+
+内置 3D 启动器现在先检查 CV10 HID 的 USB 权限。缺少权限时，启动器等待系统授权，重新获得焦点并确认已授权后才开始渲染。取消授权后可点手机上的提示重新请求。2D 列表在 Broker 选中本包时也先检查权限，允许后再次点选应用。已授权或未检测到 CV10 HID 时保留原启动路径。
+
+ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27e57531eca16860ad0e`。包通过 v2 签名和 ZIP 16 KiB 对齐校验，五个原生库全部通过 16 KiB ELF 对齐检查，与上一预览中的原生库逐字节一致。用模拟 USB 服务覆盖了设备缺失、其他设备、请求、拒绝、允许及更换设备。Android 16、16 KiB 模拟器在关闭 Wi-Fi 与移动数据、未运行 Shizuku 时安装成功，从 2D 列表点选 `hello_xr` 确认发出启动请求。原版样例的 4 KiB 原生库仍无法在该系统加载。未接 CV10 的 3D 菜单可加载运行时。模拟器在 `xrGetSystem` 失败后显示重试选项并能返回 2D 列表。
+
+12:47 香港时间，同包在 Fold7 实测。Android 的 USB 授权对话框停留约 15 秒。允许后，3D 启动器自动创建 OpenXR 实例并进入 `FOCUSED`，再从菜单点选原版 `hello_xr`。随后对照 2D 直启，两个入口的会话均进入 `FOCUSED`，外显截图均有灰底双目蓝块，右镜相机均未拍到图案。
+
+12:48，用户只重接眼镜端，保留手机端和 5 V 供电。CV10 HID 从 USB 地址 004 重新枚举为 009，Android 的外显逻辑编号由 246 变为 247。保持同一个 APK，3D 启动器再次在 USB 授权后自行打开。用手机置中手势瞄准并点选 `hello_xr` 后，右镜拍到蓝块。该轮按返回后样例会话进入 `IDLE`，随后 Android 记录 Activity 销毁超时。12:50 的 2D 直启对照也在右镜拍到蓝块，返回后完成 `xrDestroyInstance`。测试结束后恢复原预览 APK，Broker 保持 **Monado CV10 Preview**，系统最低刷新率为 `null`。
+
+[授权与会话日志](evidence/fold7-launcher-usb-preflight.log) · [重接前的双目外显帧](evidence/fold7-launcher-usb-before-reconnect-stereo.png) · [重接前的右镜实拍](evidence/fold7-launcher-usb-before-reconnect-right.jpg) · [重接后 3D 入口的右镜实拍](evidence/fold7-launcher-usb-after-reconnect-right.jpg) · [重接后 2D 入口的右镜实拍](evidence/fold7-launcher-usb-after-reconnect-direct-right.jpg)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。

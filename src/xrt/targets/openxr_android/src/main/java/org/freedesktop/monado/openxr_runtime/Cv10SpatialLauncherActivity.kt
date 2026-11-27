@@ -31,6 +31,7 @@ import androidx.annotation.Keep
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import org.freedesktop.monado.android_common.Cv10UsbAccess
 import org.freedesktop.monado.auxiliary.MonadoView
 
 /** An offline OpenXR app picker that runs in a separate client process. */
@@ -45,6 +46,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     private var closing = false
     private var startupFailed = false
     private var startupPromptShown = false
+    private var waitingForUsbAccess = false
     private var pendingLaunch: Cv10AppEntry? = null
     private var renderState: SpatialLauncherState? = null
     private var hitTargets = emptyList<HitTarget>()
@@ -99,7 +101,7 @@ class Cv10SpatialLauncherActivity : Activity() {
             when {
                 renderState != null -> input.confirm()
                 startupFailed -> showStartupOptions()
-                else -> startRenderer()
+                else -> startRenderer(requestUsb = true)
             }
         }
     }
@@ -132,18 +134,24 @@ class Cv10SpatialLauncherActivity : Activity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && visible && startupFailed && !startupPromptShown && !isFinishing) {
-            showStartupOptions()
-        }
+        if (!hasFocus || !visible || isFinishing) return
+        if (waitingForUsbAccess) startRenderer(requestUsb = false)
+        if (startupFailed && !startupPromptShown) showStartupOptions()
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() = close()
 
-    private fun startRenderer() {
+    private fun startRenderer(requestUsb: Boolean = !waitingForUsbAccess) {
         if (renderState != null || closing) return
         startupFailed = false
         startupPromptShown = false
+        if (!Cv10UsbAccess.readyForLaunch(this, requestUsb)) {
+            waitingForUsbAccess = true
+            controls.setText(R.string.cv10_spatial_usb_retry)
+            return
+        }
+        waitingForUsbAccess = false
         val state =
             SpatialLauncherState {
                 runOnUiThread {

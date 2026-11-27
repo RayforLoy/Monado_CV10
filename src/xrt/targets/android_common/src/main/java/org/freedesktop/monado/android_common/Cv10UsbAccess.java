@@ -24,6 +24,15 @@ public final class Cv10UsbAccess {
         manager.requestPermission(glass, PendingIntent.getBroadcast(context, 0, grant, PendingIntent.FLAG_IMMUTABLE));
     }
 
+    public static boolean readyForLaunch(Context context, boolean requestIfMissing) {
+        UsbManager manager = context.getSystemService(UsbManager.class);
+        UsbDevice glass = find(manager);
+        // Keep the launcher's regular fallback when no CV10 USB device is present.
+        if (glass == null || manager.hasPermission(glass)) return true;
+        if (requestIfMissing) request(context, manager, glass);
+        return false;
+    }
+
     static void requestFromSettings(Context context) {
         UsbManager manager = context.getSystemService(UsbManager.class);
         UsbDevice glass = find(manager);
