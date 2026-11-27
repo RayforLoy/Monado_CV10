@@ -33,12 +33,7 @@ class Cv10LauncherActivity : Activity() {
             startActivity(Intent(this, Cv10SpatialLauncherActivity::class.java))
         }
         findViewById<View>(R.id.cv10_background_restricted).setOnClickListener {
-            val settings = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
-            try {
-                startActivity(settings)
-            } catch (_: ActivityNotFoundException) {
-                Toast.makeText(this, R.string.cv10_app_settings_unavailable, Toast.LENGTH_SHORT).show()
-            }
+            openAppInfo(packageName)
         }
         search = findViewById(R.id.cv10_app_search)
         xrOnly = findViewById(R.id.cv10_xr_only)
@@ -58,6 +53,12 @@ class Cv10LauncherActivity : Activity() {
                 val activity = this@Cv10LauncherActivity
                 val app = activity.adapter.getItem(position) ?: return@setOnItemClickListener
                 activity.directLaunch.select(app) { Cv10AppCatalog.launch(activity, app) }
+            }
+            setOnItemLongClickListener { _, _, position, _ ->
+                val activity = this@Cv10LauncherActivity
+                val app = activity.adapter.getItem(position) ?: return@setOnItemLongClickListener false
+                activity.openAppInfo(app.component.packageName)
+                true
             }
         }
         search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -97,6 +98,15 @@ class Cv10LauncherActivity : Activity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus && !isFinishing) directLaunch.onWindowFocused()
+    }
+
+    private fun openAppInfo(appPackage: String) {
+        val info = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", appPackage, null))
+        try {
+            startActivity(info)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.cv10_app_settings_unavailable, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun filterApps() {

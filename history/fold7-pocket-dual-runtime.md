@@ -165,6 +165,12 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 
 单次 Android shell 解冻未消除三星的冻结重试，整合预览继续走原有的关闭路径。结束后恢复 **Monado CV10 Preview** Broker，最低刷新率为 `null`，只保留两个原有显示。[同进程、冻结和恢复窗口日志](evidence/fold7-pocket-client-restore-unfreeze.log) · [AOSP 的 `unfreeze` 命令实现](https://android.googlesource.com/platform/frameworks/base/%2B/6122f0ed1ec662067d83f0bf2b2ab6ac299ab63a/services/core/java/com/android/server/am/ActivityManagerShellCommand.java)
 
+### 从 Pocket XR 普通面板切回 Monado
+
+2026-11-27 15:08 至 15:33 香港时间。沿用 Fold7、C9.53.6 原厂线、5 V、三星镜像、原版 Pocket XR 1.6.28 和原版 Khronos OpenGLES `hello_xr`。Broker 选 **Monado CV10 Preview**。原版恢复旧的普通样例面板后，直出的 Monado 客户端拒绝建立连接，样例收到 `XR_ERROR_RUNTIME_UNAVAILABLE`。关闭空间后点击 Monado 2D 列表，Android 复用同一进程，报告旧 Activity 销毁超时，观察 23 秒未进入 `FOCUSED`。用 shell 的 `FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TASK` 再做一轮，也复用进程且发生同样的超时。关闭空间后结束失败样例的进程，再点按同一条目，新进程进入 `FOCUSED` 并正常销毁 OpenXR 实例。
+
+ARM64 预览 APK SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293`，v2、v3 签名和 16 KiB ZIP 对齐均通过。五个原生库与 `5b650d6` 预览逐字节相同。重复恢复旧面板并关闭空间，从 Monado 2D 列表长按样例后进入 Android 系统的 **应用信息**。核对标题为 **Hello XR (OpenGL ES)**，在系统页确认 **强制停止**。返回列表重新点按后，新样例进程进入 `FOCUSED`，返回时正常销毁实例。手机回到桌面，保留 Preview Broker、既有授权和无线 ADB，测试虚拟屏均已释放。[Fold7 筛选日志](evidence/fold7-pocket-panel-to-phone.log)
+
 ### 右镜输出对照
 
 11:55 至 12:00 用同一接线复测黑屏。预览版的 Pocket XR、内置 2D 直开和 3D 菜单，以及稳定版 Monado CV10 v0.1.2 均让样例进入 `FOCUSED`。Fold7 采集到的 CV10 外显帧有左右两个蓝方块。固定相机在这四次复测中均未从右镜捕捉到测试画面，与 11:40 至 11:43 的明亮实拍结果不同。重置外显电源状态及从 Android 禁用后重新启用外显，均未恢复右镜实拍。接线和相机位置未做物理调整，原因待确认。[Pocket XR 外显帧](evidence/fold7-pocket-client-close-display-stereo.png) · [3D 菜单启动后的外显帧](evidence/fold7-pocket-menu-optical-control-stereo.png) · [稳定版外显帧](evidence/fold7-pocket-stable-optical-control-stereo.png) · [稳定版右镜实拍](evidence/fold7-pocket-stable-optical-control-right.jpg)

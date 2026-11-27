@@ -99,6 +99,8 @@ Fold7 上通过已有 ADB 权限调用同一显示服务，验证了受信任虚
 
 Pocket XR 的原版空间菜单按普通应用面板启动和恢复应用。声明沉浸式入口的应用可使用 **在 Pocket XR 中打开 OpenXR 应用**，由原版运行时在独立应用屏输出。需要先在手机界面完成连接或设置的 XR 应用，可切回 Monado CV10 Broker 后从内置启动器打开。普通 Android 应用仍可从原版空间菜单点选。Monado CV10 直出运行时会拒绝来自 Pocket XR 普通面板的 OpenXR 连接，以免恢复的应用夺走空间的输出。若恢复旧面板后样例卡在启动画面，先用 **停止预览** 结束这次空间会话，再重新打开空间和独立 OpenXR 入口。从仍活动的空间强制停止样例并立即重开，Fold7 上也发生过进程冻结。[同机入口对照](history/fold7-pocket-xr-display.md#原版空间菜单中的-openxr-应用) · [恢复旧面板与重进复测](history/fold7-pocket-dual-runtime.md#同进程重进与单次解冻对照)
 
+退出空间后，若从内置列表点选的应用仍停在黑屏，可按 Home 回手机桌面。在 Monado 2D 列表长按该应用，打开系统应用详情，选择 **强制停止** 并确认。返回列表后再点按同一应用。[Fold7 恢复路径](history/fold7-pocket-dual-runtime.md#从-pocket-xr-普通面板切回-monado)
+
 **Pocket XR (Monado CV10)** 是可选的 ARM64 客户端包。它加载带卸载修复的库，渲染服务由未修改的官方 Pocket XR 1.6.28 或 1.6.31 提供。客户端包与 Monado 预览需使用同一签名。Fold7 用原版 1.6.28、正式 Shizuku 入口和此客户端，已复测 `hello_xr` 出画、正常关闭和同进程重进。选择原版 Broker 条目 **Pocket XR** 时，应用加载上游自带的客户端，可能遇到退出崩溃。[客户端构建](src/xrt/targets/pocket_client_android/README.md) · [Fold7 正式入口实测](history/fold7-pocket-dual-runtime.md#正式预览通过-shizuku-打开-openxr-应用)
 
 Fold7 的 CV10 IMU 通过 ADB 回环将实时样本送到隔离的 Android 16 模拟器。模拟器关闭 Wi-Fi 和移动数据，Shizuku 未运行。未修改的 Pocket XR 通过模拟器内的本机 VPN 收到约 1000 Hz 的静置数据并解算姿态。此前的模拟姿态测试还覆盖了转动方向、停止 VPN 和同进程重连。Fold7 上已验证 VPN 授权可取消。Fold7 同机实时连接及佩戴转头仍待验收。[实时 IMU 对照](history/fold7-pocket-xr-imu.md#实时-fold7-采样送入原版-android-应用)

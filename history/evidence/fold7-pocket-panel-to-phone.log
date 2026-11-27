@@ -1,0 +1,68 @@
+Fold7 SM-F9660, C9.53.6 original cable, 5 V, Samsung mirroring.
+OpenXR Broker: Monado CV10 Preview. Existing Shizuku PID 15412.
+Unmodified Pocket XR 1.6.28: 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Unmodified Khronos hello_xr OpenGLES: 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+
+fold7-panel-to-phone-normal-warm-manager.log
+11-27 15:10:37.000
+Mode normal-warm-manager; preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648; Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; Shizuku PID 15412
+Shizuku manager foreground at 11-27 15:10:39.000
+11-27 15:10:44.356 12705 12705 I Cv10PocketXrPreview: First virtual display frame available on display 341
+11-27 15:10:45.486 16898 16938 E hello_xr: [15:10:45.486][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 15:10:45.482 16898 16938 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+Sample before closing the space: 16898
+Space closed at 11-27 15:10:51.000; displays 0, 247; sample PID 16898
+No FOCUSED event for 23 seconds; top     topResumedActivity=ActivityRecord{44113972 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t35157}, sample PID 16898
+11-27 15:10:56.361  2961  4676 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [16898] reason: activity
+11-27 15:10:56.367  2961  4676 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=223886100) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 15:11:00.980  2961  3284 W ActivityTaskManager: Activity destroy timeout for ActivityRecord{91332433 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t35152 f}}
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; Shizuku PID 15412
+
+fold7-panel-to-phone-clear-task-warm-manager.log
+11-27 15:26:19.000
+Mode clear-task-warm-manager; preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648; Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; Shizuku PID 15412
+Shizuku manager foreground at 11-27 15:26:21.000
+11-27 15:26:35.393 23318 23318 I Cv10PocketXrPreview: First virtual display frame available on display 345
+11-27 15:26:36.819 29653 29684 E hello_xr: [15:26:36.819][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 15:26:36.816 29653 29684 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+Sample before closing the space: 29653
+Space closed at 11-27 15:26:42.000; displays 0, 247; sample PID 29653
+No FOCUSED event for 23 seconds; top     topResumedActivity=ActivityRecord{23148261 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t35193}, sample PID 29653
+11-27 15:26:42.715  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [29653] reason: bf_input
+11-27 15:26:43.032  2961  4527 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10008000 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+11-27 15:26:52.703  2961  3284 W ActivityTaskManager: Activity destroy timeout for ActivityRecord{146834840 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t35190 f}}
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; Shizuku PID 15412
+
+fold7-panel-to-phone-clean-start-warm-manager.log
+11-27 15:27:38.000
+Mode clean-start-warm-manager; preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648; Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; Shizuku PID 15412
+Shizuku manager foreground at 11-27 15:27:39.000
+11-27 15:27:45.113 23318 23318 I Cv10PocketXrPreview: First virtual display frame available on display 349
+11-27 15:27:45.540 31151 31176 E hello_xr: [15:27:45.540][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 15:27:45.537 31151 31176 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+Sample before closing the space: 31151
+Space closed at 11-27 15:27:51.000; displays 0, 247; sample PID 31151
+Stopped the failed test process only after the Pocket XR screen was gone.
+11-27 15:27:57.598 31878 31901 V hello_xr: [15:27:57.598][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11-27 15:27:59.479 31878 31901 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:27:56.965  2961  7268 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=263949904) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 15:27:57.244 31878 31901 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; Shizuku PID 15412
+
+fold7-panel-to-phone-settings-warm-manager.log
+11-27 15:32:24.000
+Mode settings-warm-manager; preview 37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293; Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; Shizuku PID 15412
+Shizuku manager foreground at 11-27 15:32:26.000
+11-27 15:32:37.670  5742  5742 I Cv10PocketXrPreview: First virtual display frame available on display 357
+11-27 15:32:38.367  6602  6650 E hello_xr: [15:32:38.367][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 15:32:38.365  6602  6650 I monado-ipc-client: Pocket XR app panels cannot use CV10 direct display. Use its OpenXR app screen.
+Sample before closing the space: 6602
+Space closed at 11-27 15:32:44.000; displays 0, 247, 358, 359, 360; sample PID 6602
+11-27 15:32:50.259  2961  5864 I ActivityTaskManager: START u0 {act=android.settings.APPLICATION_DETAILS_SETTINGS dat=package: xflg=0x4 cmp=com.android.settings/.applications.InstalledAppDetails} with LAUNCH_MULTIPLE from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=174450806) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+Android App info verified the Hello XR (OpenGL ES) header.
+System App info confirmation ended the failed sample after the Pocket XR screen was gone.
+11-27 15:33:02.788  7686  7710 V hello_xr: [15:33:02.788][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11-27 15:33:05.810  7686  7710 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:33:02.368  2961  8222 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=174450806) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 15:33:02.433  7686  7710 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; Shizuku PID 15412
