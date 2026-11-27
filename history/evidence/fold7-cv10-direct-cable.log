@@ -1,0 +1,35 @@
+11-27 15:54:56.000
+Fold7 USB-C directly connected to CV10 as confirmed by the user, displays 0, 390
+DisplayDeviceInfo{"HUAWEIAV03": uniqueId="local:4621527156978103573", 3200 x 1600, modeId 602, renderFrameRate 90.0
+Confirmed CV10 HID permission at 11-27 15:55:05.000
+11-27 15:55:06.405 32658   325 I Cv10SpatialLauncher: OpenXR session state 5
+Captured cv10-direct-3d-menu external display and fixed right camera at 11-27 15:55:09.000
+11-27 15:55:11.485 32658   325 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 15:55:06.079 27124   340 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11-27 15:55:06.394 32658   325 I Cv10SpatialLauncher: OpenXR session state 1
+11-27 15:55:06.395 32658   325 I Cv10SpatialLauncher: OpenXR session state 2
+11-27 15:55:06.405 32658   325 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 15:55:06.405 32658   325 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 15:55:06.405 32658   325 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 15:55:11.485 32658   325 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 15:55:57.353 32658   325 I Cv10SpatialLauncher: OpenXR session state 4
+11-27 15:55:57.353 32658   325 I Cv10SpatialLauncher: OpenXR session state 3
+11-27 15:55:57.353 32658   325 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 15:55:57.353 32658   325 I Cv10SpatialLauncher: OpenXR session state 1
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 390
+11-27 15:56:49.294 30476  1626 V hello_xr: [15:56:49.294][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2520399418646
+Captured hello_xr from the 2D launcher at 11-27 15:56:52.000
+topResumedActivity=ActivityRecord{266646044 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t35412}
+Wearer confirmed normal binocular display and head movement at 11-27 15:57:50.000
+11-27 15:57:52.995 30476  1626 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:57:59.568 32658  2337 I Cv10SpatialLauncher: OpenXR session state 5
+3D menu active for worn controller test at 11-27 15:57:59.000
+Wearer confirmed normal phone pointer direction and Hello XR launch from the 3D menu
+11-27 15:58:41.374 32658  2337 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 15:58:54.906 30476  2535 V hello_xr: [15:58:54.906][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2575661203989
+11-27 15:59:34.027 30476  2535 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final launcher test Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 390
+
+USB link removal and re-enumeration
+11-27 15:54:03.000  2961  5030 D UsbHostManager: Removed device at /dev/bus/usb/001/009: HUAWEI GLASS HID
+11-27 15:54:13.399  2961  5030 D UsbHostManager: USB device attached: vidpid 12d1:107e mfg/product/ver/serial HUAWEI/HUAWEI GLASS HID/2.00/[serial omitted] value] hasAudio/HID/Storage: false/true/false
