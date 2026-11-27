@@ -1,0 +1,25 @@
+# 2026-11-27 HKT. Fold7 SM-F9660, original C9.53.6 cable with 5 V power.
+# Android mirror, CV10 3200x1600 @ 90 Hz. Preview APK SHA-256:
+# 053494a4e9a3c8ec9efb3d5726b7053b7a1fab6e544846ca8f224b6d26231eb6
+
+12:29:30.022 MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+12:29:30.172 Cv10SpatialLauncher: OpenXR session state 5
+12:29:32.793 Cv10SpatialLauncher: Recentered 3D launcher (1)
+12:29:33.191 OpenXR-Loader [29990]: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+12:29:33.291 hello_xr [29990]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+# Selected the stock hello_xr from the 3D launcher. The composed external frame shows two blue squares.
+# The fixed right-lens camera captured a dark frame with no recognizable test image.
+12:29:36.471 hello_xr [29990]: XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING
+12:29:36.471 hello_xr [29990]: XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE
+12:29:37.824 OpenXR-Loader [29990]: xrDestroyInstance Completed loader trampoline
+
+# Selected the unmodified Pocket XR package in Khronos Runtime Broker, then reopened the 3D launcher.
+Broker active package: com.hayeco.flipspaces
+12:30:38.798 Cv10SpatialLauncher: OpenXR session state 5
+12:30:41.564 Cv10SpatialLauncher: Recentered 3D launcher (1)
+# Tapping the same hello_xr card opened the switch-runtime warning. No hello_xr process started.
+Warning action opened: org.khronos.openxr.runtime_broker/.MainActivity
+Broker active package after selection: org.cv10.monado.out_of_process.launcher_preview
+Back returned to: Cv10SpatialLauncherActivity
+12:31:04.771 Cv10SpatialLauncher: OpenXR session state 5
+# Restored f439234 preview from the saved APK; Broker remained on Monado CV10 Preview. min_refresh_rate=null.

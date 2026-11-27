@@ -20,6 +20,7 @@ import android.widget.TextView
 import android.widget.Toast
 
 class Cv10LauncherActivity : Activity() {
+    private val directLaunch = Cv10DirectLaunch(this)
     private lateinit var search: SearchView
     private lateinit var xrOnly: CheckBox
     private lateinit var adapter: ArrayAdapter<Cv10AppEntry>
@@ -54,7 +55,9 @@ class Cv10LauncherActivity : Activity() {
             adapter = this@Cv10LauncherActivity.adapter
             emptyView = this@Cv10LauncherActivity.findViewById<TextView>(R.id.cv10_apps_empty)
             setOnItemClickListener { _, _, position, _ ->
-                this@Cv10LauncherActivity.adapter.getItem(position)?.let { Cv10AppCatalog.launch(this@Cv10LauncherActivity, it) }
+                val activity = this@Cv10LauncherActivity
+                val app = activity.adapter.getItem(position) ?: return@setOnItemClickListener
+                activity.directLaunch.select(app) { Cv10AppCatalog.launch(activity, app) }
             }
         }
         search.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -79,6 +82,11 @@ class Cv10LauncherActivity : Activity() {
             if (backgroundRestricted) View.VISIBLE else View.GONE
         apps = Cv10AppCatalog.load(this)
         filterApps()
+    }
+
+    override fun onPause() {
+        directLaunch.cancel()
+        super.onPause()
     }
 
     private fun filterApps() {

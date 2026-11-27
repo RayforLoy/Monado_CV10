@@ -18,6 +18,7 @@
 12:08:51.574 Cv10Probe: Presentation shown on HUAWEIAV03 #246, requested mode ID 0, reported 3200 × 1600 @ 90.0 Hz
 # The saved external composition shows L/R. The fixed right-eye camera still did not capture the pattern.
 12:09:01.054 OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview
+12:09:01.106 MonadoCV10: CV10 proximity enabled=true, state=1
 12:09:01.150 MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
 12:09:01.423 hello_xr [16414]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
 # Started using the 2D list. The Fold7 composition has stereo samples. The fixed right-eye camera still did not capture the sample.

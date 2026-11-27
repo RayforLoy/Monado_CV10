@@ -10,7 +10,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -218,9 +217,9 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private fun openClientApp(entry: Cv10AppEntry) {
         val session = transport ?: return
         if (!controlsAvailable || changingClientDisplay) return
-        when (activeBrokerPackage()) {
+        when (Cv10RuntimeBroker.activePackage(this)) {
             Cv10PocketHeadLinkService.POCKET_PACKAGE -> Unit
-            POCKET_CLIENT_PACKAGE -> {
+            Cv10RuntimeBroker.POCKET_CLIENT_PACKAGE -> {
                 if (!hasMatchingPocketClient()) {
                     status.setText(R.string.cv10_pocket_client_incompatible)
                     return
@@ -272,7 +271,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private fun hasMatchingPocketClient(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
         val manager = packageManager
-        if (manager.checkSignatures(packageName, POCKET_CLIENT_PACKAGE) != PackageManager.SIGNATURE_MATCH) {
+        if (manager.checkSignatures(packageName, Cv10RuntimeBroker.POCKET_CLIENT_PACKAGE) != PackageManager.SIGNATURE_MATCH) {
             return false
         }
         val pocketPackage = Cv10PocketHeadLinkService.POCKET_PACKAGE
@@ -287,22 +286,6 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             Base64.decode(POCKET_RELEASE_SIGNER, Base64.DEFAULT),
             PackageManager.CERT_INPUT_SHA256,
         )
-    }
-
-    private fun activeBrokerPackage(): String? {
-        // Match the Android OpenXR loader: check the installable broker before the system one.
-        val abi = Build.SUPPORTED_ABIS.first()
-        return listOf("runtime_broker", "system_runtime_broker").firstNotNullOfOrNull { broker ->
-            val uri = Uri.parse("content://org.khronos.openxr.$broker/openxr/1/abi/$abi/runtimes/active")
-            try {
-                contentResolver.query(uri, arrayOf("package_name"), null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) cursor.getString(0) else null
-                }
-            } catch (error: RuntimeException) {
-                Log.d(TAG, "Could not read $broker", error)
-                null
-            }
-        }
     }
 
     private fun keepSessionForPhoneControls() {
@@ -490,7 +473,6 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
         private const val TAG = "Cv10PocketXrPreview"
-        private const val POCKET_CLIENT_PACKAGE = "org.cv10.monado.pocket_client"
         private const val POCKET_RELEASE_SIGNER = "M+rUzfrJVxaWq8sq6kRliRww7R2CVxJ4pKVLhwuik60="
         private const val REQUEST_DISPLAY_PERMISSION = 18_011
         private const val REQUEST_HEAD_LINK = 18_012

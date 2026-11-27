@@ -4,7 +4,6 @@ package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -41,6 +40,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     private var apps = emptyList<Cv10AppEntry>()
     private var xrOnly = false
     private var page = 0
+    private val directLaunch = Cv10DirectLaunch(this)
     private var visible = false
     private var closing = false
     private var startupFailed = false
@@ -119,6 +119,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 
     override fun onPause() {
+        directLaunch.cancel()
         input.stop()
         super.onPause()
     }
@@ -214,21 +215,13 @@ class Cv10SpatialLauncherActivity : Activity() {
             .setNegativeButton(android.R.string.cancel, null)
             .setNeutralButton(R.string.cv10_spatial_retry) { _, _ -> startRenderer() }
             .setPositiveButton(R.string.cv10_spatial_open_broker) { _, _ ->
-                val intent = Intent(Intent.ACTION_MAIN).setClassName(
-                    "org.khronos.openxr.runtime_broker",
-                    "org.khronos.openxr.runtime_broker.MainActivity",
-                )
-                try {
-                    startActivity(intent)
-                } catch (error: ActivityNotFoundException) {
-                    Log.w(TAG, "OpenXR Runtime Broker activity is unavailable", error)
-                    controls.setText(R.string.cv10_spatial_broker_missing)
-                }
+                if (!Cv10RuntimeBroker.open(this)) controls.setText(R.string.cv10_spatial_broker_missing)
             }
             .show()
     }
 
     private fun close(app: Cv10AppEntry? = null) {
+        directLaunch.cancel()
         if (closing) return
         val state = renderState
         if (state != null) {
@@ -350,7 +343,9 @@ class Cv10SpatialLauncherActivity : Activity() {
                 label("XR", badge.left + 18f, badge.centerY(), 42f, 25f, DARK_TEXT, true)
             }
             label(app.label, textLeft, rect.centerY(), textRight - textLeft, 40f, Color.WHITE, true)
-            targets.add(HitTarget(rect) { close(app) })
+            targets.add(HitTarget(rect) {
+                directLaunch.select(app) { close(app) }
+            })
         }
 
         val previous: (() -> Unit)? = if (page > 0) ({ page--; updatePanel() }) else null

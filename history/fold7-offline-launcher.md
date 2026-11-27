@@ -150,6 +150,16 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 08:47，使用同一预览包，在 2D 列表关闭 **仅显示 XR 应用** 后打开原版 Pocket XR 1.6.28。系统记录 `com.hayeco.flipspaces/.TrackpadActivity` 已显示并处于前台。系统返回后重新进入 Monado 的 2D 列表。这条手机入口未新增 Shizuku 或 VPN 授权。测试时临时固定手机竖屏，结束后恢复原横屏方向、原预览 APK 和后台限制。Broker 一直选中稳定运行时。[手机入口与返回记录](evidence/fold7-launcher-a3d86e5-pass.txt)
 
+## 从 Pocket XR 切回内置启动器
+
+2026-11-27 12:26 香港时间，ARM64 预览 APK 的 SHA-256 为 `053494a4e9a3c8ec9efb3d5726b7053b7a1fab6e544846ca8f224b6d26231eb6`。APK v2 签名、16 KiB ZIP 对齐及五个 ARM64 库的 15 个 ELF `PT_LOAD` 段均通过检查。内置 2D 和 3D 启动器在点选 OpenXR 应用时查询 Broker。确认选中原版 Pocket XR 或兼容客户端时提示切换。查询在后台进行，超过一秒会继续正常启动，避免 Broker 卡住手机界面。
+
+同一 APK 在 Android 16 的 16 KiB 模拟器上运行，系统 Wi-Fi 和移动数据关闭，Shizuku 未运行。2D 列表在两个 Pocket XR 选项下都显示提示。取消后仍在列表，样例进程未启动。提示能打开已安装的 Khronos Broker。选择 **仍然启动** 时 Android 收到原版 `hello_xr` Activity 启动请求。切回 **Monado CV10 Preview** 后再次点选，同一 Activity 直接启动。模拟器用于验收手机入口和 Broker 选择，镜片输出由 Fold7 实测。
+
+12:29 在 Fold7 以同一 APK 复测。沿用 C9.53.6 原厂线、5 V 外接供电及三星镜像。从 3D 菜单置中后点选未修改的 `hello_xr`，样例加载 Preview，在点选后一秒内进入 `FOCUSED`，按返回后进入 `IDLE` 并完成 `xrDestroyInstance`。CV10 外显采集帧有两个蓝色方块。固定相机在同一轮右镜实拍中仍未捕捉到图案。开屏命令收到 `OK`。之前的稳定版和独立 Android 图案对照也有相同现象，眼镜重新插接后的恢复情况仍待验。[筛选日志](evidence/fold7-launcher-broker-handoff.log) · [双目外显帧](evidence/fold7-launcher-broker-handoff-external.png) · [右镜实拍](evidence/fold7-launcher-broker-handoff-right.jpg)
+
+12:30 将 Broker 切到原版 Pocket XR 后，在同一 3D 菜单点选 `hello_xr` 显示切换提示，样例进程未启动。从提示打开 Khronos Broker 并切回 **Monado CV10 Preview**，按返回回到 3D 启动器，菜单会话重新到达 `FOCUSED`。测试后恢复 `f439234` APK 和原先的 Preview Broker 选择，最低刷新率为 `null`。[筛选日志](evidence/fold7-launcher-broker-handoff.log)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。

@@ -144,4 +144,6 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 
 12:05 至 12:09 用独立的 **CV10 显示测试** 应用以 Android `Presentation` 绘制 L／R 测试图，右镜相机仍未拍到图案。应用请求 3200×1600 @ 70 Hz 或 3200×1800 @ 90 Hz 时，外显活动模式仍是 3200×1600 @ 90 Hz。随后在三星 DeX 的 **连接的显示设备** 中从 **已镜像** 切到 **已扩展** 并切回，活动时序实际切至 640×480 @ 60 Hz 再回到 3200×1600 @ 90 Hz。逻辑显示从 91 变为 245 和 246，SurfaceFlinger 的物理 ID 始终为 `4621527156978103573`。在恢复镜像后重新绘制测试图、再从 Monado 的 2D 列表打开 `hello_xr`。测试图和蓝方块分别出现在外显采集画面中，Monado 收到开屏 `OK`，样例正常进入 `FOCUSED` 和退出。右镜相机仍无可辨识的测试图案。当前对照覆盖了独立 Android 绘制和重新选择活动时序，头显重新插接后的恢复情况仍待确认。[筛选日志](evidence/fold7-native-optical-control.log) · [测试图外显帧](evidence/fold7-native-optical-control-frame.png) · [同轮右镜实拍](evidence/fold7-native-optical-control-right.jpg)
 
+12:09:01 的 Monado 日志还记录佩戴传感器已启用并读回 `state=1`，随后收到开屏 `OK`。同轮右镜仍未拍到样例图案。[筛选日志](evidence/fold7-native-optical-control.log)
+
 复测后 Broker 保持 **Monado CV10 Preview**，手机停在 2D 列表，Pocket XR 诊断虚拟屏已释放。已恢复三星外显镜像，保留现有 Shizuku 授权及无线 ADB，系统最低刷新率为 `null`。原版 Pocket XR 的佩戴头动和左镜光学输出，以及 Fold7 整机关 Wi-Fi 后的实测仍待完成。
