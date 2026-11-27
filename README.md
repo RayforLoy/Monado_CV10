@@ -49,6 +49,8 @@ Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停�
 
 如果 2D 列表提示 **后台运行受限**，在 **应用程序信息 → 电池 → 后台运行** 中可为 Monado CV10 Preview 选择 **不受限制**。Fold7 的 One UI 8.5 即使在该设置下也曾冻结 Preview，导致 2D 直启或 3D 点选后黑屏、定格或无法返回。当前整合预览在三星 Android 16 设备上检测到外部 OpenXR 应用的 IPC 回复超时后，通过 Android 服务绑定唤醒运行时。Fold7 从 3D 菜单启动和退出原版 `hello_xr` 五轮通过，最初数秒仍可能有短暂停顿。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
 
+出现黑屏时可先核对 `hello_xr` 是否进入 `FOCUSED`，以及外显截图是否已有双目方块。有一次 Fold7 截图有图，但右镜在稳定版、预览版和独立 Android 显示测试中均未拍到图案。三星外显重新切回 3200×1600 @ 90 Hz 后仍未恢复该轮出画。[右镜输出对照](history/fold7-pocket-dual-runtime.md#右镜输出对照)
+
 ## Pocket XR 外屏兼容性
 
 安装原版 Pocket XR 后，在 Monado CV10 菜单打开 **Pocket XR 外显兼容性**。该页面显示 CV10 的活动时序，以及 Android 是否允许 Pocket XR 在外屏启动。Fold7 的 **设置 → 已连接的设备 → Samsung DeX → 连接的显示设备** 可切换 **已扩展** 和 **已镜像**。
