@@ -1,0 +1,46 @@
+11-27 13:54:38.000
+Preview SHA-256 5a92592e79d0d6e1fe6b4545ebc5a32171bf3ee3c45bb6a05cf5e08bef912770
+Display 4621527156978103573 (HWC display 1): port=21 pnpId=HWV screenPartStatus=UNSUPPORTED displayName="HUAWEIAV03"
+Active mode for display 247:   Mode ID: 456, Resolution: 3200x1600, Refresh Rate: 90.00 Hz
+11-27 13:54:43.927 13874 17916 V hello_xr: [13:54:43.927][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2520318114427
+11-27 13:54:43.668 13424 17932 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+CV10 framebuffer sample 1, host bracket 1..65ms, frame 33737
+CV10 framebuffer sample 2, host bracket 2575..2663ms, frame 33883
+11-27 13:54:50.998 13874 17916 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, min refresh null
+Final displays 0, 247
+
+Fold7 SM-F9660, C9.53.6 original cable, 5 V auxiliary supply, Samsung screen mirroring.
+2026-11-27 Hong Kong time. Measurements used the existing Preview and original Khronos OpenGLES hello_xr.
+The 3200x1600 HUAWEIAV03 frame-counter is from the FramebufferSurface section of dumpsys SurfaceFlinger --comp-displays.
+The two host stopwatch brackets surround the ADB dump requests. The sample spacing lies between 2510 and 2662 ms.
+Host external framebuffer advanced 146 frames. This is a compositor buffer count, not a measurement of light or a per-display present fence.
+
+dumpsys android.hardware.graphics.composer3.IComposer/default (frame-1-hwc.txt)
+SDM3 display_id: 1
+layer: 274557 name: 5326fbb SurfaceView[]@0#24(BLAST Consumer)24 z: 0 composition: 1/1 alpha: 65535 format:         RGBA_8888_UBWC dataspace:0x08810000 transform: 0/0/0 buffer_id: local-reference-1 secure: 0
+format: RGBA_8888_UBWC dataspace:0x08810000  buffer_id: local-reference-2 secure: 0
+device type:1 DrawMethod: 2
+state: 1 vsync on: 0 max. mixer stages: 11
+num configs: 2 active config index: 0
+ Mode:Video Primary:false DynFPS:false
+ FPS min:90 max:90 cur:90 TransferTime: 0us Min TransferTime: 0us Max TransferTime: 0us MaxBrightness:255
+ Display WxH: 3200x1600 MixerWxH: 3200x1600 DPI: 101.6x90.3111 LM_Split: true
+ v_total: 1780 h_total: 3308 clk: 529940 Topology: 5
+|   1 |    GPU_TARGET |    Pipe-1 |  165 | 3200 x 1600 |           RGBA_8888_UBWC |    0    0 3200 1600 |    0    0 3200 1600 |  0 | 0x00000001 |   0 x   0 |  1 |   1 |  1 |
+
+dumpsys android.hardware.graphics.composer3.IComposer/default (frame-2-hwc.txt)
+SDM3 display_id: 1
+layer: 274557 name: 5326fbb SurfaceView[]@0#24(BLAST Consumer)24 z: 0 composition: 1/1 alpha: 65535 format:         RGBA_8888_UBWC dataspace:0x08810000 transform: 0/0/0 buffer_id: local-reference-3 secure: 0
+format: RGBA_8888_UBWC dataspace:0x08810000  buffer_id: local-reference-4 secure: 0
+device type:1 DrawMethod: 2
+state: 1 vsync on: 0 max. mixer stages: 11
+num configs: 2 active config index: 0
+ Mode:Video Primary:false DynFPS:false
+ FPS min:90 max:90 cur:90 TransferTime: 0us Min TransferTime: 0us Max TransferTime: 0us MaxBrightness:255
+ Display WxH: 3200x1600 MixerWxH: 3200x1600 DPI: 101.6x90.3111 LM_Split: true
+ v_total: 1780 h_total: 3308 clk: 529940 Topology: 5
+|   1 |    GPU_TARGET |    Pipe-1 |  165 | 3200 x 1600 |           RGBA_8888_UBWC |    0    0 3200 1600 |    0    0 3200 1600 |  0 | 0x00000001 |   0 x   0 |  1 |   1 |  1 |
+
+Earlier 13:53 test on the same connection matched the external BLAST layer name, but --latency returned only 16666666 and no timestamp rows. The line is not a CV10 refresh measurement.
+The capture made after the second HWC sample contains two blue cubes in the system frame. No cube is visible in the fixed right-lens camera capture.

@@ -192,6 +192,12 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 重接后，12:49–13:01 的出图实拍与 13:11–13:14 的黑屏实拍之间，保存下来的驱动记录没有新的 HPD、训练或分辨率切换。USB 历史也没有新增的断开或枚举。HDCP 2.2 认证失败在出图和黑屏时段均已存在。这组证据只能确认重接时链路训练成功，尚未取得黑屏当时的实时 DPCD 或面板读数。[13:01 原版 Pocket XR 右镜](evidence/fold7-pocket-original-xr-compat-right.jpg) · [随后黑屏同机对照](evidence/fold7-integrated-preview-optical-recurrence.jpg)
 
+### 镜片黑屏时的 Fold7 显示硬件读数
+
+2026-11-27 13:54 香港时间。保留 C9.53.6 原厂线、5 V 供电、三星镜像及右镜机位，使用 `9e96499` 构建的预览 APK，SHA-256 为 `5a92592e79d0d6e1fe6b4545ebc5a32171bf3ee3c45bb6a05cf5e08bef912770`。从 2D 列表打开原版 `hello_xr`，样例进入 `FOCUSED`，CV10 的开屏命令收到 `OK`。同期外显截图可见两个蓝块，右镜照片里没有蓝块。
+
+`dumpsys SurfaceFlinger --comp-displays` 里，`HUAWEIAV03` 的 3200×1600 `FramebufferSurface` 计数在约 2.6 秒内从 33737 增至 33883。两次 `dumpsys android.hardware.graphics.composer3.IComposer/default` 采样中，HWC 显示 1 均使用 3200×1600、90 Hz 的全幅 `GPU_TARGET`。同一 SurfaceView 对应的缓冲和客户端合成目标缓冲均发生变化。可以确认黑屏期间 Fold7 仍在合成和更新 CV10 外显缓冲。逐图层 `--latency` 只返回主屏周期，没有提供 CV10 的呈现记录。物理链路即时状态及镜片出画仍需独立证据。[提取后的计数和 HWC 读数](evidence/fold7-hwc-black-optical.log) · [同轮外显与右镜对照](evidence/fold7-hwc-black-optical.png) · [AOSP 的逐图层统计实现](https://android.googlesource.com/platform/frameworks/native/+/refs/heads/android16-qpr2-release/services/surfaceflinger/SurfaceFlinger.cpp#6403)
+
 ### 2D USB 授权后继续启动
 
 2026-11-27 13:28–13:30 香港时间，在同一台 Fold7 上保留 C9.53.6 原厂线、外接 5 V、三星镜像及右镜相机位置。源码提交 `463702b` 在 USB 权限对话框关闭、启动器重新获得焦点后，检查仍连接的 CV10 和它的授权状态。允许后继续启动刚才点选的应用。拒绝或眼镜已断开时留在列表。此流程依赖 Android 在关闭系统对话框前授予 USB 设备访问权。[AOSP USB 授权对话框](https://android.googlesource.com/platform/frameworks/base/%2B/c231302191e6/packages/SystemUI/src/com/android/systemui/usb/UsbPermissionActivity.java)
