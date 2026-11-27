@@ -140,6 +140,12 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 已安装的预览和未修改的 Khronos `hello_xr` 均无 `INTERNET` 权限。从 Shizuku 手机端停止服务后，测试前后均确认没有 `shizuku_server` 进程。从 2D 列表直启样例，再打开 3D 菜单，底部上滑停留置中后点选样例。同一 PID 14436 两次进入 `FOCUSED`，两次按返回均完成 `xrDestroyInstance`。两次 CV10 外显截图均有双目蓝块，固定右镜相机均未拍到蓝块。系统 Wi-Fi 保留给无线 ADB。测完恢复常规预览、其 Broker 选择和 Shizuku 服务，最低刷新率为 `null`。[筛选日志](evidence/fold7-integrated-offline-combined.log) · [外显截图与右镜对照（上为 2D 直启，下为 3D 点选）](evidence/fold7-integrated-offline-combined.jpg)
 
+### Fold7 整机断网并停止 Shizuku
+
+2026-11-27 16:08–16:12 香港时间，Fold7（SM-F9660）用支持视频输出的 USB-C 线直连 CV10，三星外接显示为 **已镜像**，活动时序为 3200×1600、90 Hz。Broker 选择 **Monado CV10 Preview**。使用源码 `6d2fb4c` 的常规 ARM64 预览 APK，SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293`。未修改的 Khronos `hello_xr` OpenGLES APK 的 SHA-256 为 `29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962`。
+
+在移动数据已关闭的情况下停止 Shizuku，打开 2D 列表，再关闭 Wi-Fi。手机本地探针约每两秒读取一次网络与 Shizuku 状态，16:08:58 至 16:11:46 持续记录 `wifi=0 mobile_data=0 shizuku=stopped default_network=none`。断网后先从 2D 列表启动原版样例，返回后打开 3D 菜单并点选同一样例。用户佩戴确认两条路径均出画。两次样例会话由同一 PID 30476 进入 `FOCUSED`，按返回后分别在 16:09:13 和 16:09:45 完成 `xrDestroyInstance`。3D 菜单也在离线期间创建并销毁自己的会话。测试后恢复无线调试、Wi-Fi、移动数据及 Shizuku，保留直连和原 Broker 选择。[断网与会话筛选日志](evidence/fold7-direct-offline.log) · [同一接法的双目与头动复测](#usb-c-直连恢复右镜画面)
+
 ### Android 16 16 KiB 系统断网对照
 
 2026-11-27 11:33–11:37 香港时间，Android 16（API 36）模拟器报告 `PAGE_SIZE=16384`。使用与 Fold7 相同的 `71b7fd8` ARM64 APK，Broker 选择 **Monado CV10 Preview**。测试期间系统 Wi-Fi 与移动数据均关闭，`shizuku_server` 未运行。

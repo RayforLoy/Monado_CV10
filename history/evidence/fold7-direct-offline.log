@@ -1,0 +1,24 @@
+# 2026-11-27 Hong Kong time. Galaxy Z Fold7 SM-F9660, USB-C direct to CV10, mirrored 3200x1600 @ 90 Hz.
+# Monado CV10 Preview 6d2fb4c APK SHA-256 37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293.
+# Stock Khronos hello_xr OpenGLES APK SHA-256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962.
+# Shizuku was stopped and the 2D list was opened before disconnecting. Network probe and logcat ran locally on the Fold7.
+# First hello_xr session: 2D list. Second: selection from the offline 3D launcher. The wearer confirmed lens output in both sessions.
+11-27 16:08:58.537 12133 12133 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:00.609 12186 12186 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:02.680 12215 12215 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:03.913 30476 12235 V hello_xr: [16:09:03.913][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598405072 time=2520486561354
+11-27 16:09:04.819 12324 12324 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:13.015 30476 12235 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 16:09:13.205 12461 12461 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:14.012 32658 12473 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 16:09:15.368 12521 12521 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:23.025 32658 12473 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 16:09:23.318 30476 12609 V hello_xr: [16:09:23.318][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598428400 time=2539890827961
+11-27 16:09:23.765 12669 12669 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:44.717 12980 12980 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:09:45.179 30476 12609 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 16:09:46.807 13021 13021 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:11:46.667 14380 14380 I Cv10OfflineCheck: wifi=0 mobile_data=0 shizuku=stopped default_network=none
+11-27 16:11:48.760 14444 14444 I Cv10OfflineCheck: wifi=1 mobile_data=0 shizuku=stopped default_network=none
+# After recovery, adb confirmed wifi_on=1, mobile_data=1, shizuku_server PID 15233.
+# Broker remained org.cv10.monado.out_of_process.launcher_preview. Logical displays 0 and 390.
