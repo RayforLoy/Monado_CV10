@@ -4,6 +4,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 安装
 
+**整合预发布 v0.1.4-rc.1** 把 OpenXR 运行时、离线 2D/3D 启动器、Pocket XR 外显、CF20 手柄和实验性 6DoF 套件放进同一个 ARM 安装包。它在手机和 Broker 中显示为 **Monado CV10 Preview**，包名为 `org.cv10.monado.out_of_process.launcher_preview`。此包可与稳定版并存，覆盖旧预览版时须匹配签名。[整合预发布和 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.1) · [Fold7 整合包实测](history/fold7-unified-runtime.md)
+
 从 [Releases](https://github.com/RayforLoy/Monado_CV10/releases) 下载与系统 ABI 匹配的 APK。用 `adb shell getprop ro.product.cpu.abilist` 查看支持的 ABI，用 `adb install -r <APK>` 安装。Android 11 为 API 30，项目最低为 API 26。覆盖更新需要相同签名。实际 VR 功能还取决于 USB 主机、外接显示器、Broker 和 Vulkan 驱动。历史 Fold7 镜片、3DoF 和刷新率复测见 [验收记录](history/README.md)。
 
 | 系统 ABI | v0.1.3 APK |
@@ -17,7 +19,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 在 Galaxy Z Fold7 上启动 OpenXR 应用
 
-首次配置时安装 ARM64 版 Monado CV10 和 Khronos OpenXR Runtime Broker（`org.khronos.openxr.runtime_broker`），在 Broker 的 **Installed Runtimes** 中勾选 **Monado CV10**。把三星外接显示模式设为 **已镜像**。测试可使用未修改的 Khronos `hello_xr` OpenGLES 样例。[Broker 安装](https://play.google.com/store/apps/details?id=org.khronos.openxr.runtime_broker) · [Broker 源码](https://github.com/KhronosGroup/OpenXR-Android-Broker) · [hello_xr 1.1.65 APK](https://github.com/KhronosGroup/OpenXR-SDK-Source/releases/download/release-1.1.65/hello_xr-OpenGLES-release-1.1.65.apk)
+首次配置时安装支持 ARM64 的 Monado CV10 和 Khronos OpenXR Runtime Broker（`org.khronos.openxr.runtime_broker`），在 Broker 的 **Installed Runtimes** 中勾选 **Monado CV10**。使用整合预发布时勾选 **Monado CV10 Preview**，后续步骤也打开该应用。把三星外接显示模式设为 **已镜像**。测试可使用未修改的 Khronos `hello_xr` OpenGLES 样例。[Broker 安装](https://play.google.com/store/apps/details?id=org.khronos.openxr.runtime_broker) · [Broker 源码](https://github.com/KhronosGroup/OpenXR-Android-Broker) · [hello_xr 1.1.65 APK](https://github.com/KhronosGroup/OpenXR-SDK-Source/releases/download/release-1.1.65/hello_xr-OpenGLES-release-1.1.65.apk)
 
 1. 普通 C-C 线可直连 CV10。使用原厂手机线时先接好 CV10 和外接 5 V，再接入已解锁的 Fold7。等镜片出现手机桌面。
 2. 在 Fold7 打开 **Monado CV10**，再回到手机桌面。遇到三星后台管理拦截服务绑定时，先打开运行时可恢复启动。
@@ -77,7 +79,7 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 ### Pocket XR 外显实验预览
 
-本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。
+此模式用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。整合预发布和源码构建的独立进程版均提供此入口。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。对应 Monado 包和原版 Pocket XR 的 Shizuku 授权各自独立。
 
 点选外显模式时，如果系统询问 CV10 USB 访问权限，点 **允许** 后继续刚才选择的模式。如果预览包也缺少 Shizuku 授权，接下来会显示 Shizuku 的授权提示。拒绝 USB 后会留在预览页，可再次点选重试。[Fold7 首次授权记录](history/fold7-pocket-xr-display.md#连接-cv10-后的首次-usb-授权)
 
@@ -85,7 +87,7 @@ Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenX
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
 - **打开 Pocket XR 空间** 并收到画面后，使用 **打开手机控制** 切到原版 Pocket XR，同时保持眼镜会话。可在手机端 **空间窗口** 打开启动器，再在启动器中使用 **3D** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
-- **在 Pocket XR 中打开 OpenXR 应用** 是 Monado 手机端的实验入口。先在 OpenXR Runtime Broker 选择 **Pocket XR (Monado CV10)**，再打开 Pocket XR 空间。收到画面后点选已安装的 OpenXR 应用。预览为应用建立独立虚拟屏，手机会切到原版 Pocket XR 触控板。打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**，选 **关闭 OpenXR 应用屏** 可结束当前应用并保留 Pocket XR 空间，选 **停止预览** 会关闭整个外显会话。日常直接启动 OpenXR 应用时，在 Broker 改回 **Monado CV10** 或 **Monado CV10 Preview**。[Fold7 双运行时记录](history/fold7-pocket-dual-runtime.md#正式预览通过-shizuku-打开-openxr-应用)
+- **在 Pocket XR 中打开 OpenXR 应用** 是 Monado 手机端的实验入口。先在 OpenXR Runtime Broker 选择 **Pocket XR**，或者另外安装了带退出修复的可选客户端时选择 **Pocket XR (Monado CV10)**，再打开 Pocket XR 空间。收到画面后点选已安装的 OpenXR 应用。预览为应用建立独立虚拟屏，手机会切到原版 Pocket XR 触控板。打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**，选 **关闭 OpenXR 应用屏** 可结束当前应用并保留 Pocket XR 空间，选 **停止预览** 会关闭整个外显会话。日常直接启动 OpenXR 应用时，在 Broker 改回 **Monado CV10** 或 **Monado CV10 Preview**。[Fold7 双运行时记录](history/fold7-pocket-dual-runtime.md#正式预览通过-shizuku-打开-openxr-应用)
 - Fold7 的独立应用屏已验证原版 Khronos `hello_xr` 的 OpenGL ES 和 Vulkan APK。Vulkan 样例在同一进程重进，两次外显均显示双目蓝块。本轮右镜仍待光学验收。需要在手机主屏完成设置的 XR 应用从 Monado 的独立启动器打开。[Vulkan 实测](history/fold7-pocket-dual-runtime.md#vulkan-应用屏与同进程重进)
 - **电脑屏幕 3D（左右并排）** 使用原版 Pocket XR 的独立电脑屏幕。结束正在运行的空间预览，再选 **在手机上设置电脑屏幕** 配对 Sunshine 或 Apollo。配对后返回 Monado，选择 **电脑屏幕 3D（左右并排）**。原版在虚拟屏上自动连接已配对的主机。电脑播放铺满 16:9 桌面的左右并排内容时，左半送入左眼，右半送入右眼。当前实测主机为 Sunshine，接收 1920×1080 的 Half SBS 视频。这一路径使用独立的头锁定平面。[正式入口实测](history/fold7-pocket-pc-sbs.md#fold7-正式入口配对后自动开流) · [USB-C 直连双眼佩戴验收](history/fold7-pocket-pc-sbs.md#fold7-usb-c-直连双眼佩戴验收)
 - **使用 CV10 头部追踪固定 Pocket XR 画面** 让 Monado 将原版空间的双目画面固定在最初朝向，转头时画面留在原位。选择 **将画面移到当前朝向** 可重新置中。固定模式无需 VPN 授权，请在 Pocket XR 中关闭自身的头部追踪，以免画面被两次校正。[Fold7 原版测试卡实拍](history/fold7-pocket-world-anchor.md)
@@ -110,6 +112,12 @@ Fold7 在关闭 Pocket XR 的独立 Vulkan 应用屏时，三星后台管理可�
 
 Fold7 的 CV10 IMU 通过 ADB 回环将实时样本送到隔离的 Android 16 模拟器。模拟器关闭 Wi-Fi 和移动数据，Shizuku 未运行。未修改的 Pocket XR 通过模拟器内的本机 VPN 收到约 1000 Hz 的静置数据并解算姿态。此前的模拟姿态测试还覆盖了转动方向、停止 VPN 和同进程重连。Fold7 上已验证 VPN 授权可取消。Fold7 同机实时连接及佩戴转头仍待验收。[实时 IMU 对照](history/fold7-pocket-xr-imu.md#实时-fold7-采样送入原版-android-应用)
 
+## 手柄、定位套件和软件瞳距
+
+- **更多选项 → CV10 蓝牙手柄** 提供 CF20 的扫描、配对和输入诊断。系统提示时允许附近设备访问。
+- **CV10 蓝牙手柄 → Huawei 6DoF Kit · 定位交互套件** 提供校准读取、Y8 双目、头部定位和左右手柄的实验入口。运行原厂头部 SLAM 需要用户自行导入对应的 ARM64 `libarvr_slam.so`。套件的头手完整 6DoF 尚待真机验收。[连接与校准流程](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/README.md)
+- **更多选项 → CV10 软件瞳距** 可在 55–71 毫米范围调整立体渲染使用的眼距，默认 63 毫米。物理镜片的个体标定仍待实测。
+
 ## 原厂手机线
 
 运行时识别到原厂线且当前来源为 PC 时，会请求切换到手机来源。获取 HID 后会请求启用佩戴传感器。拔插后重新获取 HID 时，即使 Android 复用了设备 ID，运行时也会重新发送开屏指令。
@@ -128,6 +136,12 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 
 ```powershell
 .\scripts\build-cv10-apks.ps1 -OutputDir .\build\cv10-apks
+```
+
+用 `-UnifiedPreview` 可生成与稳定版并存的单个双 ABI 安装包。
+
+```powershell
+.\scripts\build-cv10-apks.ps1 -OutputDir .\build\cv10-unified -UnifiedPreview
 ```
 
 仅构建一个架构时，通过 `-Pcv10Abi` 指定，例如 `.\gradlew.bat "-Pcv10Abi=arm64-v8a" :src:xrt:targets:openxr_android:packageOutOfProcessRelease`。`x86` 和 `x86_64` 可用同一参数显式构建，例如用于模拟器调试。Gradle 把未签名包输出到 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/release/`。上述脚本使用本机 Android 开发证书签名，并校验对齐和签名。首次构建请允许 Gradle 下载依赖。
