@@ -55,6 +55,23 @@ AOSP 的 `Output::beginFrame` 会根据损伤区决定是否重画。物理输�
 
 上游 `follower_display_backpressure` 在跟随输出已有待完成栅栏时，可以把它排除出当轮目标集合。同步 HAL 仍可在把新栅栏返回给 SurfaceFlinger 之前阻塞。Fold7 的系统配置查询没有显示该标志的覆盖值。三组已采集的 CV10 时钟追踪里均未找到上游的 `Avoiding backpressure for follower display` 事件，且两路 `HwcPresentOrValidateDisplay` 次数分别为 360/360、420/420、421/420。量产二进制是否包含这条分支仍未核实。[AOSP Scheduler](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/Scheduler/Scheduler.cpp#432)
 
+### 每块物理屏的帧周期提示
+
+原厂线连接不变，用原版 Hello XR 重新采集两次约 4.5 秒的轻量追踪。两次手机面板均为 ON/60，CV10 的物理时序均为 90 Hz。用 HWC 调用的直接父追踪区间匹配 `NextFrameInterval`，同一次调用中的提示和耗时如下。[Perfetto 查询](fold7-hwc-frame-interval.sql)
+
+| 合成时钟 | CV10（HWC 1） | 手机屏（HWC 3） | 调用数（每屏） |
+| --- | ---: | ---: | ---: |
+| 系统自动选手机 | 60 Hz 提示，平均 0.150 ms | 60 Hz 提示，平均 0.203 ms | 269 |
+| 临时指定 CV10 | 90 Hz 提示，平均 1.165 ms | 90 Hz 提示，平均 13.930 ms | 268 |
+
+Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏时钟的下一帧周期。各输出已有独立的预计呈现时间，写入 HWC 的帧周期仍共用同一个值。高通同平台公开实现把这两个值作为每屏单独的参数交给 HAL。当前追踪切换了时钟和周期提示，因而无法单独归因于提示。[AOSP SurfaceFlinger](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/SurfaceFlinger.cpp#3157) · [AOSP Output](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/CompositionEngine/src/Output.cpp#909) · [高通 Composer AIDL](https://github.com/LineageOS/android_vendor_qcom_opensource_display-hal/blob/28edbb21cf722c6ce5acdd7711af9cc692167a12/composer/AidlComposerClient.cpp#L1276)
+
+复查六秒强制 CV10 时钟的 HAL 追踪，手机和眼镜的提交已运行在两个线程。手机的 `DRMAtomicReq::Commit` 平均耗时 16.3 ms，其中 `atomic_commit` 平均 16.0 ms。CV10 对应两段平均为 15.2 ms 和 0.32 ms。CV10 线程在较长的提交区间内有 358 个由手机提交线程触发的唤醒。因此即使拆开 SurfaceFlinger 层的线程，下面两路提交仍有等待关系。新追踪未采得 syscall 或内核阻塞符号，无法确定 Samsung 量产 Composer 的 DRM flags 或具体锁。[Perfetto syscall 数据源](https://perfetto.dev/docs/data-sources/syscalls) · [同平台公开的 DRM 提交代码](https://github.com/LineageOS/android_vendor_qcom_opensource_display-core/blob/89aa1914da50aae0fb1b2ebf3db38d34fba5f748/sde-drm/drm_atomic_req.cpp#L260)
+
+[系统实验补丁](aosp-android16-per-display-present-interval.patch) 基于 `platform/frameworks/native@fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103`，默认关闭。在含补丁的系统构建中，启动 SurfaceFlinger 前设置 `debug.sf.cv10_per_display_frame_interval=true`，把各物理跟随输出的帧周期取自各自的 VSync 跟踪器和预计呈现时间。虚拟输出及缺少有效单屏周期的输出沿用主时钟的值。补丁已在指定上游文件上通过正反向应用检查。Fold7 使用量产系统，这轮未编译或部署修改后的 SurfaceFlinger。
+
+有系统构建时先固定 CV10 为调度时钟，仅切换此属性，确认 HWC 1 收到约 11.11 ms 周期、HWC 3 收到约 16.67 ms 周期。先测原版 Hello XR，再在同一 Pocket XR 工作区测静止和持续转头。同时记录 CV10 图层实呈、手机 DRM 等待与温控。若周期已分开但仍低于 90 次实呈/秒，应再比较跟随屏的提交调度和 Qualcomm DRM 完成等待。
+
 ## Pocket 工作区性能对照
 
 每眼 2240×2240，GLES 固定中心 1×1、外围 2×2。两条路径保持同一 Bilibili 工作区，使用 34° 峰峰值、3 秒周期的模拟左右转头，连续比较约 15 秒；动态推荐内容随页面变化。熄屏对照的电池温度在 35.1–35.7°C，系统热状态分别为 1→2 和 2→2。右镜固定相机确认内容出画，刷新率由呈现时间戳统计。延迟是模拟头动信号的相位拟合，不是光学测得的运动到光子时延。
@@ -196,6 +213,8 @@ The final build also displayed the workspace through the original cable with the
 - `hello-policy-{lit-auto,lit-forced,off-forced}-trace-summary.txt`、`hello-policy-hwc-{thread-state,binder}.txt` 和对应 Perfetto trace，记录 Hello XR 的调度对照。
 
 - `hello-composer-{lit-auto,lit-forced,off-forced}.perfetto-trace`、`composer-waits-summary.txt` 和 `trace-fold7-composer.ps1`，记录 Qualcomm DRM 工作线程及 Composer Binder 等待的对照。
+
+- `hello-drm-lock-lit-{auto,forced}.perfetto-trace`、`hello-drm-lock-lit-{auto,forced}-dump.txt` 和 `trace-fold7-drm-lock.ps1`，记录两块屏的帧周期提示、HWC 调用和采样前后的物理模式。
 - `pocket-policy-static-phone-summary.txt` 和 `hello-policy-static-phone-hashes.txt`，记录工作区直出时静置的手机界面。
 - `pocket-lit-layer-state.perfetto-trace`、`lit-layer-present-mode-comparison.txt`、`hello-present-asap-comparison.txt`、`fold7-backpressure-stages.txt` 和对应 `*-monado.log`，记录快返回的 HWC 调用、图层与 Vulkan 调度对照。尽早呈现实验 APK SHA-256 为 `d377c303c99109361a5d5f3f6145253abca9ccc2714f322a25c0c973092a410d`。
 

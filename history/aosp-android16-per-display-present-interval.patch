@@ -1,0 +1,88 @@
+diff --git a/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h b/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
+index 27f791f..cc7933d 100644
+--- a/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
++++ b/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
+@@ -27,6 +27,7 @@
+ #include <compositionengine/OutputColorSetting.h>
+ #include <math/mat4.h>
+ #include <scheduler/interface/ICompositor.h>
++#include <ui/DisplayMap.h>
+ #include <ui/FenceTime.h>
+ #include <ui/Transform.h>
+
+@@ -88,9 +89,9 @@ struct CompositionRefreshArgs {
+
+     scheduler::FrameTargets frameTargets;
+
+-    // The frameInterval for the next present
+-    // TODO (b/315371484): Calculate per display and store on `FrameTarget`.
++    // Pacesetter interval, also used for virtual outputs and missing physical targets.
+     Fps frameInterval;
++    ui::PhysicalDisplayMap<PhysicalDisplayId, Fps> physicalDisplayFrameIntervals;
+
+     // If set, a frame has been scheduled for that time.
+     // TODO (b/255601557): Calculate per display.
+diff --git a/services/surfaceflinger/CompositionEngine/src/Output.cpp b/services/surfaceflinger/CompositionEngine/src/Output.cpp
+index 9fe0528..9664360 100644
+--- a/services/surfaceflinger/CompositionEngine/src/Output.cpp
++++ b/services/surfaceflinger/CompositionEngine/src/Output.cpp
+@@ -914,11 +914,10 @@ void Output::writeCompositionState(const compositionengine::CompositionRefreshAr
+         return;
+     }
+
+-    if (auto frameTargetPtrOpt = getDisplayIdVariant()
+-                                         .and_then(asPhysicalDisplayId)
+-                                         .and_then([&refreshArgs](PhysicalDisplayId id) {
+-                                             return refreshArgs.frameTargets.get(id);
+-                                         })) {
++    const auto physicalId = getDisplayIdVariant().and_then(asPhysicalDisplayId);
++    if (auto frameTargetPtrOpt = physicalId.and_then([&refreshArgs](PhysicalDisplayId id) {
++            return refreshArgs.frameTargets.get(id);
++        })) {
+         editState().earliestPresentTime = frameTargetPtrOpt->get()->earliestPresentTime();
+         editState().expectedPresentTime = frameTargetPtrOpt->get()->expectedPresentTime().ns();
+         const auto debugPresentDelay = frameTargetPtrOpt->get()->debugPresentDelay();
+@@ -928,7 +927,13 @@ void Output::writeCompositionState(const compositionengine::CompositionRefreshAr
+             editState().expectedPresentTime += debugPresentDelay->ns();
+         }
+     }
++
+     editState().frameInterval = refreshArgs.frameInterval;
++    if (auto interval = physicalId.and_then([&refreshArgs](PhysicalDisplayId id) {
++            return refreshArgs.physicalDisplayFrameIntervals.get(id);
++        })) {
++        editState().frameInterval = interval->get();
++    }
+     editState().powerCallback = refreshArgs.powerCallback;
+
+     applyPictureProfile();
+diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
+index c448169..c6fcc7a 100644
+--- a/services/surfaceflinger/SurfaceFlinger.cpp
++++ b/services/surfaceflinger/SurfaceFlinger.cpp
+@@ -3154,9 +3154,24 @@ CompositeResultsPerDisplay SurfaceFlinger::composite(
+
+     setForcedClientCompositionLayerStacks(refreshArgs);
+
+-    // TODO(b/255601557) Update frameInterval per display
+     refreshArgs.frameInterval =
+             mScheduler->getNextFrameInterval(pacesetterId, pacesetterTarget.expectedPresentTime());
++    static const bool usePerDisplayFrameInterval =
++            base::GetBoolProperty("debug.sf.cv10_per_display_frame_interval", false);
++    if (usePerDisplayFrameInterval) {
++        for (const auto& [id, targeter] : frameTargeters) {
++            if (id == pacesetterId) {
++                continue;
++            }
++
++            const Fps interval =
++                    mScheduler->getNextFrameInterval(id, targeter->target().expectedPresentTime());
++            if (interval.isValid()) {
++                refreshArgs.physicalDisplayFrameIntervals.try_emplace(id, interval);
++            }
++        }
++    }
++
+     const auto scheduledFrameResultOpt = mScheduler->getScheduledFrameResult();
+     const auto scheduledFrameTimeOpt = scheduledFrameResultOpt
+             ? std::optional{scheduledFrameResultOpt->callbackTime}
