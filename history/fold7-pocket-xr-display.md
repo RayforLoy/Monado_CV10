@@ -38,6 +38,14 @@
 
 11:22–11:25，沿用同一接线，Fold7 安装 `71b7fd8` ARM64 预览，APK SHA-256 为 `71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8`。原版 Pocket XR 1.6.28 APK 摘要保持一致。使用既有 Shizuku 授权从 **打开 Pocket XR 空间** 启动，Monado 收到 3840×1080 虚拟屏的首帧，原版触控板自动到手机前台。上次的计算器和时钟面板各自重建了显示屏，时钟直接恢复到眼镜画面。向时钟屏点按开始后，CV10 的两个输出眼区均从 `00:00.00` 更新至 `00:08.64`，右镜实拍拍到了正在计时的窗口。手机切回预览并点按 **停止预览** 后，三个虚拟屏及手机控制前台服务均已释放。[双眼输出对照](evidence/fold7-pocket-71b7fd8-clock-stereo.png) · [右镜实拍](evidence/fold7-pocket-71b7fd8-clock-right.jpg) · [筛选日志](evidence/fold7-71b7fd8-pocket-and-no-shizuku.log)
 
+### 原版空间菜单中的 OpenXR 应用
+
+12:59 香港时间，Fold7 保持 C9.53.6 线、5 V 供电和外屏镜像，CV10 在眼镜端重接后正常出画。Monado 整合预览 `f439234` 的 APK SHA-256 为 `aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e`。Broker 暂选 **Pocket XR**，两项 Shizuku 授权沿用原值，头踪 VPN 未打开。结束时核对了手机内原版 Pocket XR 1.6.28，APK 摘要与早期记录一致。
+
+在原版 **空间窗口** 打开其启动器，并从菜单点选原版 Khronos `hello_xr`。Pocket XR 将它放到普通应用面板的虚拟屏 254，系统使用 `android.intent.category.LAUNCHER` 启动样例。OpenXR Loader 随后加载原版 Pocket XR 运行时，原版也记录 3840×1080 的游戏 Surface 已就绪。样例失去前台焦点、销毁应用窗口，未在观察窗口内进入 `FOCUSED`。右镜仍可见 Pocket XR 的秒表面板。普通 Android 应用可以从原版空间菜单打开。OpenXR 样例应走 CV10 提供的独立应用屏入口。[筛选日志](evidence/fold7-pocket-original-xr-menu.log)
+
+13:01，用同一设备、两个 APK 和 Broker 选择复测。原版空间恢复后，同一个样例先随上轮留存的应用面板打开。随后在 Monado 选择 **在 Pocket XR 中打开 OpenXR 应用 → Hello XR (OpenGL ES)**，样例进入独立虚拟屏 259。样例 PID 31106 仍使用原版 Pocket XR 的运行时，并在请求后约 0.33 秒进入 `FOCUSED`。CV10 双目外显帧各显示一个蓝块，右镜再次拍到蓝块。本轮以停止测试进程收尾，确认空间屏和应用屏释放，Broker 恢复 **Monado CV10 Preview**，最低刷新率为 `null`。[原版运行时对照日志](evidence/fold7-pocket-original-xr-menu.log) · [双目外显帧](evidence/fold7-pocket-original-xr-compat-stereo.png) · [右镜实拍](evidence/fold7-pocket-original-xr-compat-right.jpg)
+
 ### 早期整合预览
 
 2026-11-27 02:40 香港时间，同一台 Fold7 和接线。ARM64 整合预览来自 `6e536a4`，包含内置 2D、3D 启动器及 Pocket XR 外显和头踪实验。正式预览包 SHA-256 为 `94fc866acb33f0def30ec4d3f03ffd11a09e918e44b30604635ea850c110f21c`。签名与 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 `PT_LOAD` 段均对齐到 16 KiB。本机页大小为 4 KiB。内置 3D 菜单进入 `XR_SESSION_STATE_FOCUSED`，右镜拍到应用卡片和手机指针。[内置 3D 菜单右镜实拍](evidence/fold7-pocket-integrated-menu-right.jpg)

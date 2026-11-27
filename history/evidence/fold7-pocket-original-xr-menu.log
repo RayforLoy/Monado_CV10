@@ -1,0 +1,28 @@
+# Galaxy Z Fold7 SM-F9660, original C9.53.6 cable, 5 V, Samsung display mirror after glasses-side reconnect.
+# 2026-11-27 HKT. Monado CV10 Preview f439234 SHA-256 aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e
+# Official Pocket XR 1.6.28 SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+# OpenXR Broker selected the original com.hayeco.flipspaces for both trials.
+# The existing Shizuku grants stayed in place. No local VPN enabled.
+# First trial: select the sample in the original Pocket XR launcher.
+11-27 12:59:26.770 27818 27818 I Cv10PocketXrPreview: First virtual display frame available on display 251
+11-27 12:59:40.877  3500 28146 I FlipSpaces/Space: launcher: Hello XR (OpenGL ES) (org.khronos.openxr.hello_xr.opengles) launched into a window where the launcher was, yaw 0.0, pitch -5.0
+11-27 12:59:41.027  1814  3409 I FlipSpaces/PanelHost: created display 254 1786x976 at 60.0 Hz flags=0x7d49; ignores activity size restrictions: set; ignores orientation requests: on
+11-27 12:59:41.053  2961  8627 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10a00000 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 2000 (com.android.shell) (BAL_ALLOW_PERMISSION) result code=0
+11-27 12:59:41.169 29083 29102 I OpenXR-Loader: Got runtime: package: com.hayeco.flipspaces, so filename: libopenxr_monado.so
+11-27 12:59:41.236  3500  3500 I PocketXrOpenXr: the game's surface is 3840x1080
+11-27 12:59:41.272  2961  3282 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=false, r=ActivityRecord{213064293 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34605}
+11-27 12:59:41.569 29083 29102 V hello_xr: [12:59:41.569][Info   ] onPause()
+11-27 12:59:41.573 29083 29102 V hello_xr: [12:59:41.573][Info   ] surfaceDestroyed()
+11-27 12:59:41.574 29083 29102 V hello_xr: [12:59:41.574][Info   ] onStop()
+
+# Second trial: use the Monado menu for a separate application display.
+11-27 13:01:01.304 30440 30440 I Cv10PocketXrPreview: First virtual display frame available on display 255
+11-27 13:01:05.297 31106 31126 I OpenXR-Loader: Got runtime: package: com.hayeco.flipspaces, so filename: libopenxr_monado.so
+11-27 13:01:11.982 30440 30440 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 259
+11-27 13:01:12.307 31106 31126 V hello_xr: [13:01:12.307][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2825019540308
+
+# The right-eye camera after original-menu selection still showed the Pocket XR stopwatch window.
+# The physical mirror framebuffer after independent-display launch showed a blue square in each eye region.
+# The right-eye camera also showed the blue square after independent-display launch.
+# Cleanup stopped the test processes. No CV10 Pocket XR virtual display remained in dumpsys display.
+# Restored active broker: org.cv10.monado.out_of_process.launcher_preview. Minimum refresh rate: null.
