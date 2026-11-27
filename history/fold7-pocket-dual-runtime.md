@@ -147,3 +147,5 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 12:09:01 的 Monado 日志还记录佩戴传感器已启用并读回 `state=1`，随后收到开屏 `OK`。同轮右镜仍未拍到样例图案。[筛选日志](evidence/fold7-native-optical-control.log)
 
 复测后 Broker 保持 **Monado CV10 Preview**，手机停在 2D 列表，Pocket XR 诊断虚拟屏已释放。已恢复三星外显镜像，保留现有 Shizuku 授权及无线 ADB，系统最低刷新率为 `null`。原版 Pocket XR 的佩戴头动和左镜光学输出，以及 Fold7 整机关 Wi-Fi 后的实测仍待完成。
+
+12:34 至 12:35，保持同一接线、5 V 供电与无线 ADB，在 Fold7 的物理 USB 端口关闭再恢复数据传输。头显 HID、音频、集线器和键盘均重新枚举。头显 HID 复用了原 USB 地址，Monado 在下次启动 `hello_xr` 时仍重新请求 USB 权限。Android 在切换期间持续列出 CV10，前后均为显示 246、3200×1600、90 Hz。手机通过 `monitor_info` 读到显示器身份，当前 shell 无权读取链路训练相关节点。首次样例在系统授权提示中等候，已允许此次访问，手机随后恢复个人使用。没有取得 USB 重枚举后的镜片结果，仍需物理重接眼镜端来完成对照。[设备与运行时日志](evidence/fold7-usb-data-reenumeration.log)

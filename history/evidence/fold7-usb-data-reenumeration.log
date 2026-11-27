@@ -1,0 +1,27 @@
+# 2026-11-27 HKT, Fold7 SM-F9660. Original C9.53.6 cable, external 5 V, Samsung mirror.
+# Installed f439234 preview SHA-256:
+# aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e
+# Original connection and wireless ADB kept in place. Physical port0, power role sink and data role host.
+
+# Host samples from the USB data disable/enable round trip:
+12:34:37.065 USB=enabled hub=present audio=present control=present keyboard=present CV10-display=present
+12:34:40.253 USB=disabled-force hub=missing audio=missing control=missing keyboard=missing CV10-display=present
+12:34:40.622 Requested USB data enabled
+12:34:41.151 USB=enabled hub=present audio=missing control=missing keyboard=missing CV10-display=present
+12:34:42.676 USB=enabled hub=present audio=present control=present keyboard=missing CV10-display=present
+12:34:43.052 USB=enabled hub=present audio=present control=present keyboard=present CV10-display=present
+12:35:04.436 USB=enabled sink/host and all listed devices present
+
+# Phone UsbHostManager: the control interface reused its previous USB address.
+12:34:36.962 Removed device at /dev/bus/usb/001/004: HUAWEI GLASS HID
+12:34:42.325 Added device at /dev/bus/usb/001/004: HUAWEI GLASS HID (12d1:107e)
+12:35:21.817 OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview
+12:35:21.945 MonadoCV10: Requested CV10 USB permission
+12:35:22.138 OpenXR-Loader: xrCreateInstance succeeded
+# The permission dialog was still in front when the test timed out waiting for FOCUSED. One-time permission was then allowed.
+# The phone returned to personal use before the retest. No optical result was recorded after the data cycle.
+
+# The logical display was 246 before and after, at 3200 x 1600 and 90 Hz.
+# /sys/class/dp_sec/monitor_info: HWV,0x300,0x1
+# Shell reads of dp_error_info, bw_code and the DRM connector status were denied.
+# Display presence and EDID-derived identity do not establish physical link training or panel light output.
