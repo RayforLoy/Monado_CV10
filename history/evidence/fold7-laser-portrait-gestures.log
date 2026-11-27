@@ -1,0 +1,19 @@
+11-27 13:03:29.000
+Android navigation_mode=2
+Preview SHA-256 18220C62C54343A7F7212979E03717AEEA2C63D0E3ED27E57531ECA16860AD0E
+11-27 13:03:38.567 32676 32703 I Cv10SpatialLauncher: OpenXR session state 5
+{"left":[130,1314],"right":[949,1314],"bottom":[540,2352],"width":1080,"height":2520}
+Left in-app guide
+topResumedActivity=ActivityRecord{49203963 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34621}
+11-27 13:03:43.078 32676   423 I Cv10SpatialLauncher: OpenXR session state 5
+Right in-app guide
+topResumedActivity=ActivityRecord{49203963 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34621}
+11-27 13:03:47.208 32676   586 I Cv10SpatialLauncher: OpenXR session state 5
+Android left-edge Back
+topResumedActivity=ActivityRecord{49203963 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34621}
+11-27 13:03:51.298 32676   799 I Cv10SpatialLauncher: OpenXR session state 5
+Quick swipe released before hold did not recenter
+11-27 13:03:53.481 32676   799 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+topResumedActivity=ActivityRecord{25944368 u0 com.sec.android.app.launcher/.activities.LauncherActivity t28330}
+Android bottom-edge Home reached Samsung Home without a second recenter
+Restored preview aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e and minimum refresh rate null
