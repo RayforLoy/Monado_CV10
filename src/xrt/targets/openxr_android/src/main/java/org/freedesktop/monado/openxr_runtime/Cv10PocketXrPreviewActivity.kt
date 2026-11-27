@@ -216,7 +216,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     }
 
     private fun chooseOpenXrApp() {
-        val apps = Cv10AppCatalog.load(this).filter(Cv10AppEntry::isXr)
+        // The independent client display discards Android window buffers. Phone-first setup must remain on the phone.
+        val apps = Cv10AppCatalog.load(this, immersiveOnly = true)
         val dialog = AlertDialog.Builder(this).setTitle(R.string.cv10_pocket_open_xr_app)
             .setNegativeButton(android.R.string.cancel, null)
         if (apps.isEmpty()) {

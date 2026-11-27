@@ -24,19 +24,43 @@ data class Cv10AppEntry(
 
 object Cv10AppCatalog {
     private const val IMMERSIVE_HMD = "org.khronos.openxr.intent.category.IMMERSIVE_HMD"
+    private const val OPENXR_RUNTIME_SERVICE = "org.khronos.openxr.OpenXRRuntimeService"
+    private const val OPENXR_PERMISSION = "org.khronos.openxr.permission.OPENXR"
+    private const val OPENXR_SYSTEM_PERMISSION = "org.khronos.openxr.permission.OPENXR_SYSTEM"
 
-    fun load(context: Context): List<Cv10AppEntry> {
+    fun load(context: Context, immersiveOnly: Boolean = false): List<Cv10AppEntry> {
         val pm = context.packageManager
-        val phoneApps = findActivities(context, Intent.CATEGORY_LAUNCHER)
         val immersiveApps = findActivities(context, IMMERSIVE_HMD)
-        val immersivePackages = immersiveApps.keys.mapTo(hashSetOf()) { it.packageName }
-        val entries = immersiveApps.map { (component, info) ->
+        val immersiveEntries = immersiveApps.map { (component, info) ->
             Cv10AppEntry(component, info.loadLabel(pm).toString(), true, IMMERSIVE_HMD)
-        } + phoneApps.filterKeys { it.packageName !in immersivePackages }.map { (component, info) ->
-            Cv10AppEntry(component, info.loadLabel(pm).toString(), false, Intent.CATEGORY_LAUNCHER)
         }
+        val entries = if (immersiveOnly) immersiveEntries else immersiveEntries + phoneEntries(context, immersiveApps)
         val collator = Collator.getInstance()
         return entries.sortedWith(compareBy(collator) { it.label })
+    }
+
+    private fun phoneEntries(context: Context, immersiveApps: Map<ComponentName, ResolveInfo>): List<Cv10AppEntry> {
+        val pm = context.packageManager
+        val immersivePackages = immersiveApps.keys.mapTo(hashSetOf()) { it.packageName }
+        // Runtime packages can inherit the OpenXR permissions from the loader in their settings app.
+        val runtimePackages = pm.queryIntentServices(Intent(OPENXR_RUNTIME_SERVICE), 0)
+            .mapTo(hashSetOf()) { it.serviceInfo.packageName }
+        val usesOpenXr = mutableMapOf<String, Boolean>()
+        return findActivities(context, Intent.CATEGORY_LAUNCHER)
+            .filterKeys { it.packageName !in immersivePackages }
+            .map { (component, info) ->
+                val isXr = component.packageName !in runtimePackages && usesOpenXr.getOrPut(component.packageName) {
+                    requestsOpenXrPermission(pm, component.packageName)
+                }
+                Cv10AppEntry(component, info.loadLabel(pm).toString(), isXr, Intent.CATEGORY_LAUNCHER)
+            }
+    }
+
+    private fun requestsOpenXrPermission(pm: PackageManager, packageName: String): Boolean = try {
+        pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS).requestedPermissions.orEmpty()
+            .any { it == OPENXR_PERMISSION || it == OPENXR_SYSTEM_PERMISSION }
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
     }
 
     private fun findActivities(context: Context, category: String): Map<ComponentName, ResolveInfo> {
