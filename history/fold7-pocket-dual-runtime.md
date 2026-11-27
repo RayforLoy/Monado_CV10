@@ -125,3 +125,21 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 06:14 用 ADB 将样例任务从虚拟屏 192 移至主屏 0，复现此前长测观察到的显示旋转、会话重建和焦点迁移。同一 PID 12975 约 0.8 秒内恢复 `FOCUSED`，右镜重新出画。按 `dumpsys window displays` 确认焦点后把返回键发给主屏 0，样例正常进入 `STOPPING` 并销毁第二个实例。此轮验证了焦点移到主屏后的退出，自发迁移的触发条件仍需查明。[焦点和销毁日志](evidence/fold7-pocket-client-companion.log#L38)
 
 06:14 至 06:15 切回普通预览 APK `5b5efa7`，SHA-256 为 `73ff89d035379109d8dd8ba956ca385bd4d893f8b36d74319be5d165c393201d`。在 Broker 选择 **Monado CV10 Preview**，未使用 Shizuku。2D 菜单直接启动原版 `hello_xr`，3D 启动器经底部上滑停留和点按也启动了同一样例。右镜拍到 3D 菜单和两次样例出画，样例两次进入 `FOCUSED`，返回后均完成 `xrDestroyInstance`。复测后恢复稳定版 Broker 和试验前安装的预览包。[会话日志](evidence/fold7-pocket-client-companion.log#L51)
+
+## 正式预览通过 Shizuku 打开 OpenXR 应用
+
+2026-11-27 11:40 至 11:43 香港时间。沿用 Fold7（SM-F9660）、C9.53.6 原厂线、外接 5 V 和 3200×1600 @ 90 Hz 的 CV10 镜像输出。使用 `71b7fd8` 正式预览，APK SHA-256 为 `71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8`。保留 Fold7 上已有的 Shizuku 授权及官方 Pocket XR 1.6.28。Broker 选用同一签名的 **Pocket XR (Monado CV10)** 客户端，APK SHA-256 为 `043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a`。
+
+通过手机上的 **打开 Pocket XR 空间** 创建显示 206 并收到首帧。随后从 Monado 的 **在 Pocket XR 中打开 OpenXR 应用** 两次选择未修改的 `hello_xr`。正式 Shizuku 服务为样例创建显示 209 和 210，Loader 确认使用客户端包。两次分别在 606 和 430 毫秒内进入 `FOCUSED`，右镜都拍到蓝方块。第一轮开始约 35 秒后，原版 Pocket XR 游戏图层的帧编号继续从 2121 升至 2262。第一轮向样例所在屏发送返回，正常完成 `xrDestroyInstance`。第二轮重用样例 PID 22779。手机主屏的返回键由原版触控板转发给空间，样例继续运行。从 Monado 点按 **停止预览** 正常销毁第二个样例实例，空间及应用显示均已释放。[正式流程日志](evidence/fold7-pocket-client-production.log) · [右镜实拍](evidence/fold7-pocket-client-production-right.jpg)
+
+### 关闭应用屏并保留 Pocket XR 空间
+
+11:46 至 11:55，覆盖安装 `f439234` ARM64 预览，APK SHA-256 为 `aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e`。APK 通过 v2 签名与 16 KiB ZIP 对齐检查。五个原生库和 `71b7fd8` 逐字节相同，15 个 ELF `PT_LOAD` 段仍采用 16 KiB 对齐。
+
+通过 **关闭 OpenXR 应用屏** 三次退出样例，Android DisplayManager 依次移除显示 238、239、240，每一轮都保留空间显示 235。原版运行时为样例提供 3840×1080 游戏图层，同一 PID 22779 三次进入 `FOCUSED`、三次完成 `xrDestroyInstance`。最后点按 **停止预览**，空间显示也已释放。另有对照在 DisplayManager 移除应用屏后触发三星 Freecess，样例的销毁回调在解除冻结后才完成，最迟一次约 32 秒。关闭按钮释放应用屏，无需等 Android 回收应用进程。[独立关闭筛选日志](evidence/fold7-pocket-client-close-display.log)
+
+### 右镜输出对照
+
+11:55 至 12:00 用同一接线复测黑屏。预览版的 Pocket XR、内置 2D 直开和 3D 菜单，以及稳定版 Monado CV10 v0.1.2 均让样例进入 `FOCUSED`。Fold7 采集到的 CV10 外显帧有左右两个蓝方块。固定相机在这四次复测中均未从右镜捕捉到测试画面，与 11:40 至 11:43 的明亮实拍结果不同。重置外显电源状态及从 Android 禁用后重新启用外显，均未恢复右镜实拍。接线和相机位置未做物理调整，原因待确认。[Pocket XR 外显帧](evidence/fold7-pocket-client-close-display-stereo.png) · [3D 菜单启动后的外显帧](evidence/fold7-pocket-menu-optical-control-stereo.png) · [稳定版外显帧](evidence/fold7-pocket-stable-optical-control-stereo.png) · [稳定版右镜实拍](evidence/fold7-pocket-stable-optical-control-right.jpg)
+
+复测后 Broker 选回 **Monado CV10 Preview**，手机停在 2D 列表，Pocket XR 诊断虚拟屏已释放。保留现有 Shizuku 授权及无线 ADB，系统最低刷新率为 `null`。原版 Pocket XR 的佩戴头动和左镜光学输出，以及 Fold7 整机关 Wi-Fi 后的实测仍待完成。

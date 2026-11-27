@@ -1,0 +1,46 @@
+# Fold7 SM-F9660, HUAWEI VR Glass CV10, C9.53.6 original cable with external 5 V.
+# 2026-11-27, Hong Kong time. CV10 3200x1600 @ 90 Hz. Selected logcat messages and display observations.
+# Monado CV10 preview f439234 APK aec65f666705bc278a589dead6dd7dc3ea31a157ad91f8fc09de17f1a4a8ed7e
+# Pocket XR (Monado CV10) client APK 043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a
+# Unmodified Pocket XR 1.6.28 APK 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+# Unmodified hello_xr OpenGLES APK 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+
+11:53:49.606 Cv10PocketXrPreview: First virtual display frame available on display 235
+11:53:58.363 Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 238
+11:53:58.770 hello_xr [22779]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11:54:07.277 hello_xr [22779]: XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING
+11:54:08.809 OpenXR-Loader [22779]: xrDestroyInstance Completed loader trampoline
+# The display list no longer contains 238. Space 235 and PID 22779 are still present.
+
+11:54:14.875 Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 239
+11:54:15.338 hello_xr [22779]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11:54:23.693 hello_xr [22779]: XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING
+11:54:24.203 OpenXR-Loader [22779]: xrDestroyInstance Completed loader trampoline
+# The display list no longer contains 239. Space 235 and PID 22779 are still present.
+
+11:54:31.790 Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 240
+11:54:32.184 hello_xr [22779]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11:54:40.612 hello_xr [22779]: XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING
+11:54:42.226 OpenXR-Loader [22779]: xrDestroyInstance Completed loader trampoline
+# The display list no longer contains 240. Space 235 and PID 22779 are still present.
+# Stop Preview removes space 235. The virtual displays used by the run are gone.
+
+# Earlier teardown with Samsung background freeze, same preview and client PID.
+11:51:03.912 hello_xr [22779]: XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING
+11:51:04.395 Samsung Freecess: frozen hello_xr PID 22779
+11:51:36.186 Android process freezer: sync unfroze PID 22779
+11:51:36.239 OpenXR-Loader [22779]: xrDestroyInstance Completed loader trampoline
+
+# Right-eye camera comparison. CV10 external-display captures contain blue samples in both regions.
+11:55:18.297 Cv10PocketXrPreview: First virtual display frame available on display 241
+11:55:27.259 hello_xr [22779]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+# Original Pocket XR's 3840x1080 game surface reaches frame 1027. Fixed right-eye camera stays dark.
+11:56:49.828 Preview, 2D direct launch: hello_xr FOCUSED. Fixed right-eye camera stays dark.
+11:58:43.936 Preview, 3D menu launch: hello_xr FOCUSED. Fixed right-eye camera stays dark.
+11:59:19.285 OpenXR-Loader [11431]: Got runtime: package: org.cv10.monado.out_of_process
+11:59:19.404 MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11:59:19.660 hello_xr [11431]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+# Stable v0.1.2 direct launch. Fixed right-eye camera stays dark.
+12:00:14.874 hello_xr [11431]: XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+# Stable v0.1.2 after toggling the Android external display. It is enabled, ON and 3200x1600 @ 90 Hz.
+# Fixed right-eye camera stays dark. Preview Broker and 2D menu restored after capture.

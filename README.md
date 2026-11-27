@@ -75,7 +75,7 @@ Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenX
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。
 - **打开 Pocket XR 空间** 并收到画面后，使用 **打开手机控制** 切到原版 Pocket XR，同时保持眼镜会话。可在手机端 **空间窗口** 打开启动器，再在启动器中使用 **3D** 切换到双目布局。Pocket XR 创建应用面板需要它自己的 Shizuku 授权。
-- **在 Pocket XR 中打开 OpenXR 应用** 是 Monado 手机端的实验入口。先在 OpenXR Runtime Broker 选择 **Pocket XR** 或可选的 **Pocket XR (Monado CV10)**，再打开 Pocket XR 空间。收到画面后点选已安装的 OpenXR 应用。预览为应用建立独立虚拟屏，手机会切到原版 Pocket XR 触控板。返回正在运行的会话可用预览通知，或打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。从这里可继续选应用，或选择 **停止预览**。切回日常 OpenXR 启动前，请在 Broker 改回 **Monado CV10**。[Fold7 双运行时记录](history/fold7-pocket-dual-runtime.md)
+- **在 Pocket XR 中打开 OpenXR 应用** 是 Monado 手机端的实验入口。先在 OpenXR Runtime Broker 选择 **Pocket XR (Monado CV10)**，再打开 Pocket XR 空间。收到画面后点选已安装的 OpenXR 应用。预览为应用建立独立虚拟屏，手机会切到原版 Pocket XR 触控板。打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**，选 **关闭 OpenXR 应用屏** 可结束当前应用并保留 Pocket XR 空间，选 **停止预览** 会关闭整个外显会话。日常直接启动 OpenXR 应用时，在 Broker 改回 **Monado CV10** 或 **Monado CV10 Preview**。[Fold7 双运行时记录](history/fold7-pocket-dual-runtime.md#正式预览通过-shizuku-打开-openxr-应用)
 - **电脑屏幕 3D（左右并排）** 使用原版 Pocket XR 的独立电脑屏幕。结束正在运行的空间预览，再选 **在手机上设置电脑屏幕** 配对 Sunshine 或 Apollo。配对后返回 Monado，选择 **电脑屏幕 3D（左右并排）**。原版在虚拟屏上自动连接已配对的主机。电脑播放铺满 16:9 桌面的左右并排内容时，左半送入左眼，右半送入右眼。当前实测主机为 Sunshine，接收 1920×1080 的 Half SBS 视频。这一路径使用独立的头锁定平面。[正式入口实测](history/fold7-pocket-pc-sbs.md#fold7-正式入口配对后自动开流)
 - **使用 CV10 头部追踪固定 Pocket XR 画面** 让 Monado 将原版空间的双目画面固定在最初朝向，转头时画面留在原位。选择 **将画面移到当前朝向** 可重新置中。固定模式无需 VPN 授权，请在 Pocket XR 中关闭自身的头部追踪，以免画面被两次校正。[Fold7 原版测试卡实拍](history/fold7-pocket-world-anchor.md)
 - **通过 Android 本机 VPN 接入头部追踪（实验）** 可在打开空间前选用。勾选后由 Android 询问 VPN 授权。打开空间时，预览只为原版 Pocket XR 宣告本机 `169.254.2.1/32`，将 CV10 的 HID 样本和控制心跳送到该地址的两个 TCP 端口。选择 **停止预览** 会释放连接和 VPN 接口。[姿态与重连验证](history/fold7-pocket-xr-imu.md#android-16-原版-pocket-xr-接入)
@@ -87,9 +87,9 @@ Fold7 上通过已有 ADB 权限调用同一显示服务，验证了受信任虚
 
 临时在 Broker 选用原版 **Pocket XR** 做诊断时，原版运行时接管 `hello_xr`，内置 Monado CV10 同时将游戏图层送到 CV10。将样例放到独立虚拟屏后，四轮在手机主屏打开 Pocket XR 触控板并连续出帧约九秒，CV10 右镜拍到蓝色方块。三星 Freecess 仍可能冻结原版进程。一次冻结后，在 Monado 点按 **打开手机控制**，三星解冻原版进程，同一游戏图层恢复出帧。样例在退出时仍可能于原版运行时卸载后崩溃。长时间运行、正常退出和从原版空间菜单点选应用仍待验证。[双运行时实测](history/fold7-pocket-dual-runtime.md)
 
-**Pocket XR (Monado CV10)** 是可选的 ARM64 客户端包。它加载带卸载修复的库，渲染服务由未修改的官方 Pocket XR 1.6.28 或 1.6.31 提供。客户端包与 Monado 预览需使用同一签名。选择原版 **Pocket XR** 时，应用仍加载上游自带的客户端，可能遇到退出崩溃。[客户端构建](src/xrt/targets/pocket_client_android/README.md) · [卸载修复与构建记录](history/fold7-pocket-dual-runtime.md#源码版卸载修复对照)
+**Pocket XR (Monado CV10)** 是可选的 ARM64 客户端包。它加载带卸载修复的库，渲染服务由未修改的官方 Pocket XR 1.6.28 或 1.6.31 提供。客户端包与 Monado 预览需使用同一签名。Fold7 用原版 1.6.28、正式 Shizuku 入口和此客户端，已复测 `hello_xr` 出画、正常关闭和同进程重进。选择原版 Broker 条目 **Pocket XR** 时，应用加载上游自带的客户端，可能遇到退出崩溃。[客户端构建](src/xrt/targets/pocket_client_android/README.md) · [Fold7 正式入口实测](history/fold7-pocket-dual-runtime.md#正式预览通过-shizuku-打开-openxr-应用)
 
-Fold7 的 CV10 IMU 通过回环诊断连续两次把约 1000 Hz 的实时样本送入电脑端原版 Pocket XR 解析器。Android 16 模拟器关闭 Wi-Fi 和移动数据、无运行中的 Shizuku 时，未修改的 Pocket XR 通过本机 VPN 接收了约 1000 Hz 的 Fold7 静置录制样本。模拟姿态测试还覆盖了转动方向、停止 VPN 和同进程重连。Fold7 上已验证出现 VPN 授权框并能取消。实机授权后的实时连接、佩戴转头和 Shizuku 一键开流仍待验收。[IMU 实测与对照](history/fold7-pocket-xr-imu.md)
+Fold7 的 CV10 IMU 通过回环诊断连续两次把约 1000 Hz 的实时样本送入电脑端原版 Pocket XR 解析器。Android 16 模拟器关闭 Wi-Fi 和移动数据、无运行中的 Shizuku 时，未修改的 Pocket XR 通过本机 VPN 接收了约 1000 Hz 的 Fold7 静置录制样本。模拟姿态测试还覆盖了转动方向、停止 VPN 和同进程重连。Fold7 上已验证出现 VPN 授权框并能取消。实机授权后的实时连接及佩戴转头仍待验收。[IMU 实测与对照](history/fold7-pocket-xr-imu.md)
 
 ## 原厂手机线
 

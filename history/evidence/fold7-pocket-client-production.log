@@ -1,0 +1,30 @@
+Fold7 SM-F9660, CV10 C9.53.6 original powered cable, 3200x1600 at 90 Hz.
+2026-11-27 HKT. Shizuku running for the unchanged Pocket XR 1.6.28 and official Monado preview flow.
+Monado CV10 integration 71b7fd8: 71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8
+Monado Pocket XR companion: 043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a
+Original Pocket XR: 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Original hello_xr: 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+
+11-27 11:40:30.484 21375 21393 I Cv10PocketXrDisplay: Pocket XR mode 0 start accepted on 206 (3840x1080, 240 dpi)
+11-27 11:40:30.681  9424  9424 I Cv10PocketXrPreview: First virtual display frame available on display 206
+11-27 11:41:18.497 21375 21393 I Cv10PocketXrDisplay: OpenXR client display ready: 209
+11-27 11:41:18.664  9424  9424 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 209
+11-27 11:41:18.834 22779 22809 I OpenXR-Loader: Got runtime: package: org.cv10.monado.pocket_client, so filename: libopenxr_monado.so
+11-27 11:41:19.270 22779 22809 V hello_xr: [11:41:19.270][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819520551436
+11-27 11:41:58.350 22779 22809 V hello_xr: [11:41:58.350][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2858600659390
+11-27 11:41:58.350 22779 22809 V hello_xr: [11:41:58.350][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2858601219182
+11-27 11:41:58.863 22779 22809 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 11:42:15.680 21375 21393 I Cv10PocketXrDisplay: OpenXR client display ready: 210
+11-27 11:42:15.744 22779 23372 I OpenXR-Loader: Got runtime: package: org.cv10.monado.pocket_client, so filename: libopenxr_monado.so
+11-27 11:42:15.754  9424  9424 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 210
+11-27 11:42:16.184 22779 23372 V hello_xr: [11:42:16.184][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598405072 time=2819245186196
+11-27 11:42:40.310  3500  3500 I FlipSpaces/Trackpad: phone Back (callback) sent to the Space
+11-27 11:43:22.135 22779 23372 V hello_xr: [11:43:22.135][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598405072 time=2885188404035
+11-27 11:43:22.135 22779 23372 V hello_xr: [11:43:22.135][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598405072 time=2885196628827
+11-27 11:43:22.157  9424 21334 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 11:43:22.641 22779 23372 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+First-round Pocket XR game layer frame IDs near 11:41:54 HKT: 2121, 2194, 2262.
+First round: Android Back sent to the sample display 209.
+Second round: phone Back left the sample running, then Stop Preview released space and sample displays.
+Sample PID after both exits: 22779. No sample crash recorded in either round.

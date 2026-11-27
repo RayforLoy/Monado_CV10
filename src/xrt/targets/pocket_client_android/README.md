@@ -16,4 +16,4 @@ python src/xrt/targets/pocket_client_android/build.py `
   --keystore $cv10Keystore --key-alias $cv10KeyAlias --output Monado-CV10-Pocket-Client-arm64-v8a.apk
 ```
 
-安装后在 Broker 选择 **Pocket XR (Monado CV10)**，打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。开启 Pocket XR 空间，再用 **在 Pocket XR 中打开 OpenXR 应用** 选择应用。手机端建立虚拟屏仍需要预览自己的 Shizuku 授权。日常从内置 2D、3D 启动器启动应用时，在 Broker 选回 **Monado CV10 Preview** 或稳定的 **Monado CV10**。
+安装后在 Broker 选择 **Pocket XR (Monado CV10)**，打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。开启 Pocket XR 空间，再用 **在 Pocket XR 中打开 OpenXR 应用** 选择应用。手机端建立虚拟屏需要预览自己的 Shizuku 授权。回到预览页，可用 **关闭 OpenXR 应用屏** 保留空间、结束当前应用，或用 **停止预览** 结束整个外显会话。日常从内置 2D、3D 启动器启动应用时，在 Broker 选回 **Monado CV10 Preview** 或稳定的 **Monado CV10**。
