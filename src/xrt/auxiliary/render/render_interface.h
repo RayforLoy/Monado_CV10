@@ -1396,8 +1396,17 @@ struct render_compute_distortion_ubo_data
 	struct xrt_normalized_rect post_transforms[XRT_MAX_VIEWS];
 	struct xrt_matrix_4x4 transform_timewarp_scanout_begin[XRT_MAX_VIEWS];
 	struct xrt_matrix_4x4 transform_timewarp_scanout_end[XRT_MAX_VIEWS];
-	//! X component enables the CV10 enhancement, packed as std140 vec4.
-	float enhanced_render_mode[4];
+	//! X enables CV10 enhancement. Y is the foveated inset blend width, or zero.
+	float distortion_options[4];
+	struct xrt_normalized_rect inset_rects[XRT_MAX_VIEWS];
+	struct xrt_normalized_rect context_to_inset[XRT_MAX_VIEWS];
+};
+
+//! A foveated inset that shares the context's sampled image and render pose.
+struct render_compute_projection_inset
+{
+	struct xrt_normalized_rect rect;
+	struct xrt_normalized_rect context_to_inset;
 };
 
 /*!
@@ -1469,6 +1478,7 @@ render_compute_projection_timewarp(struct render_compute *render,
                                    const struct xrt_fov src_fovs[XRT_MAX_VIEWS],
                                    const struct xrt_pose new_poses_scanout_begin[XRT_MAX_VIEWS],
                                    const struct xrt_pose new_poses_scanout_end[XRT_MAX_VIEWS],
+                                   const struct render_compute_projection_inset *insets,
                                    VkImage target_image,
                                    VkImageView target_image_view,
                                    VkImageLayout target_final_layout,

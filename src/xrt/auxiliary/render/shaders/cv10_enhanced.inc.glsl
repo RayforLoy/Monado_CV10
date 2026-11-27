@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: BSL-1.0
 
+const float CV10_ENHANCED_RADIUS = 0.15;
+const float CV10_ENHANCED_SAMPLE_STEP = 0.000644;
+
 vec3 cv10_enhance_tap(sampler2D image, vec2 red_uv, vec2 green_uv, vec2 blue_uv,
                       vec2 offset, vec2 uv_min, vec2 uv_max)
 {
@@ -9,26 +12,8 @@ vec3 cv10_enhance_tap(sampler2D image, vec2 red_uv, vec2 green_uv, vec2 blue_uv,
 		textureLod(image, clamp(blue_uv + offset, uv_min, uv_max), 0.0).b);
 }
 
-vec3 cv10_enhance(sampler2D image, vec3 rgb, vec2 red_uv, vec2 green_uv, vec2 blue_uv,
-                  vec4 eye_rect)
+vec3 cv10_enhance_colour(vec3 rgb, vec3 neighbours, float radius)
 {
-	// The OEM filter fades to ordinary chromatic sampling at 0.15 eye-relative UV.
-	float radius = length((green_uv - eye_rect.xy) / eye_rect.zw - vec2(0.5));
-	if (radius >= 0.15) {
-		return rgb;
-	}
-
-	// Preserve RGB distortion coordinates and keep taps inside the eye subimage.
-	vec2 span = abs(eye_rect.zw);
-	vec2 half_texel = min(0.5 / vec2(textureSize(image, 0)), span * 0.5);
-	vec2 uv_min = min(eye_rect.xy, eye_rect.xy + eye_rect.zw) + half_texel;
-	vec2 uv_max = max(eye_rect.xy, eye_rect.xy + eye_rect.zw) - half_texel;
-	vec2 dx = vec2(0.000644 * span.x, 0.0);
-	vec2 dy = vec2(0.0, 0.000644 * span.y);
-	vec3 neighbours = cv10_enhance_tap(image, red_uv, green_uv, blue_uv, -dx, uv_min, uv_max)
-	                + cv10_enhance_tap(image, red_uv, green_uv, blue_uv,  dx, uv_min, uv_max)
-	                + cv10_enhance_tap(image, red_uv, green_uv, blue_uv, -dy, uv_min, uv_max)
-	                + cv10_enhance_tap(image, red_uv, green_uv, blue_uv,  dy, uv_min, uv_max);
 	vec3 enhanced = clamp(3.0 * rgb - 0.5 * neighbours, 0.0, 1.0);
 
 	// The OEM center pass also adjusts shadows, highlights, saturation and vibrance.
@@ -45,5 +30,28 @@ vec3 cv10_enhance(sampler2D image, vec3 rgb, vec2 red_uv, vec2 green_uv, vec2 bl
 	float peak = max(enhanced.r, max(enhanced.g, enhanced.b));
 	float vibrance = -0.15 * (peak - dot(enhanced, vec3(1.0 / 3.0)));
 	enhanced = clamp(mix(enhanced, vec3(peak), vibrance), 0.0, 1.0);
-	return mix(enhanced, rgb, radius / 0.15);
+	return mix(enhanced, rgb, radius / CV10_ENHANCED_RADIUS);
+}
+
+vec3 cv10_enhance(sampler2D image, vec3 rgb, vec2 red_uv, vec2 green_uv, vec2 blue_uv,
+                  vec4 eye_rect)
+{
+	// The OEM filter fades to ordinary chromatic sampling at 0.15 eye-relative UV.
+	float radius = length((green_uv - eye_rect.xy) / eye_rect.zw - vec2(0.5));
+	if (radius >= CV10_ENHANCED_RADIUS) {
+		return rgb;
+	}
+
+	// Preserve RGB distortion coordinates and keep taps inside the eye subimage.
+	vec2 span = abs(eye_rect.zw);
+	vec2 half_texel = min(0.5 / vec2(textureSize(image, 0)), span * 0.5);
+	vec2 uv_min = min(eye_rect.xy, eye_rect.xy + eye_rect.zw) + half_texel;
+	vec2 uv_max = max(eye_rect.xy, eye_rect.xy + eye_rect.zw) - half_texel;
+	vec2 dx = vec2(CV10_ENHANCED_SAMPLE_STEP * span.x, 0.0);
+	vec2 dy = vec2(0.0, CV10_ENHANCED_SAMPLE_STEP * span.y);
+	vec3 neighbours = cv10_enhance_tap(image, red_uv, green_uv, blue_uv, -dx, uv_min, uv_max)
+	                + cv10_enhance_tap(image, red_uv, green_uv, blue_uv,  dx, uv_min, uv_max)
+	                + cv10_enhance_tap(image, red_uv, green_uv, blue_uv, -dy, uv_min, uv_max)
+	                + cv10_enhance_tap(image, red_uv, green_uv, blue_uv,  dy, uv_min, uv_max);
+	return cv10_enhance_colour(rgb, neighbours, radius);
 }

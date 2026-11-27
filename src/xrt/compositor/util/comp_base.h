@@ -28,8 +28,8 @@ extern "C" {
  */
 struct comp_frame_params
 {
-	//! Special case one layer projection/projection-depth fast-path.
-	bool one_projection_layer_fast_path;
+	//! Send projection layers directly to the distortion shader.
+	bool projection_fast_path;
 
 	//! fov as reported by device for the current submit.
 	struct xrt_fov fovs[XRT_MAX_VIEWS];

@@ -32,6 +32,8 @@
 #include "util/comp_render_helpers.h"
 #include "util/comp_base.h"
 
+#include <string.h>
+
 
 /*
  *
@@ -480,7 +482,8 @@ static void
 crc_distortion_fast_path(struct render_compute *render,
                          const struct comp_render_dispatch_data *d,
                          const struct comp_layer *layer,
-                         const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS])
+                         const struct xrt_layer_projection_view_data *vds[XRT_MAX_VIEWS],
+                         const struct comp_layer *inset)
 {
 	if (d->target.view_count > XRT_MAX_VIEWS) {
 		U_LOG_E("Only supports max %d views!", XRT_MAX_VIEWS);
@@ -502,6 +505,7 @@ crc_distortion_fast_path(struct render_compute *render,
 	struct xrt_pose src_poses[XRT_MAX_VIEWS];
 	struct xrt_pose target_poses_begin[XRT_MAX_VIEWS];
 	struct xrt_pose target_poses_end[XRT_MAX_VIEWS];
+	struct render_compute_projection_inset insets[XRT_MAX_VIEWS];
 	const bool view_space = is_layer_view_space(data);
 
 	for (uint32_t i = 0; i < d->target.view_count; i++) {
@@ -536,6 +540,25 @@ crc_distortion_fast_path(struct render_compute *render,
 		src_poses[i] = src_pose;
 		target_poses_begin[i] = view_space ? d->views[i].eye_pose : d->views[i].world_pose_scanout_begin;
 		target_poses_end[i] = view_space ? d->views[i].eye_pose : d->views[i].world_pose_scanout_end;
+
+		if (inset != NULL) {
+			const struct xrt_layer_projection_view_data *focus = &inset->data.proj.v[i];
+			const float left = tanf(src_fov.angle_left);
+			const float right = tanf(src_fov.angle_right);
+			const float top = tanf(src_fov.angle_up);
+			const float bottom = tanf(src_fov.angle_down);
+			const float focus_left = tanf(focus->fov.angle_left);
+			const float focus_top = tanf(focus->fov.angle_up);
+			const float focus_width = tanf(focus->fov.angle_right) - focus_left;
+			const float focus_height = focus_top - tanf(focus->fov.angle_down);
+			insets[i].rect = focus->sub.norm_rect;
+			insets[i].context_to_inset = (struct xrt_normalized_rect){
+			    .x = (left - focus_left) / focus_width,
+			    .y = (focus_top - top) / focus_height,
+			    .w = (right - left) / focus_width,
+			    .h = (top - bottom) / focus_height,
+			};
+		}
 	}
 
 	if (!d->do_timewarp) {
@@ -558,11 +581,43 @@ crc_distortion_fast_path(struct render_compute *render,
 		    src_fovs,                       //
 		    target_poses_begin,             //
 		    target_poses_end,               //
+		    inset != NULL ? insets : NULL,  //
 		    d->target.cs.image,             //
 		    d->target.cs.storage_view,      //
 		    d->target.cs.final_layout,      //
 		    target_viewport_datas);         //
 	}
+}
+
+bool
+comp_render_cs_can_fuse_projection_inset(const struct comp_layer *layers)
+{
+	const struct xrt_layer_data *context = &layers[0].data;
+	const struct xrt_layer_data *inset = &layers[1].data;
+	const uint32_t common = context->flags & XRT_LAYER_COMPOSITION_VIEW_SPACE_BIT;
+	if (context->type != XRT_LAYER_PROJECTION || inset->type != XRT_LAYER_PROJECTION ||
+	    context->view_count != 2 || inset->view_count != 2 ||
+	    context->flags != (common | XRT_LAYER_SPLIT_QUAD_VIEW_CONTEXT) ||
+	    inset->flags != (common | XRT_LAYER_SPLIT_QUAD_VIEW_INSET) || context->flip_y || inset->flip_y ||
+	    context->proj.chroma_key.curve > 0.0f || inset->proj.chroma_key.curve > 0.0f) {
+		return false;
+	}
+
+	for (uint32_t eye = 0; eye < 2; ++eye) {
+		const struct xrt_layer_projection_view_data *full = &context->proj.v[eye];
+		const struct xrt_layer_projection_view_data *focus = &inset->proj.v[eye];
+		const struct xrt_swapchain *swapchain = comp_layer_get_swapchain(&layers[0], eye);
+		if (!swapchain->android_stream || swapchain != comp_layer_get_swapchain(&layers[1], eye) ||
+		    full->sub.image_index != focus->sub.image_index || full->sub.array_index != focus->sub.array_index ||
+		    memcmp(&full->pose, &focus->pose, sizeof(full->pose)) != 0 ||
+		    !(full->fov.angle_left <= focus->fov.angle_left && focus->fov.angle_left < focus->fov.angle_right &&
+		      focus->fov.angle_right <= full->fov.angle_right &&
+		      full->fov.angle_down <= focus->fov.angle_down && focus->fov.angle_down < focus->fov.angle_up &&
+		      focus->fov.angle_up <= full->fov.angle_up)) {
+			return false;
+		}
+	}
+	return true;
 }
 
 
@@ -850,7 +905,8 @@ comp_render_cs_dispatch(struct render_compute *render,
 		    render,               //
 		    d,                    //
 		    layer,                //
-		    vds);                 //
+		    vds,                  //
+		    layer_count == 2 ? &layers[1] : NULL);
 
 	} else if (fast_path && layer->data.type == XRT_LAYER_PROJECTION_DEPTH) {
 		// Fast path.
@@ -863,7 +919,8 @@ comp_render_cs_dispatch(struct render_compute *render,
 		    render,               //
 		    d,                    //
 		    layer,                //
-		    vds);                 //
+		    vds,                  //
+		    NULL);                //
 
 	} else if (layer_count > 0) {
 		// Compute layer squasher

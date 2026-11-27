@@ -283,6 +283,7 @@ dispatch_project_pipeline(struct render_compute *render,
                           VkSampler src_samplers[XRT_MAX_VIEWS],
                           VkImageView src_image_views[XRT_MAX_VIEWS],
                           const struct xrt_normalized_rect src_norm_rects[XRT_MAX_VIEWS],
+                          const struct render_compute_projection_inset *insets,
                           VkImage target_image,
                           VkImageView target_image_view,
                           VkImageLayout target_final_layout,
@@ -299,10 +300,15 @@ dispatch_project_pipeline(struct render_compute *render,
 
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.distortion.ubo.mapped;
-	data->enhanced_render_mode[0] = r->enable_enhanced_render_mode ? 1.0f : 0.0f;
+	data->distortion_options[0] = r->enable_enhanced_render_mode ? 1.0f : 0.0f;
+	data->distortion_options[1] = insets != NULL ? RENDER_LAYER_DEFAULT_INSET_BLEND_EDGE : 0.0f;
 	for (uint32_t i = 0; i < render->r->view_count; ++i) {
 		data->views[i] = views[i];
 		data->post_transforms[i] = src_norm_rects[i];
+		if (insets != NULL) {
+			data->inset_rects[i] = insets[i].rect;
+			data->context_to_inset[i] = insets[i].context_to_inset;
+		}
 	}
 
 
@@ -584,6 +590,7 @@ render_compute_projection_timewarp(struct render_compute *render,
                                    const struct xrt_fov src_fovs[XRT_MAX_VIEWS],
                                    const struct xrt_pose new_poses_scanout_begin[XRT_MAX_VIEWS],
                                    const struct xrt_pose new_poses_scanout_end[XRT_MAX_VIEWS],
+                                   const struct render_compute_projection_inset *insets,
                                    VkImage target_image,
                                    VkImageView target_image_view,
                                    VkImageLayout target_final_layout,
@@ -623,7 +630,7 @@ render_compute_projection_timewarp(struct render_compute *render,
 		data->post_transforms[i] = src_norm_rects[i];
 	}
 
-	dispatch_project_pipeline(render, src_samplers, src_image_views, src_norm_rects, target_image,
+	dispatch_project_pipeline(render, src_samplers, src_image_views, src_norm_rects, insets, target_image,
 	                          target_image_view, target_final_layout, views,
 	                          r->compute.distortion.timewarp_pipeline);
 }
@@ -677,7 +684,7 @@ render_compute_projection_scanout_compensation(struct render_compute *render,
 		data->post_transforms[i] = src_rects[i];
 	}
 
-	dispatch_project_pipeline(render, src_samplers, src_image_views, src_rects, target_image, target_image_view,
+	dispatch_project_pipeline(render, src_samplers, src_image_views, src_rects, NULL, target_image, target_image_view,
 	                          target_final_layout, views, r->compute.distortion.timewarp_pipeline);
 }
 
@@ -694,7 +701,7 @@ render_compute_projection_no_timewarp(struct render_compute *render,
 	assert(render->r != NULL);
 	struct render_resources *r = render->r;
 
-	dispatch_project_pipeline(render, src_samplers, src_image_views, src_rects, target_image, target_image_view,
+	dispatch_project_pipeline(render, src_samplers, src_image_views, src_rects, NULL, target_image, target_image_view,
 	                          target_final_layout, views, r->compute.distortion.pipeline);
 }
 

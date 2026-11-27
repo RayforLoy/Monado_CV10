@@ -51,6 +51,10 @@ Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这�
 
 本机 `sfdo` 可指定时钟和强制 GPU 合成。已列出的命令没有针对单个物理输出拆分 Present 的选项。量产系统要求 root 才能读取 `aflags list`，无线 ADB 也无法读取 Composer 服务和 `libsdmcore.so`、`libsdedrm.so` 的文件内容。现有 Perfetto 证据能定位同步等待链。此固件是否在 HAL 对各物理显示声明 `MULTI_THREADED_PRESENT`、以及内部调用使用的 DRM flags，仍需用可读的同版固件或系统构建核对。[Composer AIDL 能力定义](https://android.googlesource.com/platform/hardware/interfaces/+/48fc7fb9ac330141c352b293f36c7c23fa00ae37/graphics/composer/aidl/android/hardware/graphics/composer3/DisplayCapability.aidl)
 
+AOSP 的 `Output::beginFrame` 会根据损伤区决定是否重画。物理输出仍可在后续的 `prepareFrame` 中进入 `presentOrValidate`，即使应用画面保持静止。实现跳过静置手机提交的实验，应在 `prepareFrame` 前检查该输出是否还有内容、配置、颜色、光标或缓冲释放事务，并仅对真实的新硬件 present 更新该输出的栅栏和帧统计。[AOSP Output](https://android.googlesource.com/platform/frameworks/native/+/58bca588b79f339a2ae26f4348b88ac93084e038/services/surfaceflinger/CompositionEngine/src/Output.cpp#1135)
+
+上游 `follower_display_backpressure` 在跟随输出已有待完成栅栏时，可以把它排除出当轮目标集合。同步 HAL 仍可在把新栅栏返回给 SurfaceFlinger 之前阻塞。Fold7 的系统配置查询没有显示该标志的覆盖值。三组已采集的 CV10 时钟追踪里均未找到上游的 `Avoiding backpressure for follower display` 事件，且两路 `HwcPresentOrValidateDisplay` 次数分别为 360/360、420/420、421/420。量产二进制是否包含这条分支仍未核实。[AOSP Scheduler](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/Scheduler/Scheduler.cpp#432)
+
 ## Pocket 工作区性能对照
 
 每眼 2240×2240，GLES 固定中心 1×1、外围 2×2。两条路径保持同一 Bilibili 工作区，使用 34° 峰峰值、3 秒周期的模拟左右转头，连续比较约 15 秒；动态推荐内容随页面变化。熄屏对照的电池温度在 35.1–35.7°C，系统热状态分别为 1→2 和 2→2。右镜固定相机确认内容出画，刷新率由呈现时间戳统计。延迟是模拟头动信号的相位拟合，不是光学测得的运动到光子时延。
@@ -125,6 +129,23 @@ Fold7 test on the original powered cable, with the phone panel ON at 60 Hz and C
 Both producer sessions reported zero bridge copies, clean Back, and four correctly dimensioned imported buffers. Vulkan actual timestamps matched all 3172 unique SurfaceFlinger timestamps across the four motion samples. The replay fit for the producer atlas was 1.0–1.1 ms after late reprojection, with 0.21–0.25° RMS error. This is a pose-phase estimate. Fold7 external screenshots showed both eyes with the same window layout and orientation as the resampling path. The fixed right-eye camera still captured a dark image, including when the ordinary Hello XR control reached FOCUSED with both blue blocks in the external screenshot. Optical clarity, motion-to-photon latency, and smearing await optical verification.
 
 Reproduction evidence is in `.research/monado-rc2-fold7/pocket-performance/ffr-quad/` under `producer-quad-ab-*` and `producer-quad-ba-*`. The replay APK hashes are `bf0ffbb782fd4b99d4c04c64f9c4ea822aa630282b692f797ec9325a56bc3dbd` (Monado) and `f1dafd19c9570d13cceed017826140ba06badef4afab7b74b0227443af09f259` (Pocket XR). The steady-state CV10 limitation remains the physical-display Composer wait described above. The producer atlas improves rendering headroom before that system limit.
+
+### Single-pass distortion for the four-view atlas
+
+For a compatible four-view hardware-buffer atlas, one Compute dispatch now performs late reprojection, the center/periphery blend, chromatic correction, optional center enhancement, and lens distortion. It samples the independent 1280×1280 center views directly and avoids writing and reading an intermediate full-field image for each eye. Samples are clamped inside their atlas rectangles. The path is experimental and requires `debug.xrt.CV10_FUSE_INSET=1`, Compute, timewarp, and the three atlas settings above. Other layer combinations follow the existing compositor paths.
+
+Both test orders used the same Pocket XR Bilibili workspace, independent center views, enabled center enhancement, scanout feedback, and a 15-second analysis window within continuous simulated yaw. Fold7 stayed ON at 60 Hz and the CV10 active mode stayed at 90 Hz. Bilibili recommendations varied. The AB runs both recorded thermal status 2, with maximum skin sensor readings of 42.2→44.7°C for the two-pass run and 42.8→44.3°C for the single-pass run. The BA single-pass run started cooler at thermal status 1.
+
+| Run | Compute path | Monado submits/s | CV10 actual/s | CV10 new source frames/s | Compositor GPU p50/p95 | Pocket swap to actual p50/p95 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| AB | Two pass | 82.53 | 59.79 | 53.96 | 7.57 / 10.85 ms | 57.91 / 69.06 ms |
+| AB | Single pass | 90.00 | 60.31 | 60.02 | 2.41 / 4.24 ms | 56.94 / 57.94 ms |
+| BA | Single pass | 90.00 | 60.36 | 59.41 | 3.03 / 5.81 ms | 46.81 / 66.61 ms |
+| BA | Two pass | 75.57 | 57.01 | 54.72 | 7.58 / 10.70 ms | 55.44 / 67.91 ms |
+
+All 3419 sampled unique CV10 presentation timestamps matched the Vulkan feedback exactly. The calibrated single-pass yaw phase fits were −2.1 ms and +0.2 ms, with 0.16° and 0.24° RMS errors. The Android external screenshots show the two workspace panels in both eye images. The fixed right-eye camera was dark in both Pocket XR and the original Hello XR control, leaving in-lens center clarity, motion-to-photon delay, and smear unmeasured. Monado sustained 90 submissions per second while the Android display path still limited presentation.
+
+The local evidence uses `fused-sharpness-ab-*`, `fused-sharpness-ba-*`, and `fused-sharpness-hello-control-*` under the same evidence directory. The replay Monado APK SHA-256 is `409428eaf782a45856631eb3ea6bca41555d91a95915bfb640eb7f22d54004e5`. The APK without synthetic IMU uses SHA-256 `62b3c37d4a19514b95faefd25fcd34ba282b953c7fd9559057d4d816bfd2f803`. Both retain the preview package name. The ordinary preview and Pocket XR builds were restored after sampling.
 
 ## 直出帧的姿态记录
 

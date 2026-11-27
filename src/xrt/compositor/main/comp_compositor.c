@@ -64,6 +64,7 @@
 #include "util/u_verify.h"
 
 #include "util/comp_vulkan.h"
+#include "util/comp_render.h"
 #include "main/comp_compositor.h"
 #include "main/comp_frame.h"
 
@@ -93,6 +94,9 @@
 #define WINDOW_TITLE "Monado"
 
 DEBUG_GET_ONCE_BOOL_OPTION(disable_deferred, "XRT_COMPOSITOR_DISABLE_DEFERRED", false)
+#ifdef XRT_OS_ANDROID
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_fuse_inset, "CV10_FUSE_INSET", false)
+#endif
 
 
 /*
@@ -324,16 +328,16 @@ compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_handle_t sy
 
 	COMP_SPEW(c, "LAYER_COMMIT at %8.3fms", ts_ms());
 
-	/*
-	 * We have a fast path for single projection layer that goes directly
-	 * to the distortion shader, so no need to use the layer renderer.
-	 */
-	bool fast_path =                              //
-	    !c->peek &&                               //
-	    !c->mirroring_to_debug_gui &&             //
-	    !c->debug.disable_fast_path &&            //
-	    can_do_one_projection_layer_fast_path(c); //
-	c->base.frame_params.one_projection_layer_fast_path = fast_path;
+	// Bypass the layer renderer for a single projection or a compatible CV10 atlas.
+	bool direct_projection = can_do_one_projection_layer_fast_path(c);
+#ifdef XRT_OS_ANDROID
+	if (c->is_cv10 && c->settings.use_compute && c->base.layer_accum.layer_count == 2 && !c->debug.atw_off &&
+	    debug_get_bool_option_cv10_fuse_inset()) {
+		direct_projection = comp_render_cs_can_fuse_projection_inset(c->base.layer_accum.layers);
+	}
+#endif
+	c->base.frame_params.projection_fast_path =
+	    direct_projection && !c->peek && !c->mirroring_to_debug_gui && !c->debug.disable_fast_path;
 
 
 	u_graphics_sync_unref(&sync_handle);

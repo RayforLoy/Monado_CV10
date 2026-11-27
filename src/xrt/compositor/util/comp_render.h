@@ -713,6 +713,10 @@ comp_render_cs_dispatch(struct render_compute *render,
                         const uint32_t layer_count,
                         const struct comp_render_dispatch_data *d);
 
+//! Whether a producer-rendered Android atlas can be sampled in the distortion pass.
+bool
+comp_render_cs_can_fuse_projection_inset(const struct comp_layer *layers);
+
 /* end of comp_render_cs group */
 /*! @} */
 

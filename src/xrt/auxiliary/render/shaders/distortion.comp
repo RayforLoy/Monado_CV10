@@ -30,7 +30,9 @@ layout(set = 0, binding = 3, std140) uniform restrict Config
 	vec4 post_transform[2];
 	mat4 transform_timewarp_scanout_begin[2];
 	mat4 transform_timewarp_scanout_end[2];
-	vec4 enhanced_render_mode;
+	vec4 distortion_options;
+	vec4 inset_rect[2];
+	vec4 context_to_inset[2];
 }ubo;
 
 
@@ -106,6 +108,44 @@ vec2 transform_uv(vec2 uv, uint iz)
 	return transform_uv_subimage(uv, iz);
 }
 
+bool inside_view(vec2 uv)
+{
+	return all(greaterThanEqual(uv, vec2(0))) && all(lessThan(uv, vec2(1)));
+}
+
+vec3 sample_atlas(sampler2D atlas, vec2 uv, vec4 rect, vec2 half_texel)
+{
+	vec2 first = rect.xy + half_texel;
+	vec2 last = rect.xy + rect.zw - half_texel;
+	return texture(atlas, clamp(uv * rect.zw + rect.xy, first, last)).rgb;
+}
+
+vec3 sample_foveated(sampler2D atlas, vec2 uv, uint iz, vec2 half_texel)
+{
+	vec4 transform = ubo.context_to_inset[iz];
+	vec2 inset_uv = fma(uv, transform.zw, transform.xy);
+	float weight = 0.0;
+	vec3 inset = vec3(0);
+	if (inside_view(inset_uv)) {
+		vec2 distance = min(inset_uv, 1.0 - inset_uv);
+		weight = smoothstep(0.0, ubo.distortion_options.y, min(distance.x, distance.y));
+		inset = sample_atlas(atlas, inset_uv, ubo.inset_rect[iz], half_texel);
+		if (weight >= 1.0) {
+			return inset;
+		}
+	}
+
+	vec3 context = inside_view(uv) ? sample_atlas(atlas, uv, ubo.post_transform[iz], half_texel) : vec3(0);
+	return mix(context, inset, weight);
+}
+
+vec3 sample_foveated_rgb(sampler2D atlas, vec2 r_uv, vec2 g_uv, vec2 b_uv, uint iz, vec2 half_texel)
+{
+	return vec3(sample_foveated(atlas, r_uv, iz, half_texel).r,
+	            sample_foveated(atlas, g_uv, iz, half_texel).g,
+	            sample_foveated(atlas, b_uv, iz, half_texel).b);
+}
+
 void main()
 {
 	uint ix = gl_GlobalInvocationID.x;
@@ -125,24 +165,34 @@ void main()
 	vec2 g_uv = texture(distortion[k_view_count * 1 + iz], dist_uv).xy;
 	vec2 b_uv = texture(distortion[k_view_count * 2 + iz], dist_uv).xy;
 
-	// Do any transformation needed.
-	r_uv = transform_uv(r_uv, iz);
-	g_uv = transform_uv(g_uv, iz);
-	b_uv = transform_uv(b_uv, iz);
-
 	// Sample the source with distorted and chromatic-aberration corrected samples.
-	vec4 colour = vec4(              //
-	    texture(source[iz], r_uv).r, //
-	    texture(source[iz], g_uv).g, //
-	    texture(source[iz], b_uv).b, //
-	    1);                          //
-
-	if (ubo.enhanced_render_mode.x > 0.0) {
-		colour.rgb = cv10_enhance(source[iz], colour.rgb, r_uv, g_uv, b_uv, ubo.post_transform[iz]);
+	vec3 colour;
+	if (ubo.distortion_options.y > 0.0) {
+		vec2 half_texel = 0.5 / vec2(textureSize(source[iz], 0));
+		float radius = length(g_uv - vec2(0.5));
+		r_uv = transform_uv_timewarp(r_uv, iz);
+		g_uv = transform_uv_timewarp(g_uv, iz);
+		b_uv = transform_uv_timewarp(b_uv, iz);
+		colour = sample_foveated_rgb(source[iz], r_uv, g_uv, b_uv, iz, half_texel);
+		if (ubo.distortion_options.x > 0.0 && radius < CV10_ENHANCED_RADIUS) {
+			const vec2 dx = vec2(CV10_ENHANCED_SAMPLE_STEP, 0.0);
+			const vec2 dy = vec2(0.0, CV10_ENHANCED_SAMPLE_STEP);
+			vec3 neighbours = sample_foveated_rgb(source[iz], r_uv - dx, g_uv - dx, b_uv - dx, iz, half_texel)
+			                + sample_foveated_rgb(source[iz], r_uv + dx, g_uv + dx, b_uv + dx, iz, half_texel)
+			                + sample_foveated_rgb(source[iz], r_uv - dy, g_uv - dy, b_uv - dy, iz, half_texel)
+			                + sample_foveated_rgb(source[iz], r_uv + dy, g_uv + dy, b_uv + dy, iz, half_texel);
+			colour = cv10_enhance_colour(colour, neighbours, radius);
+		}
+	} else {
+		r_uv = transform_uv(r_uv, iz);
+		g_uv = transform_uv(g_uv, iz);
+		b_uv = transform_uv(b_uv, iz);
+		colour = vec3(texture(source[iz], r_uv).r, texture(source[iz], g_uv).g, texture(source[iz], b_uv).b);
+		if (ubo.distortion_options.x > 0.0) {
+			colour = cv10_enhance(source[iz], colour, r_uv, g_uv, b_uv, ubo.post_transform[iz]);
+		}
 	}
 
 	// Do colour correction here since there are no automatic conversion in hardware available.
-	colour = vec4(from_linear_to_srgb(colour.rgb), 1);
-
-	imageStore(target, ivec2(offset.x + ix, offset.y + iy), colour);
+	imageStore(target, ivec2(offset.x + ix, offset.y + iy), vec4(from_linear_to_srgb(colour), 1));
 }

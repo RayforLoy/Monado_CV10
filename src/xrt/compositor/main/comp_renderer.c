@@ -1114,9 +1114,10 @@ comp_renderer_draw(struct comp_renderer *r)
 	if (trace) {
 		const struct comp_layer_accum *accum = &c->base.layer_accum;
 		const int64_t layer_time = accum->layer_count > 0 ? accum->layers[0].data.timestamp : 0;
-		U_LOG_I("CV10_DRAW id=%" PRIi64 " at=%" PRIi64 " predicted=%" PRIi64 " layer=%" PRIi64,
+		const bool fused_inset = accum->layer_count == 2 && c->base.frame_params.projection_fast_path;
+		U_LOG_I("CV10_DRAW id=%" PRIi64 " at=%" PRIi64 " predicted=%" PRIi64 " layer=%" PRIi64 " fused_inset=%u",
 		        c->frame.rendering.id, os_monotonic_get_ns(), c->frame.rendering.predicted_display_time_ns,
-		        layer_time);
+		        layer_time, (unsigned)fused_inset);
 	}
 
 	// Tell the target we are starting to render, for frame timing.
@@ -1152,7 +1153,7 @@ comp_renderer_draw(struct comp_renderer *r)
 #endif
 	enum comp_target_fov_source fov_source = COMP_TARGET_FOV_SOURCE_DISTORTION;
 
-	bool fast_path = c->base.frame_params.one_projection_layer_fast_path;
+	bool fast_path = c->base.frame_params.projection_fast_path;
 	bool do_timewarp = !c->debug.atw_off;
 
 	// Consistency check.
