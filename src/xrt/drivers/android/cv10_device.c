@@ -15,6 +15,9 @@
 #include <stdio.h>
 #include <math.h>
 
+static const float cv10_eye_panel_meters = 0.0384f;
+static const float cv10_fov_degrees = 95.0f;
+
 struct cv10_device
 {
 	struct xrt_device base;
@@ -250,6 +253,36 @@ cv10_destroy(struct xrt_device *xdev)
 }
 
 static xrt_result_t
+cv10_compute_distortion(struct xrt_device *xdev, uint32_t view, float u, float v, struct xrt_uv_triplet *out)
+{
+	// Halliday/CV10 optics from the stock P40 runtime. One panel pixel is 24 um.
+	static const float radius_meters[3] = {0.01807f, 0.01800f, 0.01787f};
+	static const float coefficients[] = {0.9989f, 0.3699f, -0.4853f, 2.306f, -3.277f, 1.604f};
+	const float scale_at_unit_radius = 1.5165f;
+	const float pixel_meters = cv10_eye_panel_meters / 1600.0f;
+
+	// The compositor supplies eye-oriented UVs. OEM tangent directions use Y up.
+	const float x = (u - 0.5f) * cv10_eye_panel_meters + (view == 0 ? pixel_meters : 0.0f);
+	const float y = (0.5f - v) * cv10_eye_panel_meters + (view == 1 ? pixel_meters : 0.0f);
+	const float distance_squared = x * x + y * y;
+	const float uv_per_tangent = 0.5f / tanf(xdev->hmd->distortion.fov[view].angle_right);
+	struct xrt_vec2 *channels[] = {&out->r, &out->g, &out->b};
+
+	for (int channel = 0; channel < 3; ++channel) {
+		const float radius = radius_meters[channel];
+		const float r_squared = distance_squared / (radius * radius);
+		float scale = coefficients[5];
+		for (int power = 4; power >= 0; --power) {
+			scale = coefficients[power] + r_squared * scale;
+		}
+		const float factor = uv_per_tangent * scale / (radius * scale_at_unit_radius);
+		*channels[channel] = (struct xrt_vec2){0.5f + x * factor, 0.5f - y * factor};
+	}
+
+	return XRT_SUCCESS;
+}
+
+static xrt_result_t
 cv10_get_view_poses(struct xrt_device *xdev,
                     const struct xrt_vec3 *default_eye_relation,
                     int64_t at_ns,
@@ -286,17 +319,21 @@ cv10_device_create(void)
 	xdev->supported.orientation_tracking = true;
 	xdev->supported.position_tracking = false;
 	xdev->hmd->view_count = 2;
-	// A symmetric test projection without lens calibration. FOV is provisional.
-	struct u_device_simple_info optics = {
-	    .display = {3200, 1600, 0.128f, 0.064f},
-	    .lens_horizontal_separation_meters = 0.064f, .lens_vertical_position_meters = 0.032f,
-	    .fov = {1.3962634f, 1.3962634f},
+	// The stock CV10 runtime reports a symmetric 95-degree field of view for each eye.
+	const struct u_device_simple_info optics = {
+	    .display = {3200, 1600, 2.0f * cv10_eye_panel_meters, cv10_eye_panel_meters},
+	    .lens_horizontal_separation_meters = cv10_eye_panel_meters,
+	    .lens_vertical_position_meters = cv10_eye_panel_meters / 2.0f,
+	    .fov = {DEG_TO_RAD(cv10_fov_degrees), DEG_TO_RAD(cv10_fov_degrees)},
 	};
 	if (!u_device_setup_split_side_by_side(xdev, &optics)) { u_device_free(xdev); return NULL; }
 	xdev->hmd->views[0].rot = u_device_rotation_left;
 	xdev->hmd->views[1].rot = u_device_rotation_right;
 	xdev->hmd->screens[0].nominal_frame_interval_ns = 11111111;
-	u_distortion_mesh_set_none(xdev);
+	xdev->compute_distortion = cv10_compute_distortion;
+	xdev->hmd->distortion.models = XRT_DISTORTION_MODEL_COMPUTE;
+	xdev->hmd->distortion.preferred = XRT_DISTORTION_MODEL_COMPUTE;
+	u_distortion_mesh_fill_in_compute(xdev);
 	if (os_thread_helper_init(&d->worker) != 0) { u_device_free(xdev); return NULL; }
 	m_imu_3dof_init(&d->fusion, M_IMU_3DOF_USE_GRAVITY_DUR_20MS);
 	m_relation_history_create(&d->history);

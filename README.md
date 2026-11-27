@@ -6,6 +6,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 **整合预发布 v0.1.4-rc.1** 把 OpenXR 运行时、离线 2D/3D 启动器、Pocket XR 外显、CF20 手柄和实验性 6DoF 套件放进同一个 ARM 安装包。它在手机和 Broker 中显示为 **Monado CV10 Preview**，包名为 `org.cv10.monado.out_of_process.launcher_preview`。此包可与稳定版并存，覆盖旧预览版时须匹配签名。[整合预发布和 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.1) · [Fold7 整合包实测](history/fold7-unified-runtime.md)
 
+当前源码已合入 CV10 的华为原厂投影与 RGB 畸变，并提供 Pocket XR 宽视场选项。这两项更新需要从当前源码构建预览包。[原厂光学与 Fold7 验证](history/fold7-oem-optics.md)
+
 从 [Releases](https://github.com/RayforLoy/Monado_CV10/releases) 下载与系统 ABI 匹配的 APK。用 `adb shell getprop ro.product.cpu.abilist` 查看支持的 ABI，用 `adb install -r <APK>` 安装。Android 11 为 API 30，项目最低为 API 26。覆盖更新需要相同签名。实际 VR 功能还取决于 USB 主机、外接显示器、Broker 和 Vulkan 驱动。历史 Fold7 镜片、3DoF 和刷新率复测见 [验收记录](history/README.md)。
 
 | 系统 ABI | v0.1.3 APK |
@@ -113,11 +115,16 @@ Fold7 在关闭 Pocket XR 的独立 Vulkan 应用屏时，三星后台管理可�
 
 Fold7 的 CV10 IMU 通过 ADB 回环将实时样本送到隔离的 Android 16 模拟器。模拟器关闭 Wi-Fi 和移动数据，Shizuku 未运行。未修改的 Pocket XR 通过模拟器内的本机 VPN 收到约 1000 Hz 的静置数据并解算姿态。此前的模拟姿态测试还覆盖了转动方向、停止 VPN 和同进程重连。Fold7 上已验证 VPN 授权可取消。Fold7 同机实时连接及佩戴转头仍待验收。[实时 IMU 对照](history/fold7-pocket-xr-imu.md#实时-fold7-采样送入原版-android-应用)
 
-## 手柄、定位套件和软件瞳距
+## 原厂光学与软件瞳距
+
+CV10 驱动使用 P40 Pro+ 原厂运行时实测的双眼投影参数。每眼水平和垂直投影视场均为 95°。左右眼的 RGB 径向畸变分别应用，并保留实测的逐眼光心偏移。用 P40 Pro+ 上原厂运行时提交给 GPU 的 2,178 个网格顶点核对，Monado 的归一化 UV 单轴最大误差约为 0.0000092。95° 是运行时投影参数，镜片实际可见范围仍需单独测量。[采集、对照和 Fold7 验证](history/fold7-oem-optics.md)
+
+在 **更多选项 → CV10 软件瞳距** 可将 OpenXR 的左右眼位间距设为 55–71 毫米，默认 63 毫米。Fold7 上在同一个 OpenXR 会话内调节并恢复默认后，`xrLocateViews` 实测为 63.000 → 68.000 → 63.000 毫米。[眼位实测](history/fold7-oem-optics.md#fold7-软件瞳距)
+
+## 手柄与定位套件
 
 - **更多选项 → CV10 蓝牙手柄** 提供 CF20 的扫描、配对和输入诊断。系统提示时允许附近设备访问。
 - **CV10 蓝牙手柄 → Huawei 6DoF Kit · 定位交互套件** 提供校准读取、Y8 双目、头部定位和左右手柄的实验入口。运行原厂头部 SLAM 需要用户自行导入对应的 ARM64 `libarvr_slam.so`。套件的头手完整 6DoF 尚待真机验收。[连接与校准流程](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/README.md)
-- **更多选项 → CV10 软件瞳距** 可在 55–71 毫米范围调整立体渲染使用的眼距，默认 63 毫米。物理镜片的个体标定仍待实测。
 
 ## 原厂手机线
 
