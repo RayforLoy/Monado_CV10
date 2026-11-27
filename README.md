@@ -47,7 +47,7 @@ Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停�
 
 整合预览提供离线启动器和 Pocket XR 外显入口。`a3d86e5` 的 ARM64 包在 Fold7 复测了 2D 直启、3D 点选、右镜出图和正常退出。早期整合构建在 16 KiB 的 Android 16 模拟器验证了安装、原生运行时加载和 Vulkan 初始化失败后的重试与返回。[整合 APK 校验与复测记录](history/fold7-offline-launcher.md#启动器与-pocket-xr-整合预览)
 
-如果 2D 列表提示 **后台运行受限**，在 **应用程序信息 → 电池 → 后台运行** 中可为 Monado CV10 Preview 选择 **不受限制**。三星的后台限制可能拒绝第三方 XR 应用绑定运行时。3D 启动器在切换应用时短暂保留 Monado 运行时连接，避免系统在两个 XR 会话之间冻结进程。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
+如果 2D 列表提示 **后台运行受限**，在 **应用程序信息 → 电池 → 后台运行** 中可为 Monado CV10 Preview 选择 **不受限制**。Fold7 的 One UI 8.5 即使在该设置下也曾冻结 Preview，导致 2D 直启或 3D 点选后黑屏、定格或无法返回。当前整合预览在三星 Android 16 设备上检测到外部 OpenXR 应用的 IPC 回复超时后，通过 Android 服务绑定唤醒运行时。Fold7 从 3D 菜单启动和退出原版 `hello_xr` 五轮通过，最初数秒仍可能有短暂停顿。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
 
 ## Pocket XR 外屏兼容性
 

@@ -90,6 +90,22 @@
 
 10:41，`00d383b` 从 2D 列表直启原版 `hello_xr` 约 0.52 秒进入 `FOCUSED`。按返回后马上由 3D 菜单点选同一个仍存活的样例，三星 Freecess 在启动请求约 0.24 秒后冻结 Preview 约 9.8 秒，随后解冻。样例这轮在点选后约 10.43 秒进入 `FOCUSED`，CV10 两眼区最终正常出画。Preview 的后台运行已允许。2D 直启后迅速切到 3D 的延迟待修。[筛选日志](evidence/fold7-launcher-warm-2d-to-3d.log)
 
+10:48，仍用 `00d383b` 快速重进。3D 点选后 121 毫秒进入 `FOCUSED`，约 378 毫秒后 Freecess 冻结预览的运行时与菜单进程。返回键因输入超时触发 ANR。One UI 8.5 中国版 **电池 → 后台控制** 显示 Preview 已为 **不受限制**，ADB 也读到该包位于 Android 电池优化豁免名单。
+
+10:50 至 11:00 用三份诊断包复测。将 3D Activity 的 `finish()` 推迟到 `onStop()`，仍在旧样例的 `onDestroy` 时触发约 9.6 秒冻结。将预览的目标 SDK 改为 34，Android 确认 Monado 前台服务的类型为 `specialUse`，样例 178 毫秒进入 `FOCUSED` 后仍然冻结，返回触发 ANR。让 3D 启动器在交接时使用带 `BIND_IMPORTANT | BIND_ABOVE_CLIENT` 的绑定，三次点选仍在进入 `FOCUSED` 后冻结约十秒。三份诊断包均已撤回。
+
+11:01，恢复 `00d383b` 后只从 2D 列表打开样例，未启动 3D 菜单进程。样例约 405 毫秒进入 `FOCUSED`，约 648 毫秒后 Freecess 冻结 Preview 主进程。两次双目截图的文件摘要相同，系统返回触发 ANR。当时 `dumpsys activity oom` 仍显示运行时为前台绑定服务 `BTOP`，该 PID 的 `cgroup.freeze` 已实际为 `1`。AOSP 的 `cmd activity unfreeze` 报告成功后，三星记录与该 cgroup 仍显示冻结。[进程状态和筛选日志](evidence/fold7-launcher-3d-freecess-20261127.log)
+
+11:04–11:05，单独把 Preview 的后台 AppOp 设为 `default`，以及单独把 `hello_xr` 的后台 AppOp 设为 `allow`，均复现 3D 点选后约十秒的冻结。两项设置随即恢复为实测前的 `allow` 和 `ignore`。
+
+11:07–11:08，用诊断提交 `9c4a497` 构建的 APK，SHA-256 为 `328ac97b74f0b7465ad03d8fdafb7237a1acd25fad675d8e1670546970f75d2`。原版样例进程加载运行时后，每 300 毫秒新建并释放一次额外的服务绑定。三次 2D 后立即切到 3D 的轮次中，从点选到 `FOCUSED` 分别为 114、650、147 毫秒。三次均在同一个样例 PID 中重新创建会话。长一点的第三轮前几秒仍出现 Freecess 冻结，系统日志确认新的 `bindService` 解冻，摘录中的间隔为 53–100 毫秒。外屏早期测得约 50.88 次不同的呈现时间戳每秒，最大呈现间隔 116.05 毫秒，稳定后约 60.32 次每秒，最大间隔 16.58 毫秒。第三轮打开约 17 秒后，返回键立即触发 `onPause`。循环绑定仅用于诊断，生产预览仍待解决最初数秒的冻结和掉帧。[筛选日志和呈现数据摘要](evidence/fold7-launcher-3d-freecess-20261127.log)
+
+11:12，持久绑定改用外部样例的 Activity 上下文，并设置 `BIND_ADJUST_WITH_ACTIVITY | BIND_IMPORTANT`。3D 点选使样例在 119 毫秒进入 `FOCUSED`，Freecess 在其后 85 毫秒冻结运行时 10.59 秒。该 APK 已撤回。[持久绑定对照](evidence/fold7-launcher-3d-freecess-20261127.log)
+
+11:16–11:19，测试 `71b7fd8` 的按需唤醒预览。外部 XR 应用等待套接字回复超过 45 毫秒时，才向 Android 请求一次额外服务绑定。无延迟的回复不发起新绑定。APK SHA-256 为 `71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8`。APK v2 签名、16 KiB ZIP 对齐及五个 ARM64 库的 15 个 ELF `PT_LOAD` 段检查通过。
+
+五轮都先从 2D 列表直启，再从 3D 菜单点选原版 `hello_xr`。3D 点选至 `FOCUSED` 为 134–658 毫秒，五次均在同一 PID 进入 `FOCUSED`，均在系统返回后完成 `xrDestroyInstance`，其中两次在启动约一秒后返回，未出现 ANR。三轮延长测试采样到最初数秒外屏约 54.75–55.47 次呈现每秒，最大间隔 66.33 毫秒，稍后稳定至约 60.32 次每秒，最大间隔 16.58 毫秒。CV10 右镜实拍有蓝块。三星仍在最初数秒触发 Freecess，预览通过绑定缩短冻结；这次测量未覆盖佩戴时的流畅度。[筛选日志和呈现数据摘要](evidence/fold7-launcher-3d-freecess-20261127.log) · [右镜实拍](evidence/fold7-launcher-71b7fd8-right.jpg)
+
 2026-11-27 香港时间。沿用同一台 Fold7、原厂线、供电及原版 `hello_xr`。经手机菜单打开 2D 列表后等待 40 秒，避免 ADB 启动产生的临时豁免覆盖 2D 直启。先在 2D 列表直启并退出样例，再从 3D 菜单点选同一个样例。记录 `FOCUSED`、SurfaceFlinger 呈现计数、右镜画面及返回后的 `xrDestroyInstance`。前三轮预览包的 `RUN_ANY_IN_BACKGROUND` 为 `ignore`。
 
 - 基线 `76ad245` 经 2D 直启后持续出帧至第 78 秒，外屏图层约 60 次不同的呈现时间戳每秒，CV10 面板模式为 90 Hz。3D 点选于 07:28:46.252 进入 `FOCUSED`，Freecess 随后以 `Bg-buff` 冻结预览包的两个进程。第 2 秒右镜为黑色，`ActivityDestroyTimeout` 约十秒后解冻并恢复出图，样例可退出。[第 2 秒右镜](evidence/fold7-launcher-76ad245-handoff-black-right.jpg) · [第 38 秒右镜](evidence/fold7-launcher-76ad245-handoff-recovered-right.jpg)

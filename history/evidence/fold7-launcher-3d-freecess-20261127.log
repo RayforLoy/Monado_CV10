@@ -1,0 +1,226 @@
+Fold7 SM-F9660, Android API 36, One UI 8.5 CN, original C9.53.6 cable, USB power, Samsung mirroring.
+Preview RUN_ANY_IN_BACKGROUND=allow; One UI battery manager lists Preview as unrestricted.
+Preview present in cmd deviceidle whitelist; original Khronos hello_xr OpenGL ES.
+
+00d383b (a5576bd1e230a1a9a00a557ca6022e72d81a809a9f67a694d268262bda13d610)
+11-27 10:48:04.403  2961  5254 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=193717399) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:48:04.524 16655 18647 V hello_xr: [10:48:04.524][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598405072 time=2522510145103
+11-27 10:48:04.902  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [11627, 16922] reason: Bg-buff
+11-27 10:48:15.237  2961  4594 I WindowManager: ANR in Window{b97732c u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity}. Reason:Input dispatching timed out (b97732c org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity is not responding. Waited 10000ms for KeyEvent).
+11-27 10:48:15.264  2961  3284 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [11627, 16922] reason: ActivityDestroyTimeout
+11-27 10:48:22.169  2961 18763 E ActivityManager: ANR in org.khronos.openxr.hello_xr.opengles (org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity)
+
+Diagnostic build: defer finishing the spatial Activity to onStop (5382116ace99507ad980badf40d16139f38ea476f7c561660c1945af73a04a43)
+11-27 10:50:44.301  2961  8662 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=215194117) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:50:44.556 22027 22049 V hello_xr: [10:50:44.556][Info   ] onDestroy()
+11-27 10:50:44.705  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [20340, 22177] reason: Bg-buff
+11-27 10:50:54.301  2961  3284 W ActivityTaskManager: Launch timeout has expired, giving up wake lock!
+11-27 10:50:54.314  2961  3282 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [20340, 22177] reason: procstate:3
+11-27 10:50:54.349 20340 20340 D MonadoService: onUnbind
+11-27 10:50:54.392 20340 20340 D MonadoService: onRebind
+11-27 10:50:54.538 22027 24378 V hello_xr: [10:50:54.538][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2533904443380
+
+Diagnostic build: target SDK 34, runtime FGS type=0x40000000 (75bb6ea19f1eddb938a1d497235a22bad76c80b4dd5d8e4bb1bc8e15ffcf5067)
+11-27 10:54:40.864  2961  7140 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=7173051) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:54:41.042 26412 26671 V hello_xr: [10:54:41.042][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2523825553332
+11-27 10:54:41.888  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [25984, 26530] reason: Bg-buff
+11-27 10:55:01.067  2961 26768 E ActivityManager: ANR in org.khronos.openxr.hello_xr.opengles (org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity)
+
+Diagnostic build: add BIND_IMPORTANT and BIND_ABOVE_CLIENT to the handoff binding (22d8c5546c9a1502c235212df042b6b7da2e830176e50d581c08f95d004f803e)
+Round 1
+11-27 10:59:44.374  2961  7394 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=175215567) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:59:44.966 30622 30644 V hello_xr: [10:59:44.966][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520354772656
+11-27 10:59:48.372  2961  5252 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=199727676) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:59:48.476 30622 30960 V hello_xr: [10:59:48.476][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2523865052447
+11-27 10:59:48.823  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: Bg-buff
+11-27 10:59:59.188  2961  3284 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: ActivityDestroyTimeout
+Round 2
+11-27 11:00:02.879  2961  3042 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=175215567) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:00:03.253 30622 31160 V hello_xr: [11:00:03.253][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520276471719
+11-27 11:00:06.092  2961  7396 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=157402330) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:00:06.129  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: Bg-buff
+11-27 11:00:06.133  2961  5763 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: bf_input
+11-27 11:00:06.199 30622 31308 V hello_xr: [11:00:06.199][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2523222409062
+11-27 11:00:06.636  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: Bg-buff
+11-27 11:00:16.885  2961  3284 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: ActivityDestroyTimeout
+Round 3
+11-27 11:00:20.507  2961  4691 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=175215567) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:00:20.909 30622 31501 V hello_xr: [11:00:20.909][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520277510990
+11-27 11:00:23.658  2961  3042 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=134221737) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:00:23.714  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: Bg-buff
+11-27 11:00:23.757  2961  3282 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: procstate:3
+11-27 11:00:23.811 30622 31669 V hello_xr: [11:00:23.811][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2523179174374
+11-27 11:00:24.262  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: Bg-buff
+11-27 11:00:34.467  2961  3284 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [30756, 30321] reason: ActivityDestroyTimeout
+
+00d383b restored, only direct launch from the 2D list; no :spatialLauncher process
+11-27 11:01:02.551  2961  6748 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=239494051) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:01:02.956 32294 32314 V hello_xr: [11:01:02.956][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520284282031
+11-27 11:01:03.604  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32024] reason: Bg-buff
+  recovered-direct-early.png: d402adf6266a6596d975e11eb926b2b40391638584963229e3f0020fb787d475
+  recovered-direct-late.png: d402adf6266a6596d975e11eb926b2b40391638584963229e3f0020fb787d475
+11-27 11:01:38.164  2961 32448 E ActivityManager: ANR in org.khronos.openxr.hello_xr.opengles (org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity)
+dumpsys activity oom: Proc # 0: fg T/S/BTOP LCMNFUATI  t: 0 32024:org.cv10.monado.out_of_process.launcher_preview/u0a848 (service)
+cmd activity unfreeze: Unfreezing process org.cv10.monado.out_of_process.launcher_preview (32024) sticky=false
+cat /sys/fs/cgroup/apps/uid_10848/pid_32024/cgroup.freeze: 1
+
+9c4a497 external client binding diagnostic
+APK SHA-256: 328ac97b74f0b7465ad03d8fdafb7237a1acd25fad675d8e1670546970f75d2
+
+binding-probe-handoff-1
+11-27 11:07:19.958  5358  5386 V hello_xr: [11:07:19.958][Info   ] onDestroy()
+11-27 11:07:20.888  2961  4527 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=263849902) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:07:21.002  5358  5708 V hello_xr: [11:07:21.002][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2523580396925
+11-27 11:07:21.110  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:21.253  2961  7268 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:21.756  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:21.865  2961  5252 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:22.368  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:22.468  2961  7393 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:22.971  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:23.072  2961  5252 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:23.575  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:23.677  2961  5252 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:24.181  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:24.281  2961  8660 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:24.785  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:24.885  2961  8660 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:25.312  5358  5708 V hello_xr: [11:07:25.311][Info   ] onPause()
+
+binding-probe-handoff-2
+11-27 11:07:32.990  5358  5954 V hello_xr: [11:07:32.990][Info   ] onDestroy()
+11-27 11:07:33.041  2961  6748 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:33.393  5358  6318 V hello_xr: [11:07:33.393][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598428400 time=2524223048853
+11-27 11:07:33.546  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:33.646  2961  5890 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:34.149  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:34.254  2961  3042 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:34.756  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:34.860  2961  7396 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:35.364  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:35.465  2961  4528 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:35.969  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:36.070  2961  7396 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:36.573  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:36.674  2961  7396 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:37.178  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:07:37.280  2961  3042 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:07:37.825  5358  6318 V hello_xr: [11:07:37.825][Info   ] onPause()
+
+binding-probe-soak-1
+11-27 11:08:06.359  5358  6828 V hello_xr: [11:08:06.359][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2523759799999
+11-27 11:08:06.827  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:06.880  2961  4691 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:07.385  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:07.484  2961  7140 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:07.995  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:08.088  2961  5867 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:08.592  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:08.693  2961  7140 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:09.197  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:09.297  2961  7140 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:09.802  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:09.900  2961  7396 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:10.405  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:10.504  2961  7396 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:11.008  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: Bg-buff
+11-27 11:08:11.107  2961  7140 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [5502, 4639] reason: bindService
+11-27 11:08:23.481  5358  6828 V hello_xr: [11:08:23.481][Info   ] onPause()
+
+SurfaceFlinger external-layer distinct presentation timestamps during soak
+Early: 125 timestamps, 50.88/s, longest gap 116.05 ms
+Stable: 127 timestamps, 60.32/s, longest gap 16.58 ms
+
+External Activity-context binding with BIND_ADJUST_WITH_ACTIVITY
+APK SHA-256: 58cf13b2e538ebe87af03ad46fdbc9561f806cf304c0c156ffc9266500379dc6
+11-27 11:12:43.683  2961  7393 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=59298969) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:12:44.024  8423  8442 V hello_xr: [11:12:44.024][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520231779739
+11-27 11:12:45.268  8423  8442 V hello_xr: [11:12:45.268][Info   ] onPause()
+11-27 11:12:47.196  2961  4528 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=69851763) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:12:47.315  8423  8681 V hello_xr: [11:12:47.315][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598521712 time=2523522519321
+11-27 11:12:47.400  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [8532, 7972] reason: Bg-buff
+11-27 11:12:57.989  2961  3284 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [8532, 7972] reason: ActivityDestroyTimeout
+11-27 11:13:04.266  8423  8681 V hello_xr: [11:13:04.266][Info   ] onPause()
+
+71b7fd8 external Samsung Android 16 client, wake on stalled reply
+APK SHA-256: 71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8
+Three longer runs and two quick-return runs, all same hello_xr PID 9702; no sample ANR
+
+stall-wake-soak-1
+11-27 11:16:46.890  2961  8662 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=225824716) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:16:47.235  9702  9722 V hello_xr: [11:16:47.235][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520233463958
+11-27 11:16:50.494  2961  5254 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=53066461) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:16:51.152  9702  9967 V hello_xr: [11:16:51.152][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2524150291248
+11-27 11:16:50.648  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:16:50.790  2961  5254 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:16:50.791  9702  9722 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:16:51.296  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:16:51.343  2961  5867 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:16:51.344  9702  9967 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:16:51.799  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:08.318  9702  9967 V hello_xr: [11:17:08.318][Info   ] onPause()
+11-27 11:17:10.097  9702  9967 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+stall-wake-soak-2
+11-27 11:17:14.222  2961  8455 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=225824716) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:17:14.627  9702 10776 V hello_xr: [11:17:14.627][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520319974375
+11-27 11:17:17.801  2961  8455 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=61589698) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:17:17.935  9702 10937 V hello_xr: [11:17:17.935][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2523628320207
+11-27 11:17:18.005  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:18.059  2961  7396 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:17:18.060  9702 10937 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:17:18.562  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:18.617  2961  8662 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:17:18.618  9702 10937 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:17:19.120  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:35.026  9702 10937 V hello_xr: [11:17:35.026][Info   ] onPause()
+11-27 11:17:36.339  9702 10937 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+stall-wake-soak-3
+11-27 11:17:40.032  2961  8455 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=225824716) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:17:40.406  9702 11180 V hello_xr: [11:17:40.406][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520302206302
+11-27 11:17:43.748  2961  8627 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=98560638) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:17:43.932  9702 11336 V hello_xr: [11:17:43.932][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598533376 time=2523828390155
+11-27 11:17:43.787  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:43.819  2961  8455 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:17:44.321  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:44.367  2961  8455 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:17:44.368  9702 11336 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:17:44.871  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:17:44.922  2961  8455 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:18:00.978  9702 11336 V hello_xr: [11:18:00.978][Info   ] onPause()
+11-27 11:18:02.186  9702 11336 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+stall-wake-quick-back-1
+11-27 11:18:38.695  2961  5252 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=225824716) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:18:39.077  9702 11732 V hello_xr: [11:18:39.077][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520305288854
+11-27 11:18:42.398  2961  3045 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=207443429) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:18:42.572  9702 11990 V hello_xr: [11:18:42.572][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598381744 time=2523800160155
+11-27 11:18:42.518  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:18:42.564  2961  5867 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:18:42.565  9702 11990 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:18:43.069  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:18:43.123  2961  5254 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:18:43.124  9702 11990 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:18:43.386  9702 11990 V hello_xr: [11:18:43.386][Info   ] onPause()
+11-27 11:18:44.623  9702 11990 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Back sent: 11-27 11:18:43.246
+
+stall-wake-quick-back-2
+11-27 11:18:48.311  2961  8662 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=225824716) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:18:48.653  9702 12170 V hello_xr: [11:18:48.653][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598405072 time=2520300643177
+11-27 11:18:51.817  2961  4527 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=234344571) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 11:18:51.973  9702 12313 V hello_xr: [11:18:51.973][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598451728 time=2523620917811
+11-27 11:18:51.898  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:18:51.910  2961  3282 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: procstate:3
+11-27 11:18:52.414  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: Bg-buff
+11-27 11:18:52.468  2961  8222 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [9424, 9799] reason: bindService
+11-27 11:18:52.469  9702 12313 D monado-ipc-client: Requested a runtime wake after an IPC stall
+11-27 11:18:52.779  9702 12313 V hello_xr: [11:18:52.779][Info   ] onPause()
+11-27 11:18:54.004  9702 12313 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Back sent: 11-27 11:18:52.644
+
+Actual present time column in the external layer SurfaceFlinger --latency ring (distinct values)
+Run 1 early: 127 timestamps, 55.47/s, maximum gap 66.33 ms. Later: 126 timestamps, 60.32/s, maximum gap 16.58 ms.
+Run 2 early: 119 timestamps, 54.75/s, maximum gap 66.31 ms. Later: 127 timestamps, 60.32/s, maximum gap 16.58 ms.
+Run 3 early: 121 timestamps, 55.25/s, maximum gap 66.33 ms. Later: 127 timestamps, 60.32/s, maximum gap 16.58 ms.
