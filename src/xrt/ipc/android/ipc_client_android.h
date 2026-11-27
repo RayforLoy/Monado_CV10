@@ -13,6 +13,8 @@
 
 #ifdef XRT_OS_ANDROID
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,6 +54,11 @@ ipc_client_android_create(struct _JavaVM *vm, void *activity);
 int
 ipc_client_android_blocking_connect(struct ipc_client_android *ica);
 
+bool
+ipc_client_android_can_wake_runtime(struct ipc_client_android *ica);
+
+bool
+ipc_client_android_wake_runtime(void *client);
 
 /**
  * @brief Destroy an ipc_client_android object.

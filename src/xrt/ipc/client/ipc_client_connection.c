@@ -86,6 +86,10 @@ ipc_client_socket_connect(struct ipc_connection *ipc_c, struct _JavaVM *vm, void
 
 	// Set socket.
 	ipc_c->imc.ipc_handle = socket;
+	if (ipc_client_android_can_wake_runtime(ipc_c->ica)) {
+		ipc_c->imc.wake_peer = ipc_client_android_wake_runtime;
+		ipc_c->imc.wake_peer_data = ipc_c->ica;
+	}
 
 	return true;
 }

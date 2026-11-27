@@ -30,6 +30,10 @@
 #include <stdint.h>
 #include <assert.h>
 
+#ifdef XRT_OS_ANDROID
+#include <poll.h>
+#endif
+
 
 /*
  *
@@ -111,6 +115,24 @@ close_received_scm_rights(const struct msghdr *msg)
 	for (size_t i = 0; i < fd_count; i++) {
 		close(fds[i]);
 	}
+}
+
+static ssize_t
+receive_message(struct ipc_message_channel *imc, struct msghdr *msg)
+{
+#ifdef XRT_OS_ANDROID
+	if (imc->wake_peer != NULL) {
+		struct pollfd fd = {.fd = imc->ipc_handle, .events = POLLIN};
+		// A timely reply leaves the platform binding alone. No data or FDs are consumed by poll.
+		for (int attempt = 0; attempt < 3; ++attempt) {
+			int ready = poll(&fd, 1, 45);
+			if (ready != 0 || !imc->wake_peer(imc->wake_peer_data)) {
+				break;
+			}
+		}
+	}
+#endif
+	return recvmsg(imc->ipc_handle, msg, MSG_NOSIGNAL);
 }
 
 
@@ -196,7 +218,7 @@ ipc_receive(struct ipc_message_channel *imc, void *out_data, size_t size)
 		    .msg_flags = 0,
 		};
 
-		ssize_t len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+		ssize_t len = receive_message(imc, &msg);
 		if (len < 0) {
 			int code = errno;
 			if (code == EINTR) {
@@ -266,7 +288,7 @@ ipc_receive_fds(struct ipc_message_channel *imc, void *out_data, size_t size, in
 	// EINTR means this recvmsg moved nothing. A short count can already hold SCM_RIGHTS, so do not retry it.
 	ssize_t len;
 	do {
-		len = recvmsg(imc->ipc_handle, &msg, MSG_NOSIGNAL);
+		len = receive_message(imc, &msg);
 	} while (len < 0 && errno == EINTR);
 
 	if (len != (ssize_t)size) {

@@ -30,6 +30,11 @@ struct ipc_message_channel
 {
 	xrt_ipc_handle_t ipc_handle;
 	enum u_logging_level log_level;
+#ifdef XRT_OS_ANDROID
+	// Optional, only configured for affected Android clients.
+	bool (*wake_peer)(void *data);
+	void *wake_peer_data;
+#endif
 };
 
 /*!

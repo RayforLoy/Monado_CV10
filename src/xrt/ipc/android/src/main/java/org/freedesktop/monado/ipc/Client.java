@@ -63,6 +63,8 @@ public class Client implements ServiceConnection {
      */
     @Keep public boolean failed = false;
 
+    @Keep public boolean runtimeWakeEnabled = false;
+
     /**
      * "Our" side of the socket pair - the other side is sent to the server automatically on
      * connection.
@@ -93,6 +95,37 @@ public class Client implements ServiceConnection {
     private MonadoView appView;
     private Runnable releaseCv10RateVote;
     private boolean closed;
+    private Intent runtimeWakeIntent;
+
+    @Keep
+    public boolean requestRuntimeWake() {
+        final Intent intent;
+        synchronized (this) {
+            if (closed || runtimeWakeIntent == null) {
+                return false;
+            }
+            intent = runtimeWakeIntent;
+        }
+        final ServiceConnection wake = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName name, IBinder service) {}
+
+            @Override
+            public void onServiceDisconnected(ComponentName name) {}
+        };
+        try {
+            // Ask ActivityManager to bind without an IPC call into the potentially frozen service.
+            boolean bound = context.bindService(intent, wake, Context.BIND_AUTO_CREATE | Context.BIND_IMPORTANT);
+            context.unbindService(wake);
+            if (bound) {
+                Log.d(TAG, "Requested a runtime wake after an IPC stall");
+            }
+            return bound;
+        } catch (IllegalArgumentException | SecurityException e) {
+            Log.w(TAG, "Runtime wake binding failed", e);
+            return false;
+        }
+    }
 
     private void shutdown() {
         synchronized (this) {
@@ -270,6 +303,13 @@ public class Client implements ServiceConnection {
         }
 
         Intent intent = new Intent(BuildConfig.SERVICE_ACTION).setPackage(packageName);
+        runtimeWakeEnabled = Build.VERSION.SDK_INT >= 36
+                && "samsung".equalsIgnoreCase(Build.MANUFACTURER)
+                && "org.cv10.monado.out_of_process.launcher_preview".equals(packageName)
+                && !packageName.equals(context.getPackageName());
+        if (runtimeWakeEnabled) {
+            runtimeWakeIntent = intent;
+        }
 
         if (!bindService(context, intent)) {
             Log.e(TAG, "bindService: Service " + intent + " could not be found to bind!");

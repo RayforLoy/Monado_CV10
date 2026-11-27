@@ -73,6 +73,12 @@ namespace org::freedesktop::monado::ipc {
 		bool
 		getFailed() const;
 
+		bool
+		getRuntimeWakeEnabled() const;
+
+		bool
+		requestRuntimeWake();
+
 		/*!
 		 * Wrapper for a constructor
 		 *
@@ -127,9 +133,11 @@ namespace org::freedesktop::monado::ipc {
 		{
 			impl::WrappedFieldId<IMonado> monado;
 			impl::FieldId<bool> failed;
+			impl::FieldId<bool> runtimeWakeEnabled;
 			jni::method_t init;
 			jni::method_t markAsDiscardedByNative;
 			jni::method_t blockingConnect;
+			jni::method_t requestRuntimeWake;
 
 			/*!
 			 * Singleton accessor

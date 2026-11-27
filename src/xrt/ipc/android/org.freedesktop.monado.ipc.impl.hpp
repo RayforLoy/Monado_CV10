@@ -30,6 +30,20 @@ namespace org::freedesktop::monado::ipc {
 		return get(Meta::data().failed, object());
 	}
 
+	inline bool
+	Client::getRuntimeWakeEnabled() const
+	{
+		assert(!isNull());
+		return get(Meta::data().runtimeWakeEnabled, object());
+	}
+
+	inline bool
+	Client::requestRuntimeWake()
+	{
+		assert(!isNull());
+		return object().call<bool>(Meta::data().requestRuntimeWake);
+	}
+
 	inline Client
 	Client::construct(void *nativePointer)
 	{

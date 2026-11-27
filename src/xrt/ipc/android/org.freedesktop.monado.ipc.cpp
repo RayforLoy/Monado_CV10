@@ -14,9 +14,11 @@ namespace wrap {
 namespace org::freedesktop::monado::ipc {
 	Client::Meta::Meta(jni::jclass clazz)
 	    : MetaBase(Client::getTypeName(), clazz), monado(classRef(), "monado"), failed(classRef(), "failed"),
+	      runtimeWakeEnabled(classRef(), "runtimeWakeEnabled"),
 	      init(classRef().getMethod("<init>", "(J)V")),
 	      markAsDiscardedByNative(classRef().getMethod("markAsDiscardedByNative", "()V")),
-	      blockingConnect(classRef().getMethod("blockingConnect", "(Landroid/content/Context;Ljava/lang/String;)I"))
+	      blockingConnect(classRef().getMethod("blockingConnect", "(Landroid/content/Context;Ljava/lang/String;)I")),
+	      requestRuntimeWake(classRef().getMethod("requestRuntimeWake", "()Z"))
 	{}
 	IMonado::Meta::Meta(jni::jclass clazz)
 	    : MetaBase(IMonado::getTypeName(), clazz),
