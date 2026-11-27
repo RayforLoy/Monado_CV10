@@ -49,7 +49,7 @@ Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的
 
 Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认。竖屏控制页复测通过左右内侧返回、系统侧边返回和底边 Home。底部蓝线上快速上滑未置中，停留 460 ms 后置中一次。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正和左右指向。早期两路外显截图与右镜实拍一致。后续在 Fold7 竖屏控制页手持转动手机，确认光点离开菜单后仍可见，菜单外点按不触发操作。[激光笔方向、越界和竖屏手势复测](history/fold7-phone-laser-axis.md)
 
-使用无 `INTERNET` 权限且未获得 Shizuku 授权的诊断包，从 2D 直启和 3D 点选原版 `hello_xr` 均已实测在 CV10 出图和正常退出。整合预览 `71b7fd8` 在停止 Shizuku 服务后，再次通过两条实机启动和退出路径。Fold7 保留系统 Wi-Fi 用于无线 ADB，关闭系统 Wi-Fi 的实机复测待做。[应用网络隔离复测](history/fold7-offline-launcher.md#整合预览的应用网络隔离) · [关闭 Shizuku 的实机记录](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照)
+在 Fold7 停止 Shizuku 服务，并同时移除诊断版预览的 `INTERNET` 权限后，原版 `hello_xr` 经 2D 直启和 3D 点选均进入 `FOCUSED` 并正常退出。两次外显截图都有双目蓝块，本轮右镜相机均未拍到画面。此前单独进行应用网络隔离时已拍到右镜蓝块。系统 Wi-Fi 全程保留给无线 ADB，关闭系统 Wi-Fi 的实机复测仍待完成。[两项同时隔离的实机记录](history/fold7-offline-launcher.md#fold7-同时隔离应用网络并停止-shizuku) · [此前的网络隔离与右镜实拍](history/fold7-offline-launcher.md#整合预览的应用网络隔离)
 
 整合预览提供离线启动器和 Pocket XR 外显入口。`71b7fd8` 的 ARM64 包也在关闭 Wi-Fi 和移动数据的 16 KiB Android 16 模拟器上安装成功。从 2D 列表能打开原版 Pocket XR 手机触控板并返回。内置 3D 启动器两次成功加载原生运行时，模拟器因缺少 Vulkan 扩展未能出图。这个版本的原版 `hello_xr` 自带 ARM64 库采用 4 KiB 对齐，16 KiB 系统在进入 OpenXR 前即拒绝加载。[16 KiB 断网对照](history/fold7-offline-launcher.md#android-16-16-kib-系统断网对照)
 

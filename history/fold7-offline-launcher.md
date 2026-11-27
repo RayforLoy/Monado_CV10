@@ -134,6 +134,12 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 移除临时回环映射后，从 2D 列表直启和 3D 菜单点选 `hello_xr`。同一 PID 11235 两次进入 `FOCUSED` 并正常退出。3D 点选第 24 秒仍有约 60.32 次/秒的不同呈现时间戳，右镜拍到蓝块。手机 Wi-Fi 保持打开以维持无线 ADB。结束后确认稳定 Broker、后台 `ignore`、最低刷新率 `null` 和原预览 APK 已恢复。[隔离测试日志](evidence/fold7-launcher-a05f274-isolated.txt) · [第 24 秒右镜](evidence/fold7-launcher-a05f274-isolated-24s-right.jpg)
 
+### Fold7 同时隔离应用网络并停止 Shizuku
+
+2026-11-27 14:24–14:25 香港时间，Fold7（SM-F9660）保持 C9.53.6 原厂线、5 V 外接供电和三星 **已镜像**，CV10 活动时序为 3200×1600、90 Hz。用 `e8b1ef7` 构建 ARM64 诊断 APK，只移除清单中的 `INTERNET` 权限。除清单及签名文件外，APK 内容与常规预览逐字节一致。v2 签名、16 KiB ZIP 对齐及五个原生库的 15 个 ELF `PT_LOAD` 段均已校验。诊断 APK SHA-256 为 `94449002cd776489c6aade49b18d459bded1a003868ad967ec8a09bd20c96413`。
+
+已安装的预览和未修改的 Khronos `hello_xr` 均无 `INTERNET` 权限。从 Shizuku 手机端停止服务后，测试前后均确认没有 `shizuku_server` 进程。从 2D 列表直启样例，再打开 3D 菜单，底部上滑停留置中后点选样例。同一 PID 14436 两次进入 `FOCUSED`，两次按返回均完成 `xrDestroyInstance`。两次 CV10 外显截图均有双目蓝块，固定右镜相机均未拍到蓝块。系统 Wi-Fi 保留给无线 ADB。测完恢复常规预览、其 Broker 选择和 Shizuku 服务，最低刷新率为 `null`。[筛选日志](evidence/fold7-integrated-offline-combined.log) · [外显截图与右镜对照（上为 2D 直启，下为 3D 点选）](evidence/fold7-integrated-offline-combined.jpg)
+
 ### Android 16 16 KiB 系统断网对照
 
 2026-11-27 11:33–11:37 香港时间，Android 16（API 36）模拟器报告 `PAGE_SIZE=16384`。使用与 Fold7 相同的 `71b7fd8` ARM64 APK，Broker 选择 **Monado CV10 Preview**。测试期间系统 Wi-Fi 与移动数据均关闭，`shizuku_server` 未运行。

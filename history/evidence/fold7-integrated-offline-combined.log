@@ -1,0 +1,19 @@
+Fold7 SM-F9660, 2026-11-27 Hong Kong time. CV10 through stock C9.53.6 cable and 5 V auxiliary power, Samsung wired mirroring.
+Physical display 4621527156978103573 (logical 247), 3200 x 1600 at 90 Hz.
+ARM64 source e8b1ef7. Changed APK payload entry: AndroidManifest.xml (removed android.permission.INTERNET). V2 signature, 16 KiB zipalign and 15 PT_LOAD segments passed.
+
+11-27 14:24:45.000
+Original hello_xr 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962, original Pocket XR 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Initial Wi-Fi 1 and Shizuku PID 19056. Preview 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281.
+Isolated APK SHA-256 94449002cd776489c6aade49b18d459bded1a003868ad967ec8a09bd20c96413
+org.cv10.monado.out_of_process.launcher_preview Android package has no INTERNET permission.
+org.khronos.openxr.hello_xr.opengles Android package has no INTERNET permission.
+Shizuku server is stopped.
+11-27 14:25:09.016 14436 14490 V hello_xr: [14:25:09.016][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520409854167
+11-27 14:25:13.688 14436 14490 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:25:19.511 14879 14905 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 14:25:24.887 14879 14905 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 14:25:25.451 14436 15073 V hello_xr: [14:25:25.451][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2526207714998
+11-27 14:25:29.469 14436 15073 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+After both XR exits, Shizuku still has no server process.
+Final Preview 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281, Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null, Wi-Fi 1, Shizuku PID 15412.
