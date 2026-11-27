@@ -6,10 +6,12 @@ import android.content.Context;
 
 /** JNI entry point used by the out-of-process runtime. */
 public final class Cv10ControllerReader {
+    private final Cv10ControllerLauncherInput launcherInput;
     private final Cv10ControllerLink link;
 
     private Cv10ControllerReader(Context context, String address) {
-        link = new Cv10ControllerLink(context, address);
+        launcherInput = new Cv10ControllerLauncherInput(context);
+        link = new Cv10ControllerLink(context, address, launcherInput);
     }
 
     public static boolean isConfigured(Context context) {
@@ -39,5 +41,6 @@ public final class Cv10ControllerReader {
 
     public void close() {
         link.close();
+        launcherInput.close();
     }
 }

@@ -31,6 +31,12 @@ final class Cv10ControllerLink implements AutoCloseable {
     private static final long RETRY_MS = 3000;
     private static final long CONNECT_TIMEOUT_MS = 12000;
 
+    interface Listener {
+        void onReady(boolean ready);
+
+        void onInput(Cv10ControllerReport report);
+    }
+
     static final class Sample {
         final long arrivalNs = System.nanoTime();
         final byte[] bytes;
@@ -45,6 +51,7 @@ final class Cv10ControllerLink implements AutoCloseable {
     private final Context context;
     private final String address;
     private final BluetoothDevice discoveredDevice;
+    private final Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable connectTask = this::connect;
     private final Runnable timeoutTask = () -> retry("GATT setup timeout");
@@ -52,22 +59,24 @@ final class Cv10ControllerLink implements AutoCloseable {
     private BluetoothGattCharacteristic input;
     private BluetoothGattDescriptor pending;
     private volatile boolean closed;
+    private boolean inputReady;
     volatile Sample latestInput, latestControl;
     volatile String status = "Connecting";
     volatile long inputCount;
 
-    Cv10ControllerLink(Context context, String address) {
-        this(context, address, null);
+    Cv10ControllerLink(Context context, String address, Listener listener) {
+        this(context, address, null, listener);
     }
 
     Cv10ControllerLink(Context context, BluetoothDevice device) {
-        this(context, device.getAddress(), device);
+        this(context, device.getAddress(), device, null);
     }
 
-    private Cv10ControllerLink(Context context, String address, BluetoothDevice device) {
+    private Cv10ControllerLink(Context context, String address, BluetoothDevice device, Listener listener) {
         this.context = context.getApplicationContext();
         this.address = address;
         this.discoveredDevice = device;
+        this.listener = listener;
         handler.post(connectTask);
     }
 
@@ -115,6 +124,7 @@ final class Cv10ControllerLink implements AutoCloseable {
         pending = null;
         latestInput = null;
         latestControl = null;
+        setInputReady(false);
         if (previous != null) {
             // Bluetooth permission may have been revoked since connectGatt.
             try {
@@ -126,6 +136,12 @@ final class Cv10ControllerLink implements AutoCloseable {
             } catch (SecurityException ignored) {
             }
         }
+    }
+
+    private void setInputReady(boolean ready) {
+        if (inputReady == ready) return;
+        inputReady = ready;
+        if (listener != null) listener.onReady(ready);
     }
 
     private void retry(String reason) {
@@ -158,8 +174,12 @@ final class Cv10ControllerLink implements AutoCloseable {
         if (!isCurrent(source) || value == null) return;
         UUID uuid = characteristic.getUuid();
         if (INPUT.equals(uuid)) {
-            latestInput = new Sample(value);
+            Sample sample = new Sample(value);
+            latestInput = sample;
             inputCount++;
+            if (listener != null && inputReady && sample.report != null) {
+                listener.onInput(sample.report);
+            }
         } else if (CONTROL_NOTIFY.equals(uuid)) {
             latestControl = new Sample(value);
         }
@@ -210,6 +230,7 @@ final class Cv10ControllerLink implements AutoCloseable {
                     handler.removeCallbacks(timeoutTask);
                     status = "Input notifications enabled";
                     Log.i(TAG, status);
+                    setInputReady(true);
                 } else if (!subscribe(input)) {
                     retry("Input subscription failed to start");
                 }

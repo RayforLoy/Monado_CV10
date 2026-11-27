@@ -4,9 +4,11 @@ package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -19,6 +21,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import android.text.TextPaint
 import android.text.TextUtils
 import android.util.Log
@@ -28,6 +31,7 @@ import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.Keep
+import androidx.core.content.ContextCompat
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
@@ -50,6 +54,33 @@ class Cv10SpatialLauncherActivity : Activity() {
     private var pendingLaunch: Cv10AppEntry? = null
     private var renderState: SpatialLauncherState? = null
     private var hitTargets = emptyList<HitTarget>()
+    private var controllerMode = LauncherControllerMode.PHONE
+    private var resumed = false
+    private var controllerInputSince = Long.MAX_VALUE
+    private val controllerReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val kind = intent.getIntExtra(Cv10ControllerLauncherInput.KIND, 0)
+            val started = intent.getLongExtra(Cv10ControllerLauncherInput.START_TIME, 0)
+            when (kind) {
+                Cv10ControllerLauncherInput.CONNECTED ->
+                    setControllerMode(LauncherControllerMode.CF20)
+                Cv10ControllerLauncherInput.DISCONNECTED -> if (controllerMode == LauncherControllerMode.CF20) {
+                    setControllerMode(LauncherControllerMode.CF20_WAITING)
+                }
+                else -> if (controllerMode == LauncherControllerMode.CF20 &&
+                    canUseController() && started >= controllerInputSince
+                ) {
+                    when (kind) {
+                        Cv10ControllerLauncherInput.HOME -> goHome()
+                        Cv10ControllerLauncherInput.RECENTER -> renderState?.recenter()
+                        Cv10ControllerLauncherInput.SWIPE_LEFT -> movePage(1)
+                        Cv10ControllerLauncherInput.SWIPE_RIGHT -> movePage(-1)
+                        else -> Unit
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,11 +99,11 @@ class Cv10SpatialLauncherActivity : Activity() {
 
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
-                if (!::input.isInitialized || renderState?.ready != true) return
+                if (!::input.isInitialized || renderState?.ready != true || !controllerMode.usesPhone) return
                 val regions = input.gestureRegions()
-                val left = regions.leftInset + regions.backBandWidth / 2
-                val right = width - regions.rightInset - regions.backBandWidth / 2
-                val bottom = height - regions.bottomInset - regions.recenterBandHeight / 2
+                val left = regions.leftInset + 0.025f * regions.width
+                val right = width - regions.rightInset - 0.025f * regions.width
+                val bottom = height - regions.bottomInset - 0.05f * regions.height
                 val guideHalfLength = 18 * resources.displayMetrics.density
                 canvas.drawLine(left, height / 2f - guideHalfLength, left, height / 2f + guideHalfLength, guidePaint)
                 canvas.drawLine(right, height / 2f - guideHalfLength, right, height / 2f + guideHalfLength, guidePaint)
@@ -94,16 +125,28 @@ class Cv10SpatialLauncherActivity : Activity() {
                 onAim = { x, y -> renderState?.setAim(x, y) },
                 onConfirm = ::confirm,
                 onBack = { close() },
+                onHome = ::goHome,
                 onRecenter = { renderState?.recenter() },
+                onPage = ::movePage,
             )
         controls.setOnTouchListener(input)
         controls.setOnClickListener {
             when {
-                renderState != null -> input.confirm()
+                renderState?.ready == true -> when {
+                    controllerMode == LauncherControllerMode.CF20_WAITING ->
+                        setControllerMode(LauncherControllerMode.PHONE_FALLBACK)
+                    controllerMode.usesPhone -> input.confirm()
+                    else -> Unit
+                }
+                renderState != null -> Unit
                 startupFailed -> showStartupOptions()
                 else -> startRenderer(requestUsb = true)
             }
         }
+        ContextCompat.registerReceiver(
+            this, controllerReceiver, IntentFilter(Cv10ControllerLauncherInput.EVENT),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
     }
 
     override fun onStart() {
@@ -117,11 +160,16 @@ class Cv10SpatialLauncherActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        input.start()
+        resumed = true
+        if (hasWindowFocus()) controllerInputSince = SystemClock.uptimeMillis()
+        updateControls()
+        Cv10ControllerLauncherInput.requestState(this)
     }
 
     override fun onPause() {
         directLaunch.onPause()
+        resumed = false
+        controllerInputSince = Long.MAX_VALUE
         input.stop()
         super.onPause()
     }
@@ -135,10 +183,16 @@ class Cv10SpatialLauncherActivity : Activity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        controllerInputSince = if (hasFocus && resumed) SystemClock.uptimeMillis() else Long.MAX_VALUE
         if (!hasFocus || !visible || isFinishing) return
         directLaunch.onWindowFocused()
         if (waitingForUsbAccess) startRenderer(requestUsb = false)
         if (startupFailed && !startupPromptShown) showStartupOptions()
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(controllerReceiver)
+        super.onDestroy()
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
@@ -158,14 +212,13 @@ class Cv10SpatialLauncherActivity : Activity() {
             SpatialLauncherState(
                 onReady = {
                     runOnUiThread {
-                        if (renderState?.ready == true && !closing) {
-                            controls.setText(R.string.cv10_spatial_phone_controls)
-                        }
+                        if (renderState?.ready == true && !closing) updateControls()
                     }
                 },
-                onControllerClick = { x, y -> runOnUiThread { confirm(x, y) } },
-                onControllerBack = { runOnUiThread { if (renderState?.ready == true) close() } },
+                onControllerClick = { x, y -> runOnUiThread { if (canUseController()) confirm(x, y) } },
+                onControllerBack = { runOnUiThread { if (canUseController()) close() } },
             )
+        state.controllerMode = controllerMode.nativeValue
         renderState = state
         controls.setText(R.string.cv10_spatial_opening)
         controls.postDelayed(
@@ -270,6 +323,52 @@ class Cv10SpatialLauncherActivity : Activity() {
         val canvasX = (x + 1f) * PANEL_WIDTH / 2f
         val canvasY = (y + 1f) * PANEL_HEIGHT / 2f
         hitTargets.firstOrNull { it.bounds.contains(canvasX, canvasY) }?.action?.invoke()
+    }
+
+    private fun setControllerMode(mode: LauncherControllerMode) {
+        if (controllerMode == mode) return
+        controllerMode = mode
+        renderState?.controllerMode = mode.nativeValue
+        updateControls()
+    }
+
+    private fun updateControls() {
+        if (resumed && controllerMode.usesPhone) input.start() else input.stop()
+        if (renderState?.ready != true) return
+        controls.setText(
+            when (controllerMode) {
+                LauncherControllerMode.CF20 -> R.string.cv10_spatial_cf20_controls
+                LauncherControllerMode.CF20_WAITING -> R.string.cv10_spatial_cf20_waiting
+                else -> R.string.cv10_spatial_phone_controls
+            },
+        )
+        controls.invalidate()
+    }
+
+    private fun canUseController(): Boolean =
+        resumed && hasWindowFocus() && renderState?.ready == true && !closing &&
+            controllerMode != LauncherControllerMode.CF20_WAITING &&
+            controllerMode != LauncherControllerMode.PHONE_FALLBACK
+
+    private fun goHome() {
+        if (closing) return
+        directLaunch.cancel()
+        val defaultFilter = apps.any { it.isXr }
+        if (page == 0 && xrOnly == defaultFilter) return
+        page = 0
+        xrOnly = defaultFilter
+        updatePanel()
+    }
+
+    private fun movePage(direction: Int) {
+        if (renderState?.ready != true || closing) return
+        val count = if (xrOnly) apps.count { it.isXr } else apps.size
+        val lastPage = ((count - 1) / PAGE_SIZE).coerceAtLeast(0)
+        val target = (page + direction).coerceIn(0, lastPage)
+        if (target == page) return
+        directLaunch.cancel()
+        page = target
+        updatePanel()
     }
 
     private fun updatePanel() {
@@ -400,6 +499,14 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 }
 
+// These values are also read by the native draw loop.
+private enum class LauncherControllerMode(val nativeValue: Int, val usesPhone: Boolean) {
+    PHONE(0, true),
+    CF20(1, false),
+    CF20_WAITING(2, false),
+    PHONE_FALLBACK(3, true),
+}
+
 /** Single-writer render commands shared by the Android UI and the OpenXR frame loop. */
 @Keep
 internal class SpatialLauncherState(
@@ -412,6 +519,7 @@ internal class SpatialLauncherState(
     private val recenterCount = AtomicInteger()
 
     @Volatile var stop = false
+    @Volatile var controllerMode = 0
     @Volatile var ready = false
         private set
 
@@ -438,6 +546,8 @@ internal class SpatialLauncherState(
     }
 
     fun recenterGeneration(): Int = recenterCount.get()
+
+    fun controllerMode(): Int = controllerMode
 
     fun shouldStop(): Boolean = stop
 

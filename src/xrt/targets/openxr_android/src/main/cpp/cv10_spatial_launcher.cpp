@@ -48,6 +48,15 @@ constexpr XrExtent2Df pocket_wide_size = {pocket_size.width * pocket_wide_scale,
 constexpr float panel_width_m = 1.62f;
 std::mutex session_mutex;
 
+// Matches LauncherControllerMode in Cv10SpatialLauncherActivity.kt.
+enum class ControllerMode : jint
+{
+	Phone,
+	Cf20,
+	Cf20Waiting,
+	PhoneFallback,
+};
+
 constexpr char vertex_shader[] = R"(#version 300 es
 out vec2 uv;
 void main() {
@@ -61,7 +70,7 @@ constexpr char fragment_shader[] = R"(#version 300 es
 precision highp float;
 in vec2 uv;
 uniform sampler2D panel;
-uniform vec2 aim;
+uniform vec3 phoneAim;
 uniform vec3 controllerAim;
 uniform vec2 panelSize;
 uniform vec2 canvasSize;
@@ -83,11 +92,13 @@ void main() {
     if (all(greaterThanEqual(panelUv, vec2(0.0))) && all(lessThan(panelUv, vec2(1.0)))) {
         background = vec4(texture(panel, panelUv).rgb, 1.0);
     }
-    float opacity = pointerOpacity(position, aim * panelSize, vec2(0.76, 1.32) * panelSize);
-    color = vec4(vec3(0.34, 1.0, 0.75) * opacity, opacity) + background * (1.0 - opacity);
+    color = background;
     if (controllerAim.z > 0.0) {
-        opacity = pointerOpacity(position, controllerAim.xy * panelSize, vec2(1.12, 1.18) * panelSize);
+        float opacity = pointerOpacity(position, controllerAim.xy * panelSize, vec2(1.12, 1.18) * panelSize);
         color = vec4(vec3(1.0, 0.77, 0.27) * opacity, opacity) + color * (1.0 - opacity);
+    } else if (phoneAim.z > 0.0) {
+        float opacity = pointerOpacity(position, phoneAim.xy * panelSize, vec2(0.76, 1.32) * panelSize);
+        color = vec4(vec3(0.34, 1.0, 0.75) * opacity, opacity) + color * (1.0 - opacity);
     }
 }
 )";
@@ -153,6 +164,7 @@ public:
 		recenter_method = env->GetMethodID(cls, "recenterGeneration", "()I");
 		controller_click_method = env->GetMethodID(cls, "controllerClick", "(FF)V");
 		controller_back_method = env->GetMethodID(cls, "controllerBack", "()V");
+		controller_mode_method = env->GetMethodID(cls, "controllerMode", "()I");
 		env->DeleteLocalRef(cls);
 	}
 
@@ -202,6 +214,12 @@ public:
 		env->CallVoidMethod(state, controller_back_method);
 	}
 
+	ControllerMode
+	controller_mode() const
+	{
+		return static_cast<ControllerMode>(env->CallIntMethod(state, controller_mode_method));
+	}
+
 	JNIEnv *const env;
 
 private:
@@ -213,6 +231,7 @@ private:
 	jmethodID recenter_method = nullptr;
 	jmethodID controller_click_method = nullptr;
 	jmethodID controller_back_method = nullptr;
+	jmethodID controller_mode_method = nullptr;
 };
 
 class DisplayCapture
@@ -603,23 +622,33 @@ private:
 		controller_hand = hand;
 	}
 
-	bool
-	controller_pressed(XrAction action)
+	XrActionStateBoolean
+	read_controller_button(XrAction action)
 	{
 		XrActionStateGetInfo request{XR_TYPE_ACTION_STATE_GET_INFO};
 		request.action = action;
 		request.subactionPath = controller_hand;
 		XrActionStateBoolean button{XR_TYPE_ACTION_STATE_BOOLEAN};
-		return XR_SUCCEEDED(xrGetActionStateBoolean(session, &request, &button)) && button.isActive &&
-		       button.changedSinceLastSync && button.currentState;
+		if (XR_FAILED(xrGetActionStateBoolean(session, &request, &button))) {
+			button.isActive = XR_FALSE;
+		}
+		return button;
 	}
 
 	void
 	update_controller(XrTime time)
 	{
-		controller_visible = false;
-		if (controller_hand == XR_NULL_PATH || !focused) {
+		const auto mode = state.controller_mode();
+		if (mode != controller_mode) {
+			controller_buttons_armed = false;
 			controller_calibrated = false;
+			controller_mode = mode;
+		}
+		controller_visible = false;
+		if (controller_hand == XR_NULL_PATH || !focused || controller_mode == ControllerMode::Cf20Waiting ||
+		    controller_mode == ControllerMode::PhoneFallback) {
+			controller_calibrated = false;
+			controller_buttons_armed = false;
 			return;
 		}
 		const XrActiveActionSet active{controller_actions, controller_hand};
@@ -628,9 +657,18 @@ private:
 		sync.activeActionSets = &active;
 		if (xrSyncActions(session, &sync) != XR_SUCCESS) {
 			controller_calibrated = false;
+			controller_buttons_armed = false;
 			return;
 		}
-		if (controller_pressed(controller_menu)) {
+		const auto select = read_controller_button(controller_select);
+		const auto back = read_controller_button(controller_menu);
+		if (!select.isActive && !back.isActive) {
+			controller_buttons_armed = false;
+		} else if (!select.currentState && !back.currentState) {
+			// Discard a button already held when focus or the controller connection returns.
+			controller_buttons_armed = true;
+		}
+		if (controller_buttons_armed && back.isActive && back.changedSinceLastSync && back.currentState) {
 			state.controller_back();
 			return;
 		}
@@ -665,7 +703,7 @@ private:
 		controller_x = forward_x * scale;
 		controller_y = -forward_y * scale * panel_width / panel_height;
 		controller_visible = true;
-		if (controller_pressed(controller_select)) {
+		if (controller_buttons_armed && select.isActive && select.changedSinceLastSync && select.currentState) {
 			__android_log_print(ANDROID_LOG_DEBUG, tag, "OpenXR controller select at %.3f, %.3f",
 			                    controller_x, controller_y);
 			state.controller_click(controller_x, controller_y);
@@ -707,7 +745,7 @@ private:
 		} else {
 			glUniform2f(glGetUniformLocation(program, "panelSize"), panel_width, panel_height);
 			glUniform2f(glGetUniformLocation(program, "canvasSize"), canvas_width, canvas_height);
-			aim_uniform = glGetUniformLocation(program, "aim");
+			aim_uniform = glGetUniformLocation(program, "phoneAim");
 			controller_aim_uniform = glGetUniformLocation(program, "controllerAim");
 			glTexStorage2D(target, 1, panel_format, panel_width, panel_height);
 			glViewport(0, 0, canvas_width, canvas_height);
@@ -845,7 +883,9 @@ private:
 			float x = 0.0f;
 			float y = 0.0f;
 			state.read_aim(x, y);
-			glUniform2f(aim_uniform, (x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f);
+			const bool phone_visible =
+			    controller_mode == ControllerMode::Phone || controller_mode == ControllerMode::PhoneFallback;
+			glUniform3f(aim_uniform, (x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f, phone_visible ? 1.0f : 0.0f);
 			glUniform3f(controller_aim_uniform, (controller_x + 1.0f) / 2.0f, (controller_y + 1.0f) / 2.0f,
 			            controller_visible ? 1.0f : 0.0f);
 		}
@@ -984,6 +1024,8 @@ private:
 	bool running = false;
 	bool focused = false;
 	XrQuaternionf controller_center{};
+	ControllerMode controller_mode = ControllerMode::Phone;
+	bool controller_buttons_armed = false;
 	bool controller_calibrated = false;
 	bool controller_visible = false;
 	float controller_x = 0.0f;
