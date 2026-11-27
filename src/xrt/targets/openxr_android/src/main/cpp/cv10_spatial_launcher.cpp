@@ -288,9 +288,9 @@ public:
 	}
 
 	void
-	run(jobject activity, jobject application_context, const std::string &runtime_manifest)
+	run(jobject activity, jobject application_context, const std::string &runtime_manifest, bool use_bundled_runtime)
 	{
-		initialize_xr(activity, application_context, runtime_manifest);
+		initialize_xr(activity, application_context, runtime_manifest, use_bundled_runtime);
 		initialize_egl();
 		initialize_session();
 		initialize_drawing();
@@ -305,7 +305,10 @@ public:
 
 private:
 	void
-	initialize_xr(jobject activity, jobject application_context, const std::string &runtime_manifest)
+	initialize_xr(jobject activity,
+	              jobject application_context,
+	              const std::string &runtime_manifest,
+	              bool use_bundled_runtime)
 	{
 		JavaVM *vm = nullptr;
 		if (state.env->GetJavaVM(&vm) != JNI_OK) {
@@ -315,13 +318,13 @@ private:
 		check(xrGetInstanceProcAddr(XR_NULL_HANDLE, "xrInitializeLoaderKHR", &function),
 		      "xrGetInstanceProcAddr(xrInitializeLoaderKHR)");
 		const auto initialize_loader = reinterpret_cast<PFN_xrInitializeLoaderKHR>(function);
-		// Pocket XR may use the system Broker for its own OpenXR clients.
-		const bool pin_cv10_runtime = static_cast<bool>(capture);
-		if (pin_cv10_runtime && runtime_manifest.empty()) {
-			throw std::runtime_error("Cannot prepare the bundled Monado CV10 runtime for Pocket XR");
+		// The CV10 headset needs its compositor's per-eye panel orientation.
+		// Clear any previous override when using the system-selected runtime.
+		if (use_bundled_runtime && runtime_manifest.empty()) {
+			throw std::runtime_error("Cannot prepare the bundled Monado CV10 runtime");
 		}
-		XrLoaderInitPropertyValueEXT runtime_property{"XR_RUNTIME_JSON",
-		                                             pin_cv10_runtime ? runtime_manifest.c_str() : ""};
+		XrLoaderInitPropertyValueEXT runtime_property{
+		    "XR_RUNTIME_JSON", use_bundled_runtime ? runtime_manifest.c_str() : ""};
 		XrLoaderInitInfoPropertiesEXT loader_properties{XR_TYPE_LOADER_INIT_INFO_PROPERTIES_EXT};
 		loader_properties.propertyValueCount = 1;
 		loader_properties.propertyValues = &runtime_property;
@@ -345,7 +348,7 @@ private:
 		instance_info.enabledExtensionCount = 2;
 		instance_info.enabledExtensionNames = extensions;
 		XrResult result = xrCreateInstance(&instance_info, &instance);
-		if (!pin_cv10_runtime && result == XR_ERROR_RUNTIME_UNAVAILABLE && !runtime_manifest.empty()) {
+		if (!use_bundled_runtime && result == XR_ERROR_RUNTIME_UNAVAILABLE && !runtime_manifest.empty()) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR runtime unavailable, trying bundled Monado CV10");
 			runtime_property.value = runtime_manifest.c_str();
 			check(initialize_loader(loader_header), "xrInitializeLoaderKHR(bundled Monado CV10)");
@@ -356,7 +359,7 @@ private:
 		XrInstanceProperties properties{XR_TYPE_INSTANCE_PROPERTIES};
 		check(xrGetInstanceProperties(instance, &properties), "xrGetInstanceProperties");
 		__android_log_print(ANDROID_LOG_INFO, tag, "Using OpenXR runtime %s%s", properties.runtimeName,
-		                    pin_cv10_runtime ? " (bundled CV10 for Pocket XR display)" : "");
+		                    use_bundled_runtime ? " (bundled Monado CV10)" : "");
 
 		XrSystemGetInfo system_info{XR_TYPE_SYSTEM_GET_INFO};
 		system_info.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
@@ -751,8 +754,9 @@ run_launcher(JNIEnv *env,
              jobject application_context,
              jobject java_state,
              jobject java_capture,
-	             jstring java_runtime_manifest,
-	             bool capture_world_anchored)
+             jstring java_runtime_manifest,
+             bool capture_world_anchored,
+             bool use_bundled_runtime)
 {
 	try {
 		// A display configuration change can start a new Activity before the old worker exits.
@@ -770,7 +774,7 @@ run_launcher(JNIEnv *env,
 				runtime_manifest = path;
 				env->ReleaseStringUTFChars(java_runtime_manifest, path);
 			}
-			launcher.run(activity, application_context, runtime_manifest);
+			launcher.run(activity, application_context, runtime_manifest, use_bundled_runtime);
 		}
 		return nullptr;
 	} catch (const std::exception &error) {
@@ -785,9 +789,11 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jobject activity,
                                                                                   jobject application_context,
                                                                                   jobject java_state,
-                                                                                  jstring java_runtime_manifest)
+                                                                                  jstring java_runtime_manifest,
+                                                                                  jboolean use_bundled_runtime)
 {
-	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false);
+	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false,
+	                    use_bundled_runtime == JNI_TRUE);
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -801,5 +807,5 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jboolean world_anchored)
 {
 	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
-	                    world_anchored == JNI_TRUE);
+	                    world_anchored == JNI_TRUE, true);
 }

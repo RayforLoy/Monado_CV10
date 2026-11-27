@@ -111,7 +111,7 @@ public class MonadoView extends SurfaceView
     }
 
     @Nullable
-    static Display findCv10(Context context) {
+    public static Display findCv10(Context context) {
         DisplayManager manager = context.getSystemService(DisplayManager.class);
         for (Display display : manager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
             if (display.isValid()

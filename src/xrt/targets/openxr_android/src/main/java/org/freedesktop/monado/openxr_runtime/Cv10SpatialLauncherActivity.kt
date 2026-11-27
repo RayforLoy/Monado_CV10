@@ -27,6 +27,7 @@ import androidx.annotation.Keep
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import org.freedesktop.monado.auxiliary.MonadoView
 
 /** An offline OpenXR app picker that runs in a separate client process. */
 class Cv10SpatialLauncherActivity : Activity() {
@@ -162,7 +163,8 @@ class Cv10SpatialLauncherActivity : Activity() {
                         try {
                             System.loadLibrary("cv10-spatial-launcher")
                             val manifest = Cv10BundledRuntime.manifestPath(applicationContext, "cv10-spatial-runtime.json")
-                            nativeRun(applicationContext, state, manifest)
+                            val useBundledRuntime = MonadoView.findCv10(applicationContext) != null
+                            nativeRun(applicationContext, state, manifest, useBundledRuntime)
                         } catch (error: LinkageError) {
                             Log.e(TAG, "OpenXR launcher native library unavailable", error)
                             error.message ?: error.toString()
@@ -339,7 +341,12 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 
     @Keep
-    private external fun nativeRun(context: Context, state: SpatialLauncherState, runtimeManifest: String?): String?
+    private external fun nativeRun(
+        context: Context,
+        state: SpatialLauncherState,
+        runtimeManifest: String?,
+        useBundledRuntime: Boolean,
+    ): String?
 
     private data class HitTarget(val bounds: RectF, val action: () -> Unit)
 

@@ -37,7 +37,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - 3D 菜单使用手机姿态控制激光指向。点按屏幕确认，从手机两侧的蓝色标记向内滑动返回。从底部蓝色标记向上滑并停留约 350 毫秒，可将菜单和激光指向一起置中。标记位于 Android 的系统手势区内侧，屏幕外沿仍用于系统返回和 Home。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
 
-内置 3D 菜单优先使用 Broker 选中的运行时。系统 Loader 报告运行时不可用时，菜单会用预览包自带的 Monado CV10 再试一次。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
+连接 CV10 时，内置 3D 菜单使用预览包自带的 Monado CV10，以适配镜片的双目方向。未连接 CV10 时，菜单先使用 Broker 选中的运行时，系统 Loader 报告不可用时再用内置运行时重试。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
 
 Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条路径。先从 2D 列表启动未修改的 Khronos `hello_xr` OpenGLES，返回后从 3D 菜单重进，同一个应用进程两次达到 `FOCUSED`，外屏截图和右镜均有画面。结束样例进程后，3D 菜单也能启动新的样例进程并出图。运行时在 Android 12 或更新版本直接管理 CV10 的 Presentation，覆盖 3D 菜单关闭时眼镜失去画面的故障。[Fold7 验收记录](history/fold7-offline-launcher.md)
 
