@@ -1,0 +1,36 @@
+Galaxy Z Fold7 SM-F9660, original C9.53.6 cable, 5 V, Samsung mirroring.
+2026-11-27 15:21:37 HKT. SHA-256 749ac54c2036876c0fa4aec5777c42596d0630ad0c4a1e37b8d62318cba62127.
+Source member dumpstate-2026-11-27-15-21-37.txt. Line numbers are one-based.
+USB timestamps are UTC. DP rows are estimated in HKT with the previous Samsung driver UTC marker and monotonic elapsed time.
+
+Last matching CV10/hub connection events and HPD/link training in the retained driver history.
+USB-UTC L494040 [11-27 04:48:19] [2228493.762335] port disconnect - VID:0x12d1 PID:0x1092
+USB-UTC L494041 [11-27 04:48:19] [2228493.795472] port disconnect - VID:0x12d1 PID:0x107e
+USB-UTC L494042 [11-27 04:48:19] [2228493.826607] port disconnect - VID:0x2109 PID:0x8888
+USB-UTC L494043 [11-27 04:48:19] [2228493.858953] port disconnect - VID:0x2109 PID:0x2211
+USB-UTC L494048 [11-27 04:48:26] [2228501.136615] port connect - VID:0x2109 PID:0x2211 cnt:93
+USB-UTC L494051 [11-27 04:48:27] [2228502.050080] port connect - VID:0x12d1 PID:0x1092 cnt:71
+USB-UTC L494057 [11-27 04:48:28] [2228502.451920] port connect - VID:0x12d1 PID:0x107e cnt:71
+USB-UTC L494064 [11-27 04:48:28] [2228502.685808] port connect - VID:0x2109 PID:0x8888 cnt:87
+DP 11-27 12:48:19.424 L495921 [2228493.780766] PDIC_NOTIFY_ID_DP_HPD<low><.>
+DP 11-27 12:48:25.901 L495936 [2228500.257740] PDIC_NOTIFY_ID_DP_HPD<low><.>
+DP 11-27 12:48:26.209 L495941 [2228500.565759] PDIC_NOTIFY_ID_DP_HPD<low><.>
+DP 11-27 12:48:26.750 L495946 [2228501.106238] PDIC_NOTIFY_ID_DP_HPD<high><.>
+DP 11-27 12:48:27.021 L495988 [2228501.377546] link training #1 successful
+DP 11-27 12:48:27.044 L495989 [2228501.400979] link training #2 successful
+DP 11-27 12:48:27.680 L496022 [2228502.037183] SET NEW RESOLUTION: 3200x1600@90fps
+
+DP records for 13:20–15:21 HKT, including the continuing HDCP retry counter.
+DP 11-27 13:38:16.866 L496108 [2231491.222556] HDCP_VERSION_2P2: HDCP_STATE_AUTH_FAIL 2000
+DP 11-27 14:03:11.554 L496117 [2232985.910458] HDCP_VERSION_2P2: HDCP_STATE_AUTH_FAIL 3000
+DP 11-27 14:28:04.738 L496190 [2234479.094532] HDCP_VERSION_2P2: HDCP_STATE_AUTH_FAIL 4000
+DP 11-27 14:52:57.250 L496231 [2235971.606491] HDCP_VERSION_2P2: HDCP_STATE_AUTH_FAIL 5000
+DP 11-27 15:17:49.538 L496232 [2237463.894510] HDCP_VERSION_2P2: HDCP_STATE_AUTH_FAIL 6000
+
+Fold7 runtime and external timing at the later repro.
+Android L337619 11-27 15:15:27.138 10848 12705 20602 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+Android L350806 11-27 15:15:40.733 10848 12705 20872 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+Android L439369 11-27 15:21:04.074  1000  2961  3284 I DisplayDeviceRepository: Display device changed render timings: "HUAWEIAV03", renderFrameRate=70.0, presentationDeadlineNanos=9333333, appVsyncOffsetNanos=11904762, frameRateOverrides=[]
+Android L439393 11-27 15:21:04.076  1000  2961  3284 I DisplayDeviceRepository: Display device changed render timings: "HUAWEIAV03", renderFrameRate=90.0, presentationDeadlineNanos=9333333, appVsyncOffsetNanos=5555556, frameRateOverrides=[{uid=1000 frameRateHz=60.000004}]
+
+No new HPD, training, or matching USB stop/start was retained around the 15:15 repro. The retained logs do not independently establish a DP retraining or a complete headset reset for this replug.

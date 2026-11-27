@@ -1,0 +1,33 @@
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
+index 7e15746..f262e27 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10PanelWake.java
+@@ -84,6 +84,14 @@ final class Cv10PanelWake {
+                     String reply = query(port, in, out, "AT^SWITCHSCREEN=1");
+                     if (!hasLine(reply, "OK")) throw new IOException("panel command rejected");
+                     Log.i(TAG, "CV10 PCUI AT^SWITCHSCREEN=1 OK");
++                    for (String name : new String[]{"AT^GETSOURCE?", "AT^TYPECSTATE?", "AT^QUERYEXCEPTION"}) {
++                        try {
++                            String state = query(port, in, out, name).replaceAll("[\r\n]+", " ").trim();
++                            Log.i(TAG, "CV10 diagnostic " + name + " => " + state);
++                        } catch (IOException error) {
++                            Log.i(TAG, "CV10 diagnostic " + error.getMessage());
++                        }
++                    }
+                     return;
+                 } finally {
+                     port.releaseInterface(iface);
+diff --git a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
+index dc2ba3d..a45ef63 100644
+--- a/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
++++ b/src/xrt/targets/openxr_android/src/main/java/org/freedesktop/monado/openxr_runtime/Cv10UsbReader.java
+@@ -81,6 +81,9 @@ public final class Cv10UsbReader {
+                 // CV10's wear sensor gates the backlight independently of the DP signal and IMU.
+                 proximityEnabled = setSensor(5, 4) == 5;
+                 Log.i(TAG, "CV10 proximity enabled=" + proximityEnabled + ", state=" + proximityState());
++                byte[] brightness = new byte[1];
++                int gotBrightness = port.controlTransfer(0xa1, 1, 0x30a, iface.getId(), brightness, 1, 350);
++                Log.i(TAG, "CV10 diagnostic brightness=" + (gotBrightness == 1 ? brightness[0] & 0xff : -1));
+                 frames=0;
+                 deadline=SystemClock.elapsedRealtime()+5000;
+                 Log.i(TAG,"CV10 IMU enabled, interrupt IN 0x84");

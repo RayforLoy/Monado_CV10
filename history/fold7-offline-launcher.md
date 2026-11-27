@@ -208,6 +208,16 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 14:38，保持相同接线和右镜取景，用临时 Android `Presentation` 直接向 CV10 外显绘制 3200×1600 的纯色全屏画面，未运行 OpenXR。每隔约 2.2 秒更换颜色，序列为黑、白、黑、红、绿、黑、白、黑。八次外显截图的左右采样点均与预期颜色一致。右镜连续拍摄 23 秒，两段白色窗口和红、绿窗口都没有可辨认的对应画面，相机中央 RGB 的变化未重复出现在两次白屏时。本轮确认现象也能在 Android 原生外显路径中观察到。固定相机的取景和镜片实际出光仍需分别验证。测试包已卸载，手机回到桌面，原 Broker 和 Shizuku 保持运行。[外显阶段与相机读数](evidence/fold7-right-optical-pulse.log) · [白屏外显与右镜画面对照](evidence/fold7-right-optical-pulse-white.jpg)
 
+### 重接后右镜仍黑
+
+2026-11-27 15:15 至 15:21 香港时间，Fold7 使用 C9.53.6 原厂线、外接 5 V 和三星镜像，用户重接眼镜端。沿用源码 `5b650d6` 的 Preview APK，SHA-256 为 `e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648`。内置 2D 列表打开原版 `hello_xr` 后进入 `FOCUSED`，手机外显截图有左右两个蓝块，返回后完成 `xrDestroyInstance`。单独打开 3D 菜单，菜单也进入 `FOCUSED`。外显截图有双目菜单和激光，固定相机未拍到菜单，用户直接看右镜也看不到菜单。[外显与同轮右镜](evidence/fold7-eye-reseat-optics.jpg)
+
+HWC 对 CV10 使用 3200×1600、90 Hz 全幅输出。在 2.07 秒内读到同一外显图层的 126 个不同呈现时间戳。诊断 APK 与既有预览的五个 ARM64 原生库逐字节相同，通过同证书签名及 16 KiB ZIP 对齐校验，SHA-256 为 `b4988e8a39bd26afb359d9887964e976746591672058b7ccb964d486c4979ec5`。亮度读回 4，佩戴状态为 1，手机来源为 0，Type-C 状态为 2，开屏收到 `OK`。异常查询在两秒内未返回。ADB shell 无法读取即时 DP 错误计数或连接器状态。[只读诊断补丁](fold7-eye-reseat-reads.patch) · [实机筛选日志](evidence/fold7-eye-reseat-optics.log)
+
+15:21 生成的 Fold7 驱动记录保留了 12:48 的 HPD 变化和链路训练，以及持续到约 15:18 的同一组 HDCP 重试。15:15 黑屏复测附近未记录新的 HPD、链路训练或 CV10 USB 枚举，无法从该报告独立确认这次重接完成了链路重训或头显复位。[筛选后的驱动日志](evidence/fold7-eye-reseat-driver.log)
+
+临时为 CV10 请求 3200×1600、70 Hz 后，Android 读回该偏好。采样时活动模式仍为 90 Hz。驱动仅记录显示渲染频率短暂变为 70 Hz，随即回到 90 Hz，本轮未取得稳定 70 Hz 的光学对照。实验结束后恢复原 APK、外显偏好和 90 Hz 活动模式。手机已回桌面，预览 Broker、Shizuku 和无线 ADB 均可用。现象已在用户直接观察右镜时复现，故障范围仍在 Fold7 生成外显画面之后。原厂线视频通路和头显实际出光需用同机直连对照进一步区分。
+
 ### 2D USB 授权后继续启动
 
 2026-11-27 13:28–13:30 香港时间，在同一台 Fold7 上保留 C9.53.6 原厂线、外接 5 V、三星镜像及右镜相机位置。源码提交 `463702b` 在 USB 权限对话框关闭、启动器重新获得焦点后，检查仍连接的 CV10 和它的授权状态。允许后继续启动刚才点选的应用。拒绝或眼镜已断开时留在列表。此流程依赖 Android 在关闭系统对话框前授予 USB 设备访问权。[AOSP USB 授权对话框](https://android.googlesource.com/platform/frameworks/base/%2B/c231302191e6/packages/SystemUI/src/com/android/systemui/usb/UsbPermissionActivity.java)

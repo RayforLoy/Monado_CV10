@@ -1,0 +1,51 @@
+fold7-eye-reseat.log
+11-27 15:15:20.000
+Preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648; sample 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962; Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; Shizuku 15412
+Active mode for display 247:
+  Mode ID: 456, Resolution: 3200x1600, Refresh Rate: 90.00 Hz
+11-27 15:15:27.470 20557 20576 V hello_xr: [15:15:27.470][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11-27 15:15:37.556 20557 20576 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:15:40.945 20824 20848 I Cv10SpatialLauncher: OpenXR session state 5
+
+fold7-eye-reseat-readback.log
+11-27 15:20:11.000
+Diagnostic b4988e8a39bd26afb359d9887964e976746591672058b7ccb964d486c4979ec5
+11-27 15:20:21.470 22375 22877 I MonadoCV10: CV10 proximity enabled=true, state=1
+11-27 15:20:21.470 22375 22877 I MonadoCV10: CV10 diagnostic brightness=4
+11-27 15:20:21.512 22375 22883 I MonadoCV10: CV10 original cable, version field 0C095306
+11-27 15:20:21.513 22375 22883 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11-27 15:20:21.514 22375 22883 I MonadoCV10: CV10 diagnostic AT^GETSOURCE? => ^SOURCE TYPE(0:phone, 1:PC):0 OK
+11-27 15:20:21.515 22375 22883 I MonadoCV10: CV10 diagnostic AT^TYPECSTATE? => ^TYPECSTATE:2 OK
+11-27 15:20:23.518 22375 22883 I MonadoCV10: CV10 diagnostic AT^QUERYEXCEPTION reply timeout
+11-27 15:20:21.842 20557 22869 V hello_xr: [15:20:21.842][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+11-27 15:20:28.557 20557 22869 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Restored Preview e093936289f603c90d2e7e907caaea36d7380403a48a401e543296e5aebb6648; Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; min_refresh_rate null
+
+fold7-eye-reseat-70hz.log
+11-27 15:20:59.000
+Existing external mode: Active mode for display 247:   Mode ID: 456, Resolution: 3200x1600, Refresh Rate: 90.00 Hz
+Temporary preference: User preferred display mode: 3200 1600 70.0
+Actual mode: Active mode for display 247:   Mode ID: 456, Resolution: 3200x1600, Refresh Rate: 90.00 Hz
+11-27 15:21:01.164 20557 23309 V hello_xr: [15:21:01.164][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED
+While focused: Active mode for display 247:   Mode ID: 456, Resolution: 3200x1600, Refresh Rate: 90.00 Hz
+11-27 15:21:05.247 20557 23309 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Restored preference: User preferred display mode: -1 -1 0.0
+Restored active mode: Active mode for display 247:   Mode ID: 456, Resolution: 3200x1600, Refresh Rate: 90.00 Hz
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; displays 0, 247; Shizuku 15412; Wi-Fi 1; min_refresh_rate null
+
+User observation: after glasses-end reconnect, the right lens showed no 3D menu.
+External HWC display 1, physical ID 4621527156978103573, logical display 247.
+126 distinct present timestamps for the external SurfaceView, 60.33/s over 2.07 s. Physical display 3200x1600 at 90.00 Hz.
+Read-only DRM connector counters and Samsung DP error attributes were unavailable to adb shell.
+SDM3 display_id: 1
+device type:1 DrawMethod: 2
+state: 1 vsync on: 0 max. mixer stages: 11
+num configs: 2 active config index: 0
+Display Attributes:
+ Mode:Video Primary:false DynFPS:false
+ FPS min:90 max:90 cur:90 TransferTime: 0us Min TransferTime: 0us Max TransferTime: 0us MaxBrightness:255
+ Display WxH: 3200x1600 MixerWxH: 3200x1600 DPI: 101.6x90.3111 LM_Split: true
+ vsync_period 11111111 v_back_porch: 150 v_front_porch: 29 v_pulse_width: 1
+ v_total: 1780 h_total: 3308 clk: 529940 Topology: 5
+ROI(LTRB)#0 LEFT(0 0 3200 1600)
+|   1 |    GPU_TARGET |    Pipe-1 |  165 | 3200 x 1600 |           RGBA_8888_UBWC |    0    0 3200 1600 |    0    0 3200 1600 |  0 | 0x00000001 |   0 x   0 |  1 |   1 |  1 |
