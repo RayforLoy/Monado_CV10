@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="cv10_spatial_title">CV10 应用</string>
-    <string name="cv10_spatial_phone_controls">转动手机瞄准，轻触确认\n从任一侧标记向内滑动返回\n从底部标记上滑并停留可居中</string>
+    <string name="cv10_spatial_phone_controls">转动手机瞄准，轻触确认\n在中央横滑可翻页\n从任一侧标记向内滑动返回\n从底部标记上滑回首页，上滑后停留一秒可回正</string>
+    <string name="cv10_spatial_cf20_controls">CF20 已连接\n瞄准并按确认键选择\n横滑触控板可翻页\n短按主页键回首页，长按一秒回正</string>
+    <string name="cv10_spatial_cf20_waiting">正在等待 CF20 重连\n轻触这里改用手机</string>
     <string name="cv10_spatial_opening">正在打开 OpenXR 启动器…</string>
     <string name="cv10_spatial_usb_retry">允许通过 USB 访问 CV10 后将打开 3D 启动器。轻点这里可重新请求。</string>
     <string name="cv10_spatial_waiting">正在等待 OpenXR 会话。如出现系统提示，请允许通过 USB 访问 CV10。</string>
