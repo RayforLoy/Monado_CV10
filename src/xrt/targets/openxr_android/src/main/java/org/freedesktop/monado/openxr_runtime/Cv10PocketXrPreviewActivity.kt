@@ -456,9 +456,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS && !cv10Optics,
             wideCanvas = wideCanvas.isChecked && mode == MODE_SPACE,
             opticalEyeSize = opticalEyeSize,
-            onSurface = { surface ->
+            direct = direct,
+            onSurface = { surface, poseSource ->
                 if (transport === nextTransport) {
-                    nextTransport.start(surface) { result ->
+                    nextTransport.start(surface, poseSource) { result ->
                         if (transport === nextTransport) {
                             result.onSuccess { id ->
                                 displayId = id

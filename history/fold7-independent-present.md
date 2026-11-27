@@ -34,7 +34,15 @@
 
 直出保留运行 Android 窗口的工作区显示，省去的是整个双目输出的额外虚拟显示合成。熄屏直出时，有效 Vulkan 实际呈现和 SurfaceFlinger 的时间戳 2504/2504 对齐。被消费的 2367 个唯一帧时间戳都找到了对应的 EGL 提交。模拟转头期间，EGL 提交完成到 CV10 实呈的 p50/p95 为 35.70/36.01 ms。省掉最后一段虚拟显示还保住了源帧时间戳，可用作下一步绑定真实入画姿态的键。
 
-用 ChatGPT 6 极高复核了系统调度与重投影方案。后续可用会话私有的非阻塞文件描述符传递实际入画姿态、单调时钟的 EGL 时间戳和回正代数。合成端只应用时间戳及回正代数精确匹配的记录，并按实际呈现时钟预测目标姿态。先用模拟 yaw、pitch、roll 验证坐标约定，覆盖重复、丢帧和回正，再将最终重投影统一移到 Monado，避免重复补偿。现有直出实现仅提供了已验证的匹配键。
+## 直出帧的姿态记录
+
+按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。
+
+原厂线、手机 ON/60、真实眼镜 IMU、每眼 2240×2240 并开启 GLES FFR。实测两段日志分别配对 380 和 425 个帧，采样窗口内无缺失和时间戳倒退。回正对照覆盖旧序号的 133 帧和新序号的 292 帧，序号单向递增。两段分别观察到 3 和 8 帧上边、下边的姿态不同。右镜固定相机拍到回正后的工作区。两个配对样本统计的是 Monado 接收的源帧，CV10 面板的实际呈现仍以独立的 SurfaceFlinger 数据为准。
+
+通过同一 VPN 链输入可重复的 32° 峰峰值三轴运动，观测到全部 2782 个锁存时间戳精确配对且单调递增。yaw、pitch 和 roll 的实测主轴峰峰值分别为 31.41°、31.40°、31.43°，与模拟输入的相关系数均为 +0.994。测试在 pitch 段观察到 9 帧上边与下边使用不同姿态，yaw 和 roll 的运动采样内两者相同。姿态轴和符号已验证到 Monado 的捕获端，逐行补偿的目标时序和应用重投影后的光学校验待做。测试结束后恢复了使用真实 IMU 的构建。
+
+将最终重投影统一到 Monado 前，仍需用 CV10 实际呈现时钟预测目标姿态，并覆盖重复帧、丢帧、回正以及逐行姿态插值。
 
 ## 可选熄屏 90 Hz
 
@@ -61,3 +69,6 @@
 
 - 熄屏开关最终构建 SHA-256 `96acb95aac01da190cde6297506cd4e66081cafac8ab7a2cb7361855016ffd9a`。
 - Pocket XR 直接输出 APK SHA-256 `e8268306621b6ccd1db85757427e2fffcc413fde79c7a37c584657815b93325b`。
+- `frame-pose-live-matches.log`、`frame-pose-recenter.log` 和 `frame-pose-recenter-right.jpg`，记录逐帧配对、回正序号切换和右镜实拍。
+- `frame-pose-replay-matches.log`、`frame-pose-replay-summary.txt` 和 `analyze-frame-pose-replay.py`，记录三轴合成输入的配对与方向；同目录的 `build-direct-frame-pose-replay.ps1` 和 `check-direct-frame-pose-replay.ps1` 复现采样。
+- 姿态记录 APK SHA-256。Monado 为 `10149c55d75a963c061d17905f11ffcd288518d49a2edcffdf3888c97e153f5c`，Pocket XR 为 `421e7a750935fd4decd990af286cf0ccefcbdf175e2b9b9ba8e837c850aa69ce`。

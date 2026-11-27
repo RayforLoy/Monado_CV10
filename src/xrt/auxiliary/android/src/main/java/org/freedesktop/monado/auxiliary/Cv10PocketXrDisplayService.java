@@ -47,6 +47,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     public static final String DIRECT_SURFACE_CAPABILITY = "org.cv10.pocketxr.direct_surface_v1";
     private static final String DIRECT_SURFACE_EXTRA = "org.cv10.pocketxr.extra.RENDER_SURFACE";
     private static final String DIRECT_EYE_SIZE_EXTRA = "org.cv10.pocketxr.extra.RENDER_EYE_SIZE";
+    private static final String DIRECT_POSE_SOURCE_EXTRA = "org.cv10.pocketxr.extra.FRAME_POSE_SOURCE";
     static final String CV10_DISPLAY_NAME = "Monado CV10 Pocket XR Optics";
     static final String COMPATIBILITY_DISPLAY_NAME = "Monado CV10 Pocket XR";
     public static final ComponentName POCKET_PC_SCREEN = ComponentName.createRelative(
@@ -109,7 +110,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     }
 
     @Override
-    public synchronized int start(Surface surface, IBinder clientLife, int mode, int opticalEyeSize)
+    public synchronized int start(Surface surface, IBinder clientLife, int mode, int opticalEyeSize, IBinder poseSource)
             throws RemoteException {
         verifyCaller();
         if (surface == null) throw new IllegalArgumentException("Missing Pocket XR output Surface");
@@ -161,7 +162,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
             }
-            launchPocketXr(displayId, mode, direct ? surface : null, opticalEyeSize);
+            launchPocketXr(displayId, mode, direct ? surface : null, opticalEyeSize, poseSource);
             started = true;
             Log.i(TAG, "Pocket XR mode " + mode + " start accepted on " + displayId
                     + " (" + width + "x" + height + " @ " + lease.display.getDisplay().getRefreshRate()
@@ -281,7 +282,8 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     }
 
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
-    private void launchPocketXr(int displayId, int mode, Surface directSurface, int opticalEyeSize)
+    private void launchPocketXr(int displayId, int mode, Surface directSurface, int opticalEyeSize,
+            IBinder poseSource)
             throws ReflectiveOperationException {
         ComponentName target;
         switch (mode) {
@@ -304,6 +306,11 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
             intent.putExtra(DIRECT_SURFACE_EXTRA, directSurface);
             intent.putExtra(DIRECT_EYE_SIZE_EXTRA, opticalEyeSize);
+            if (poseSource != null) {
+                Bundle session = new Bundle();
+                session.putBinder(DIRECT_POSE_SOURCE_EXTRA, poseSource);
+                intent.putExtras(session);
+            }
             launchOptions.setShareIdentityEnabled(true);
         }
         Bundle options = launchOptions.toBundle();

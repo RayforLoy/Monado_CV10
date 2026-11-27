@@ -37,7 +37,7 @@ internal class Cv10PocketXrTransport(
             .tag("cv10_pocket_xr_display")
             .processNameSuffix("cv10_pocket_xr_display")
             .daemon(false)
-            .version(10)
+            .version(11)
     private var connection: ServiceConnection? = null
     private var remote: ICv10PocketXrDisplay? = null
     private var startupResult: ((Result<Int>) -> Unit)? = null
@@ -47,7 +47,7 @@ internal class Cv10PocketXrTransport(
     private val startTimeout = Runnable { fail(IllegalStateException("Pocket XR display startup timed out")) }
 
     /** Reports Android's acceptance of the fixed Activity launch, before the first frame. */
-    fun start(surface: Surface, onResult: (Result<Int>) -> Unit) {
+    fun start(surface: Surface, poseSource: IBinder?, onResult: (Result<Int>) -> Unit) {
         check(Looper.myLooper() == Looper.getMainLooper())
         check(!closing && startupResult == null && connection == null) { "Pocket XR transport is single-use" }
         startupResult = onResult
@@ -78,7 +78,7 @@ internal class Cv10PocketXrTransport(
                         remote = service
                         worker.execute {
                             val result = try {
-                                Result.success(service.start(surface, clientLife, mode, opticalEyeSize))
+                                Result.success(service.start(surface, clientLife, mode, opticalEyeSize, poseSource))
                             } catch (e: Exception) {
                                 Result.failure(e)
                             }
