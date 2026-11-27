@@ -43,3 +43,11 @@
 - 标准包再次打开 3D 菜单。从屏幕最下沿上滑，第一次显示系统导航条，第二次回到三星桌面。这两次滑动没有产生置中事件。结束后 Broker 恢复稳定版 Monado CV10，最低刷新率为 `null`。
 
 [手机手势标记截图](evidence/fold7-laser-gesture-guides.png) · [选中样例右镜实拍](evidence/fold7-laser-gesture-hello-right.jpg) · [置中、样例退出与系统 Home 日志](evidence/fold7-laser-gesture-boundaries.log)
+
+## 竖屏控制和菜单外激光
+
+2026-11-27 09:59–10:09（香港时间），Fold7 用 C9.53.6 原厂线、外接 5 V 和三星镜像模式输出到 CV10，活动时序为 3200×1600、90 Hz。3D 启动器的手机窗口为 1080×2520 竖屏。Broker 选中 Pocket XR 时，内置菜单仍通过预览包附带的 Monado CV10 进行双目显示。用户确认两眼方向正确。手机转动时光点移出菜单仍可见，菜单外轻点没有触发操作。外显截图显示光束伸到菜单下方。[双目外显截图](evidence/fold7-laser-beyond-menu-stereo.png)
+
+三星后台管理先拒绝了样例绑定运行时。将 Preview 的后台运行设为 **不受限制** 后，绑定成功，但 3D 菜单退出时三星仍冻结该包，约 11 秒后才恢复。修正版在交接时沿用 OpenXR 客户端的服务连接。原版 `hello_xr` 从同一个 3D 菜单冷启动和正常退出后重进，两次从 Activity 启动到 `FOCUSED` 分别为 193 ms 和 133 ms，重进保留相同进程。两次均读到双目蓝块。[实机日志](evidence/fold7-launcher-portrait-handoff.txt) · [首次进入双目画面](evidence/fold7-launcher-handoff-1-stereo.png) · [重进双目画面](evidence/fold7-launcher-handoff-2-stereo.png)
+
+整合 ARM64 预览包 `995855e` 的 SHA-256 为 `75ce54d1b94f896d69911b50e588edda10a416589cdc7db5208de7b01a990f06`。Fold7 读回的 APK 摘要一致。同次独立构建 `05fedb2` 的 ARM64 APK 摘要为 `b042749158ea665a03b972b9ea2558597bde9034201e31b176920b92aeb8a6fa`。两包通过签名及 16 KiB ZIP 和 ELF 对齐校验。

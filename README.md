@@ -41,13 +41,13 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的 3200×1600、90 Hz 模式验证了两条路径。先从 2D 列表启动未修改的 Khronos `hello_xr` OpenGLES，返回后从 3D 菜单重进，同一个应用进程两次达到 `FOCUSED`，外屏截图和右镜均有画面。结束样例进程后，3D 菜单也能启动新的样例进程并出图。运行时在 Android 12 或更新版本直接管理 CV10 的 Presentation，覆盖 3D 菜单关闭时眼镜失去画面的故障。[Fold7 验收记录](history/fold7-offline-launcher.md)
 
-Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正、左右指向和上滑停留置中。两路外显截图与右镜实拍一致，手持转动复测待做。[激光笔方向对照](history/fold7-phone-laser-axis.md)
+Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正、左右指向和上滑停留置中。早期两路外显截图与右镜实拍一致。后续在 Fold7 竖屏控制页手持转动手机，确认光点离开菜单后仍可见，菜单外点按不触发操作。[激光笔方向与越界复测](history/fold7-phone-laser-axis.md)
 
 使用无 `INTERNET` 权限且未获得 Shizuku 授权的诊断包，从 2D 直启和 3D 点选原版 `hello_xr` 均已实测在 CV10 出图和正常退出。整合源码也通过同一测试。诊断使用默认后台策略，保留系统 Wi-Fi 用于无线 ADB。关闭系统 Wi-Fi 的实机复测待做。[应用网络隔离复测](history/fold7-offline-launcher.md#整合预览的应用网络隔离)
 
 整合预览提供离线启动器和 Pocket XR 外显入口。`a3d86e5` 的 ARM64 包在 Fold7 复测了 2D 直启、3D 点选、右镜出图和正常退出。早期整合构建在 16 KiB 的 Android 16 模拟器验证了安装、原生运行时加载和 Vulkan 初始化失败后的重试与返回。[整合 APK 校验与复测记录](history/fold7-offline-launcher.md#启动器与-pocket-xr-整合预览)
 
-如果 2D 列表显示 **后台运行受限**，点击提示可进入 Monado CV10 的 Android 应用详情，在 **电池** 页面核对后台使用设置。Fold7 在受限时曾冻结运行时，出现黑屏、画面停止更新或退出无响应。临时使用默认后台策略复测时，3D 点选持续出帧并正常退出。启动器会读取 Android 报告的状态，电池设置由用户决定。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
+如果 2D 列表提示 **后台运行受限**，在 **应用程序信息 → 电池 → 后台运行** 中可为 Monado CV10 Preview 选择 **不受限制**。三星的后台限制可能拒绝第三方 XR 应用绑定运行时。3D 启动器在切换应用时短暂保留 Monado 运行时连接，避免系统在两个 XR 会话之间冻结进程。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
 
 ## Pocket XR 外屏兼容性
 

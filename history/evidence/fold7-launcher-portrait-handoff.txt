@@ -1,0 +1,37 @@
+Fold7 SM-F9660, C9.53.6 original cable, external 5 V, Samsung mirroring, CV10 3200x1600@90.
+09:59: Preview main window and bundled CV10 output with Pocket XR selected in the Broker
+Row: 0 package_name=com.hayeco.flipspaces
+  mCurrentFocus=Window{eb522f3 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10SpatialLauncherActivity}
+    mCurrentAppOrientation=SCREEN_ORIENTATION_PORTRAIT
+        source=ActivityRecord{194505717 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10SpatialLauncherActivity t33967} SCREEN_ORIENTATION_PORTRAIT
+11-27 09:59:47.950 11924 11948 I Cv10SpatialLauncher: Using OpenXR runtime Monado(XRT) by Collabora et al '4fe230f-cv10-16kb' (bundled Monado CV10)
+11-27 09:59:48.000 11924 11948 I Cv10SpatialLauncher: OpenXR session state 5
+10:00–10:06: original hello_xr failure and Samsung policy controls
+11-27 10:00:03.260  2651  2692 E hello_xr: [10:00:03.260][Error  ] XrResult failure [XR_ERROR_INSTANCE_LOST]
+11-27 10:03:25.155  2961  4528 D MARsPolicyManager: isRestricted by MARs! target : org.cv10.monado.out_of_process.launcher_preview/0, caller : org.khronos.openxr.hello_xr.opengles/0, type : bindService
+11-27 10:03:25.155  2961  4528 W ActivityManager: isRestricted by MARs! target : org.cv10.monado.out_of_process.launcher_preview, type : bindService
+11-27 10:03:25.156 14215 14244 E hello_xr: [10:03:25.156][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 10:06:01.288 15778 15801 I monado-ipc-client: Socket fd 121
+11-27 10:06:01.345  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [8508, 11924] reason: Bg-buff
+11-27 10:06:11.974  2961  3284 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [8508, 11924] reason: ActivityDestroyTimeout
+11-27 10:06:11.991  8508 15699 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+10:09: final APK, with the same phone application policy
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+RUN_ANY_IN_BACKGROUND: allow
+attempt=1 pid=18046
+attempt=2 pid=18046
+11-27 10:09:42.522 17897 17914 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 10:09:43.617 17897 17914 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 10:09:43.799  2961  4676 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=64341190) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:09:43.992 18046 18071 V hello_xr: [10:09:43.992][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2521729769687
+11-27 10:09:48.602 17897 18209 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 10:09:49.552 17897 18209 D Cv10SpatialLauncher: Recentered 3D launcher (1)
+11-27 10:09:49.738  2961  4527 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[org.khronos.openxr.intent.category.IMMERSIVE_HMD] flg=0x10200000 xflg=0x4 cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity} with LAUNCH_SINGLE_TASK from uid 10848 (org.cv10.monado.out_of_process.launcher_preview) (sr=16049180) (BAL_ALLOW_VISIBLE_WINDOW) result code=0
+11-27 10:09:49.871 18046 18283 V hello_xr: [10:09:49.871][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2521505679166
+11-27 10:09:43.777 17897 17914 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 10:09:45.120 18046 18071 V hello_xr: [10:09:45.120][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_SYNCHRONIZED->XR_SESSION_STATE_STOPPING session=-5476376638598498384 time=2522857242030
+11-27 10:09:45.120 18046 18071 V hello_xr: [10:09:45.120][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2522857466509
+fold7-launcher-handoff-1-stereo.png eye 1: 16256 blue pixels
+fold7-launcher-handoff-1-stereo.png eye 2: 16256 blue pixels
+fold7-launcher-handoff-2-stereo.png eye 1: 16256 blue pixels
+fold7-launcher-handoff-2-stereo.png eye 2: 16256 blue pixels
