@@ -4,6 +4,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 安装
 
+**v0.1.4-rc.2** 在手机和 Broker 中显示为 **Monado CV10**，预发布 APK 沿用 rc.1 的 `org.cv10.monado.out_of_process.launcher_preview` 包名和签名，可覆盖 rc.1，或与 v0.1.3 稳定版共存。它包含原厂手机与 CF20 控制、Pocket XR 光学视场与可选超分辨率，以及外屏识别和帧周期更新。本次预发布待实机验收。[v0.1.4-rc.2 APK 与 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.2)
+
 **整合预发布 v0.1.4-rc.1** 把 OpenXR 运行时、离线 2D/3D 启动器、Pocket XR 外显、CF20 手柄和实验性 6DoF 套件放进同一个 ARM 安装包。它在手机和 Broker 中显示为 **Monado CV10 Preview**，包名为 `org.cv10.monado.out_of_process.launcher_preview`。此包可与稳定版并存，覆盖旧预览版时须匹配签名。[整合预发布和 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.1) · [Fold7 整合包实测](history/fold7-unified-runtime.md)
 
 当前源码统一显示为 **Monado CV10**。从源码默认构建使用 `org.cv10.monado.out_of_process`，指定 `-Pcv10LauncherPreview=true` 可继续覆盖同签名的旁路预览包。当前源码包含华为原厂投影与 RGB 畸变、Pocket XR 光学视场、CF20 交互和可选超分辨率。下载链接所指的 v0.1.4-rc.1 保留其发布时的 Preview 名称和功能。[原厂光学与 Fold7 验证](history/fold7-oem-optics.md)

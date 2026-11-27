@@ -4,7 +4,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$version = '0.1.4-rc.1'
+$version = '0.1.4-rc.2'
 $builds = if ($UnifiedPreview) {
     @{ Name = "Monado-CV10-$version.apk"; Arguments = @('-Pcv10LauncherPreview=true') }
 } else {
