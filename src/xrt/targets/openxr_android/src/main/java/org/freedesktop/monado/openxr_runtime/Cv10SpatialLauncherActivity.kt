@@ -243,13 +243,13 @@ class Cv10SpatialLauncherActivity : Activity() {
 
     private fun holdRuntimeDuringLaunch() {
         val context = applicationContext
-        val service = Intent().setClassName(packageName, "org.freedesktop.monado.ipc.MonadoService")
+        val service = Intent(MONADO_CONNECT_ACTION).setPackage(packageName)
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName, binder: IBinder) = Unit
 
             override fun onServiceDisconnected(name: ComponentName) = Unit
         }
-        // Keep the runtime foreground service bound across the gap between the two XR clients.
+        // Use the same binding as the XR clients so the refresh lease stays active on handoff.
         if (context.bindService(service, connection, Context.BIND_AUTO_CREATE)) {
             Handler(Looper.getMainLooper()).postDelayed(
                 { context.unbindService(connection) },
@@ -379,6 +379,7 @@ class Cv10SpatialLauncherActivity : Activity() {
         private const val PANEL_HEIGHT = 720
         private const val PAGE_SIZE = 6
         private const val STARTUP_NOTICE_MILLIS = 15_000L
+        private const val MONADO_CONNECT_ACTION = "org.freedesktop.monado.ipc.CONNECT"
         private const val XR_APP_HANDOFF_MILLIS = 3_000L
         private val BACKGROUND = Color.rgb(18, 24, 36)
         private val PHONE_BACKGROUND = Color.rgb(14, 19, 28)
