@@ -1,0 +1,44 @@
+11-27 15:47:27.000
+Initial Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247
+11-27 15:47:44.231  5742  5742 I Cv10PocketXrPreview: First virtual display frame available on display 379
+Confirmed the target row: 正在显示 Hello XR (OpenGL ES)（显示屏 382）
+Closed the exact Hello XR (OpenGL ES) panel; remaining displays 0, 247, 379, 380, 381; previously 0, 247, 379, 380, 381, 382
+Other panel still listed: 计算器
+Other panel still listed: 正在显示 计算器（显示屏 380）
+Other panel still listed: 时钟
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247
+
+Earlier preview ANR and recovery
+11-27 15:50:02.723  2961 25970 E ActivityManager: ANR in org.cv10.monado.out_of_process.launcher_preview (org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity)
+11-27 15:50:02.723  2961 25970 E ActivityManager: Reason: Input dispatching timed out (f47dfcc org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity is not responding. Waited 9998ms for MotionEvent).
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Recovery complete:       topResumedActivity=ActivityRecord{25944368 u0 com.sec.android.app.launcher/.activities.LauncherActivity t28330}
+
+Reopen stock Pocket XR and launch the original Vulkan APK
+11-27 15:51:13.000
+Initial displays: 0, 247; charge: 79%
+Installed official Vulkan sample SHA-256 80eaa7105fdefda2936fc74622ac91fec7cf60a9940090b6bb58d92e0a73c2ab
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 15:51:33.020 27124 27124 I Cv10PocketXrPreview: First virtual display frame available on display 386
+Stock Pocket XR reopened with displays 0, 247, 386, 387, 388; no OpenGL ES restore request. Old sample PID before: 21549; after: 21549
+11-27 15:51:42.712 27124 27124 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 389
+11-27 15:51:43.374 27919 27960 V hello_xr: [15:51:43.374][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2819453447965
+Round 1 sample PID 27919, displays 0, 247, 386, 387, 388, 389
+CV10 screenshot SHA-256 0c8884790375102ecc329b89d13c2f4cb059964266db9ac70757f6865ff95ed6
+Round 1 released the Vulkan client display 389 and kept Pocket XR display 386
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Removed temporary Vulkan sample: Success
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+11-27 15:51:50.700 27919 27960 V hello_xr: [15:51:50.700][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598440064 time=2826780112598
+11-27 15:51:50.953 27919 27960 V hello_xr: [15:51:50.953][Info   ]     APP_CMD_DESTROY
+11-27 15:51:51.154  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.vulkan(10871) [27919] reason: Bg-buff
+11-27 15:52:00.649  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.vulkan(10871) [27919] reason: ActivityDestroyTimeout
+No completed xrDestroyInstance observed in the 45-second close window.
+
+Direct 2D OpenGL ES launch with the preview Broker
+11-27 15:53:11.000
+OpenGL ES sample PID before 2D launch:
+11-27 15:53:18.082 30476 30500 V hello_xr: [15:53:18.082][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520379962031
+OpenGL ES sample PID after 2D launch: 30476
+11-27 15:53:21.002 30476 30500 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247

@@ -98,7 +98,9 @@ Fold7 上通过已有 ADB 权限调用同一显示服务，验证了受信任虚
 
 临时在 Broker 选用原版 **Pocket XR** 做诊断时，原版运行时接管 `hello_xr`，内置 Monado CV10 同时将游戏图层送到 CV10。将样例放到独立虚拟屏后，四轮在手机主屏打开 Pocket XR 触控板并连续出帧约九秒，CV10 右镜拍到蓝色方块。三星 Freecess 仍可能冻结原版进程。一次冻结后，在 Monado 点按 **打开手机控制**，三星解冻原版进程，同一游戏图层恢复出帧。样例在退出时仍可能于原版运行时卸载后崩溃。长时间运行和正常退出仍待验证。[双运行时实测](history/fold7-pocket-dual-runtime.md)
 
-Pocket XR 的原版空间菜单按普通应用面板启动和恢复应用。声明沉浸式入口的应用可使用 **在 Pocket XR 中打开 OpenXR 应用**，由原版运行时在独立应用屏输出。需要先在手机界面完成连接或设置的 XR 应用，可切回 Monado CV10 Broker 后从内置启动器打开。普通 Android 应用仍可从原版空间菜单点选。Monado CV10 直出运行时会拒绝来自 Pocket XR 普通面板的 OpenXR 连接，以免恢复的应用夺走空间的输出。若恢复旧面板后样例卡在启动画面，先用 **停止预览** 结束这次空间会话，再重新打开空间和独立 OpenXR 入口。从仍活动的空间强制停止样例并立即重开，Fold7 上也发生过进程冻结。[同机入口对照](history/fold7-pocket-xr-display.md#原版空间菜单中的-openxr-应用) · [恢复旧面板与重进复测](history/fold7-pocket-dual-runtime.md#同进程重进与单次解冻对照)
+Pocket XR 的原版空间菜单按普通应用面板启动和恢复应用。声明沉浸式入口的应用可使用 **在 Pocket XR 中打开 OpenXR 应用**，由原版运行时在独立应用屏输出。需要先在手机界面完成连接或设置的 XR 应用，可切回 Monado CV10 Broker 后从内置启动器打开。普通 Android 应用仍可从原版空间菜单点选。Monado CV10 直出运行时会拒绝来自 Pocket XR 普通面板的 OpenXR 连接，以免恢复的应用夺走空间的输出。[同机入口对照](history/fold7-pocket-xr-display.md#原版空间菜单中的-openxr-应用)
+
+如果 Pocket XR 每次进空间都恢复一个旧的 OpenXR 普通面板，可在空间仍开启时到手机上的 **Pocket XR → 空间窗口**，找到该应用，按它右侧的 **关闭**。这样可移除保存的面板并保留同一空间的其他应用。之后用 Monado 的 **在 Pocket XR 中打开 OpenXR 应用** 启动该应用。[Fold7 旧面板移除记录](history/fold7-pocket-dual-runtime.md#移除恢复的-openxr-普通面板)
 
 退出空间后，若从内置列表点选的应用仍停在黑屏，可按 Home 回手机桌面。在 Monado 2D 列表长按该应用，打开系统应用详情，选择 **强制停止** 并确认。返回列表后再点按同一应用。[Fold7 恢复路径](history/fold7-pocket-dual-runtime.md#从-pocket-xr-普通面板切回-monado)
 

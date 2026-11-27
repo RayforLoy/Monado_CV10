@@ -179,6 +179,14 @@ ARM64 预览 APK SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1
 
 第一次关闭应用屏即完成实例销毁。第二次退出时，原版空间恢复的旧 **Hello XR (OpenGL ES)** 普通面板因焦点事件超时弹出无响应提示。只结束旧 OpenGL ES 样例后，Vulkan 应用屏正常释放、实例完成销毁，Pocket XR 空间继续运行。最后停止预览，卸载临时安装的 Vulkan 样例，恢复 **Monado CV10 Preview** Broker、原有显示和手机桌面。原有 Shizuku 授权保留。[关闭与恢复日志](evidence/fold7-pocket-vulkan-app.log)
 
+### 移除恢复的 OpenXR 普通面板
+
+2026-11-27 15:47 至 15:53 香港时间。沿用 `6d2fb4c` 预览、原版 Pocket XR 1.6.28、Fold7 及 C9.53.6 原厂线。在原版空间运行时，进入手机 **Pocket XR → 空间窗口**，找到 **Hello XR (OpenGL ES)** 并按该行的 **关闭**。系统仅释放样例的面板屏 382，保留空间 379、计算器 380 和时钟 381。停止预览后保留原版布局，再开空间时仅恢复计算器和时钟，系统未再次请求启动 OpenGL ES 样例。此前的样例 PID 21549 可短暂留在 Android 缓存中。
+
+重开后的 **Hello XR (Vulkan)** 在独立屏 389 进入 `FOCUSED`。关闭应用屏后，Vulkan 会话到达 `IDLE`，屏 389 释放，原版空间保留。三星 Freecess 随后冻结样例，约十秒后因 `ActivityDestroyTimeout` 解冻。该轮观测 45 秒，未记录实例销毁完成。较早一次重开也遇到 Monado 预览的 About 页面触摸超时，结束预览进程后才成功重开。旧普通面板恢复和这两个退出、重开现象有各自的日志。[面板关闭、重开及进程日志](evidence/fold7-pocket-remove-stale-test-panel.log)
+
+恢复 **Monado CV10 Preview** Broker 后，从 Monado 2D 列表选 **Hello XR (OpenGL ES)**。样例在新 PID 30476 进入 `FOCUSED`，按返回后完成 `xrDestroyInstance`。测试结束后回到桌面，只保留已有的两个显示以及原有 Shizuku 授权。[2D 入口回归日志](evidence/fold7-pocket-remove-stale-test-panel.log)
+
 ### 右镜输出对照
 
 11:55 至 12:00 用同一接线复测黑屏。预览版的 Pocket XR、内置 2D 直开和 3D 菜单，以及稳定版 Monado CV10 v0.1.2 均让样例进入 `FOCUSED`。Fold7 采集到的 CV10 外显帧有左右两个蓝方块。固定相机在这四次复测中均未从右镜捕捉到测试画面，与 11:40 至 11:43 的明亮实拍结果不同。重置外显电源状态及从 Android 禁用后重新启用外显，均未恢复右镜实拍。接线和相机位置未做物理调整，原因待确认。[Pocket XR 外显帧](evidence/fold7-pocket-client-close-display-stereo.png) · [3D 菜单启动后的外显帧](evidence/fold7-pocket-menu-optical-control-stereo.png) · [稳定版外显帧](evidence/fold7-pocket-stable-optical-control-stereo.png) · [稳定版右镜实拍](evidence/fold7-pocket-stable-optical-control-right.jpg)
