@@ -6,7 +6,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 **整合预发布 v0.1.4-rc.1** 把 OpenXR 运行时、离线 2D/3D 启动器、Pocket XR 外显、CF20 手柄和实验性 6DoF 套件放进同一个 ARM 安装包。它在手机和 Broker 中显示为 **Monado CV10 Preview**，包名为 `org.cv10.monado.out_of_process.launcher_preview`。此包可与稳定版并存，覆盖旧预览版时须匹配签名。[整合预发布和 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.1) · [Fold7 整合包实测](history/fold7-unified-runtime.md)
 
-当前源码已合入 CV10 的华为原厂投影与 RGB 畸变，并提供 Pocket XR 宽视场选项。这两项更新需要从当前源码构建预览包。[原厂光学与 Fold7 验证](history/fold7-oem-optics.md)
+当前源码统一显示为 **Monado CV10**。从源码默认构建使用 `org.cv10.monado.out_of_process`，指定 `-Pcv10LauncherPreview=true` 可继续覆盖同签名的旁路预览包。当前源码包含华为原厂投影与 RGB 畸变、Pocket XR 光学视场、CF20 交互和可选超分辨率。下载链接所指的 v0.1.4-rc.1 保留其发布时的 Preview 名称和功能。[原厂光学与 Fold7 验证](history/fold7-oem-optics.md)
 
 从 [Releases](https://github.com/RayforLoy/Monado_CV10/releases) 下载与系统 ABI 匹配的 APK。用 `adb shell getprop ro.product.cpu.abilist` 查看支持的 ABI，用 `adb install -r <APK>` 安装。Android 11 为 API 30，项目最低为 API 26。覆盖更新需要相同签名。实际 VR 功能还取决于 USB 主机、外接显示器、Broker 和 Vulkan 驱动。历史 Fold7 镜片、3DoF 和刷新率复测见 [验收记录](history/README.md)。
 
@@ -34,13 +34,14 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 离线应用启动器
 
-此功能已在预览构建中验证。在 **Monado CV10 Preview → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。启动器读取本机安装列表，无需账户或 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。在 Broker 中点按 **Monado CV10 Preview** 的名称并确认右侧已勾选，保持三星外接显示为 **已镜像**。
+在 **Monado CV10 → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。启动器读取本机安装列表，无需账户或 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。在 Broker 选中当前安装的运行时，保持三星外接显示为 **已镜像**。使用已发布的 v0.1.4-rc.1 时，相应的应用和 Broker 条目显示为 **Monado CV10 Preview**。
 
 从 Pocket XR 外显模式切回内置启动器时，如果 Broker 仍选中 **Pocket XR** 或 **Pocket XR (Monado CV10)**，点选 OpenXR 应用会提示切回 Monado。可以从提示直接打开 Broker，选好后返回启动器。普通 Android 应用仍可直接打开。
 
 - 首次使用或重新插入眼镜后，可从 Monado 菜单选择 **CV10 USB access**，预先允许访问 **HUAWEI GLASS HID**。3D 启动器也会在开启会话前请求权限，允许后会自动打开菜单。若从 2D 列表点选 XR 应用触发了权限提示，允许后会继续启动所选应用。拒绝后会停留在列表，可再次点选重试。
 - 应用列表优先使用应用声明的 OpenXR 沉浸式入口。仅有普通启动入口、但在清单请求 OpenXR 权限的应用也出现在 **仅显示 XR 应用** 中，例如需要先选择串流主机的 Moonlight XR。应用仍会在手机上打开自己的设置界面。若应用两个标记都未声明，可取消 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。[Fold7 从应用启动器打开 Moonlight XR](history/fold7-offline-launcher.md#从应用启动器打开-moonlight-xr)
-- 3D 菜单使用手机姿态控制激光指向。激光可以越过菜单边框，指向菜单按钮时点按屏幕确认，从手机两侧的蓝色标记向内滑动返回。从底部蓝色标记向上滑并停留约 350 毫秒，可将菜单和激光指向一起置中。标记位于 Android 的系统手势区内侧，屏幕外沿仍用于系统返回和 Home。手机激光笔在启动器窗口内工作，打开目标应用后按该应用的交互方式操作。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
+- **手机控制时**，转动手机瞄准，轻点确认，中央区域横滑翻页。从两侧标记向内滑动返回，从底部标记向上滑后松手回菜单首页，保持约一秒会将菜单和光标一起回正。标记位于 Android 系统手势区内侧，屏幕最外沿由系统处理。折叠屏上使用前台启动器触摸区，电源键沿用 Android 行为。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
+- **CF20 控制时**，已选用的 CF20 连上后自动接管指针，按确认键选择，返回键关闭 3D 菜单，横滑手柄触控板翻页。短按手柄主页键回菜单首页，长按约一秒使菜单和指针回正。断开后等待原手柄重连，也可轻触手机上的提示恢复手机控制。手机手势和上述按键只作用于 Monado 的启动器，第三方应用按自己的 OpenXR 绑定处理。新增手势和输入切换待实机验收。[原厂手机与 CF20 的切换](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/oem-controller-switching.md)
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
 
 连接 CV10 时，内置 3D 菜单使用预览包自带的 Monado CV10，以适配镜片的双目方向。未连接 CV10 时，菜单先使用 Broker 选中的运行时，系统 Loader 报告不可用时再用内置运行时重试。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
@@ -94,7 +95,7 @@ Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenX
 - **电脑屏幕 3D（左右并排）** 使用原版 Pocket XR 的独立电脑屏幕。结束正在运行的空间预览，再选 **在手机上设置电脑屏幕** 配对 Sunshine 或 Apollo。配对后返回 Monado，选择 **电脑屏幕 3D（左右并排）**。原版在虚拟屏上自动连接已配对的主机。电脑播放铺满 16:9 桌面的左右并排内容时，左半送入左眼，右半送入右眼。当前实测主机为 Sunshine，接收 1920×1080 的 Half SBS 视频。这一路径使用独立的头锁定平面。[正式入口实测](history/fold7-pocket-pc-sbs.md#fold7-正式入口配对后自动开流) · [USB-C 直连双眼佩戴验收](history/fold7-pocket-pc-sbs.md#fold7-usb-c-直连双眼佩戴验收)
 - **使用 CV10 头部追踪固定 Pocket XR 画面** 让 Monado 将原版空间的双目画面固定在最初朝向，转头时画面留在原位。选择 **将画面移到当前朝向** 可重新置中。固定模式无需 VPN 授权，请在 Pocket XR 中关闭自身的头部追踪，以免画面被两次校正。[Fold7 原版测试卡实拍](history/fold7-pocket-world-anchor.md)
 - **宽视场** 用于原版 Pocket XR 空间。先在 Pocket XR 手机触控板的 **菜单 → 设置 → 空间窗口 → 空间设置** 把 **在其 3D 模式下** 的屏幕大小调到 **130%**，再在 Monado 的 **Pocket XR 外显预览** 勾选 **宽视场** 后打开空间。Fold7 上原版每眼视场从约 44.2° × 25.8° 扩大到 55.7° × 33.1°，Monado 同步扩大双目画布，可与 CV10 画面固定一起使用。超出扩大后的原版视场的内容仍需移动窗口或用触控板转动空间。
-- **打开 Pocket XR（CV10 光学视场）** 需要另装基于 Pocket XR v1.6.28 构建的 **Pocket XR CV10**（`org.cv10.pocketxr`）。使用配套源码分支，以 `-Ppocketxr.cv10=true :app:assembleRelease` 构建。为适配版单独授权 Shizuku，并在 Monado 启用本机 VPN 头部追踪。该入口接收 3200×1600 的双目画面，每眼 1600×1600，使用与 CV10 原厂投影一致的 95° × 95° 视锥提交 OpenXR 投影层。Pocket XR 用头部姿态逐帧绘制空间窗口，Monado 在 VIEW 参考空间内合成每眼画面并应用镜片畸变校正。原版入口仍可用于 3840×1080 兼容模式和电脑 3D 投屏。
+- **打开 Pocket XR（CV10 光学视场）** 需要另装基于 Pocket XR v1.6.28 构建的 **Pocket XR CV10**（`org.cv10.pocketxr`）。为适配版单独授权 Shizuku，并在 Monado 启用本机 VPN 头部追踪。该入口以 95° × 95° 的 CV10 每眼视锥提交 OpenXR 投影层，默认接收 3200×1600 的双目画面。超分辨率选项会改变光学模式虚拟屏的尺寸，由适配版 Pocket XR 在源端重绘。原版入口仍可用于 3840×1080 兼容模式和电脑 3D 投屏。[Pocket XR CV10 构建与补丁](https://github.com/RayforLoy/HUAWEI_CV10_EVO/tree/codex/cv10-phase1/ports/pocket-xr)
 - **通过 Android 本机 VPN 接入头部追踪（实验）** 可在打开空间前选用。勾选后由 Android 询问 VPN 授权。打开空间时，预览只为当前选中的 Pocket XR 包宣告本机 `169.254.2.1/32`，将 CV10 的 HID 样本和控制心跳送到该地址的两个 TCP 端口。选择 **停止预览** 会释放连接和 VPN 接口。[姿态与重连验证](history/fold7-pocket-xr-imu.md#android-16-原版-pocket-xr-接入)
 - 返回预览页选择 **停止预览**，会释放本次虚拟显示和 OpenXR 会话。手机通知也可提供停止入口。
 
@@ -121,6 +122,19 @@ Fold7 的 CV10 IMU 通过 ADB 回环将实时样本送到隔离的 Android 16 �
 CV10 驱动使用 P40 Pro+ 原厂运行时实测的双眼投影参数。每眼水平和垂直投影视场均为 95°。左右眼的 RGB 径向畸变分别应用，并保留实测的逐眼光心偏移。用 P40 Pro+ 上原厂运行时提交给 GPU 的 2,178 个网格顶点核对，Monado 的归一化 UV 单轴最大误差约为 0.0000092。95° 是运行时投影参数，镜片实际可见范围仍需单独测量。[采集、对照和 Fold7 验证](history/fold7-oem-optics.md)
 
 在 **更多选项 → CV10 软件瞳距** 可将 OpenXR 的左右眼位间距设为 55–71 毫米，默认 63 毫米。Fold7 上在同一个 OpenXR 会话内调节并恢复默认后，`xrLocateViews` 实测为 63.000 → 68.000 → 63.000 毫米。[眼位实测](history/fold7-oem-optics.md#fold7-软件瞳距)
+
+## 渲染质量
+
+打开 **Monado CV10 → 更多选项 → CV10 渲染质量**。更改超分辨率档位后，重新打开 OpenXR 应用或 Pocket XR 光学会话。CV10 的物理双目输出保持 3200×1600。
+
+| 选项 | 行为 |
+| --- | --- |
+| **关闭超分辨率** | 初始设置。保留普通 OpenXR 的推荐尺寸和 Pocket XR 光学入口原有的每眼 1600×1600。 |
+| **华为默认中心密度** | 超分辨率预设。华为桌面和 VR 视频 High 档用 1280×1280 的独立中心纹理覆盖全视场投影范围的 0.4 倍。Monado 兼容普通双目提交，按等效密度请求每眼全视场 3200×3200。 |
+| **自定义超分辨率** | 设定每眼正方形画面的边长，范围 1600–3200 像素。标准 OpenXR 应用根据各自的规则采用推荐尺寸。Pocket XR CV10 光学模式会请求对应尺寸的源画面。 |
+| **启用增强渲染模式（中心锐化）** | 对应 `enableEnhancedRenderMode`，默认关闭，可与任一尺寸档位搭配。 |
+
+Pocket XR 光学入口从每眼 1600 提到 3200 时，源画面的像素数增至四倍。普通 OpenXR 多图层合成还受现有中间纹理尺寸限制。原版 Pocket XR 兼容入口和 Half SBS 来源沿用各自的捕获规格。当前新增档位和增强开关尚待构建及设备验证。[原厂档位和增强处理证据](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/docs/cv10-oem-rendering.md) · [Fold7 已知问题](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/docs/fold7-openxr-known-issues.md)
 
 ## 手柄与定位套件
 
