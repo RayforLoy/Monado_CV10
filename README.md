@@ -79,6 +79,8 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。
 
+点选外显模式时，如果系统询问 CV10 USB 访问权限，点 **允许** 后继续刚才选择的模式。如果预览包也缺少 Shizuku 授权，接下来会显示 Shizuku 的授权提示。拒绝 USB 后会留在预览页，可再次点选重试。[Fold7 首次授权记录](history/fold7-pocket-xr-display.md#连接-cv10-后的首次-usb-授权)
+
 Pocket XR 外显预览始终用内置 Monado CV10 驱动镜片。第三方 OpenXR 应用仍从系统 Broker 选择运行时。日常直接启动 CV10 OpenXR 应用时，按前文的流程选择 **Monado CV10** 或 **Monado CV10 Preview**。
 
 - **显示左右眼测试卡** 启动原版 Pocket XR 的内置测试卡。检查日志中虚拟屏 ID 与首帧，再分别确认两只镜片上的标记及其方向。

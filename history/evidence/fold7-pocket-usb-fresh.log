@@ -1,0 +1,15 @@
+2026-11-27_13:45:36_+0800 stock Broker: Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Disposable APK SHA-256 4F22508D9CD0413CB83F829F1AC1779638490D7D07098B4D8F3BF5F9F3EEE5AC
+topResumedActivity=ActivityRecord{37584349 u0 org.cv10.monado.pocketusbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity t34744}
+topResumedActivity=ActivityRecord{91424977 u0 com.android.systemui/.usb.UsbPermissionActivity t34748}
+USB dialog button: 取消
+topResumedActivity=ActivityRecord{37584349 u0 org.cv10.monado.pocketusbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity t34744}
+无法通过 USB 访问 CV10。再次点选 Pocket XR 模式可重试。
+topResumedActivity=ActivityRecord{143164076 u0 com.android.systemui/.usb.UsbPermissionActivity t34752}
+USB dialog button: 确定
+Only the USB approval button was pressed. Awaiting continuation.
+topResumedActivity=ActivityRecord{186801928 u0 moe.shizuku.privileged.api/moe.shizuku.manager.authorization.RequestPermissionActivity t34754}
+The prior Pocket XR choice continued to the separate Shizuku permission prompt.
+topResumedActivity=ActivityRecord{37584349 u0 org.cv10.monado.pocketusbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity t34744}
+Shizuku prompt was declined for the disposable package. No additional Shizuku grant.
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview. Displays 0,247.

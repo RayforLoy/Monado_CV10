@@ -1,0 +1,18 @@
+11-27 13:46:07.000
+Stock Pocket XR SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Stock hello_xr SHA-256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Pocket XR companion SHA-256 043691ba64619d31f77f118c79d371b9361cfc785ada8a2b67a2d2db0418746a
+Preview APK SHA-256 5a92592e79d0d6e1fe6b4545ebc5a32171bf3ee3c45bb6a05cf5e08bef912770
+Row: 0 package_name=org.cv10.monado.pocket_client
+Pocket XR VPN option unchecked.
+11-27 13:46:27.054  9990  9990 I Cv10PocketXrPreview: First virtual display frame available on display 276
+11-27 13:46:41.089  9990  9990 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 280
+11-27 13:46:41.466 26288 10743 V hello_xr: [13:46:41.466][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598416736 time=2832311633874
+topResumedActivity=ActivityRecord{78816612 u0 com.hayeco.flipspaces/.TrackpadActivity t33931}
+Round 1 game screen 280 released. Space 276 kept.
+11-27 13:46:50.278 26288 10743 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+topResumedActivity=ActivityRecord{17000955 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10PocketXrPreviewActivity t34758}
+Stop Preview released space 276.
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Preview c09cbfae6db51145e78638e60f32306dbd38d00b77bfc92ca057fe4b8894e079, Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, minimum refresh null
+Remaining logical displays: 0, 247

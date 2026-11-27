@@ -46,6 +46,16 @@
 
 13:01，用同一设备、两个 APK 和 Broker 选择复测。原版空间恢复后，同一个样例先随上轮留存的应用面板打开。随后在 Monado 选择 **在 Pocket XR 中打开 OpenXR 应用 → Hello XR (OpenGL ES)**，样例进入独立虚拟屏 259。样例 PID 31106 仍使用原版 Pocket XR 的运行时，并在请求后约 0.33 秒进入 `FOCUSED`。CV10 双目外显帧各显示一个蓝块，右镜再次拍到蓝块。本轮以停止测试进程收尾，确认空间屏和应用屏释放，Broker 恢复 **Monado CV10 Preview**，最低刷新率为 `null`。[原版运行时对照日志](evidence/fold7-pocket-original-xr-menu.log) · [双目外显帧](evidence/fold7-pocket-original-xr-compat-stereo.png) · [右镜实拍](evidence/fold7-pocket-original-xr-compat-right.jpg)
 
+### 连接 CV10 后的首次 USB 授权
+
+2026-11-27 13:45–13:49 香港时间。Fold7 SM-F9660 保持 C9.53.6 原厂线、外接 5 V 和三星外屏镜像。ARM64 预览由 Monado `9e96499` 构建，APK SHA-256 为 `5a92592e79d0d6e1fe6b4545ebc5a32171bf3ee3c45bb6a05cf5e08bef912770`。APK 签名验证通过，证书 SHA-256 为 `68365fa0904432aaa86a8904c691f9e6487414dc959786d72831a083b9f23fca`，五个 ARM64 库的 15 个 `PT_LOAD` 段均为 16 KiB 对齐。
+
+使用同一源码换包名构建的临时 APK 验证首次授权，SHA-256 为 `4f22508d9cd0413cb83f829f1ac1779638490d7d07098b4d8f3bf5f9f3eee5ac`。首次点按 **打开 Pocket XR 空间** 后拒绝 `HUAWEI GLASS HID` 的 USB 访问，手机留在预览页并提示可重试。再次选择后只确认了系统 USB 对话框，刚才的选择自动继续到独立的 Shizuku 授权提示。这两个阶段均未创建虚拟屏。拒绝测试包的 Shizuku 授权后回到预览页，随后移除该包。常用预览和原版 Pocket XR 的既有授权均保留。[首次授权日志](evidence/fold7-pocket-usb-fresh.log)
+
+在常用预览中使用既有 Shizuku 授权，VPN 开关关闭。通过手机页面打开未修改的 Pocket XR 1.6.28，空间屏 276 收到首帧。再从 **在 Pocket XR 中打开 OpenXR 应用** 选择未修改的 Khronos `hello_xr`，它在独立屏 280 进入 `FOCUSED`，Fold7 外显合成帧两个眼区均显示蓝块。固定右镜相机同一轮仍拍到黑画面。点按 **关闭 OpenXR 应用屏** 后，样例执行 `xrDestroyInstance`，空间屏继续保留。点按 **停止预览** 后空间屏释放。[流程日志](evidence/fold7-pocket-usb-preview.log) · [双眼外显帧](evidence/fold7-pocket-usb-preview-external.png) · [同轮右镜照片](evidence/fold7-pocket-usb-preview-right.jpg)
+
+同一 APK 随后分别从内置 2D 列表和 3D 菜单打开原版 `hello_xr`。两次都进入 `FOCUSED` 并在返回时完成 `xrDestroyInstance`。3D 菜单这轮通过底部上滑停留置中，再点按手机选中样例。对照图左列为 2D 入口，右列为 3D 入口。上方的外显截图均有双目蓝块，下方的右镜照片均为黑画面。Fold7 最终保留新版 APK，回到桌面，Broker 选回 **Monado CV10 Preview**，只剩两块实体显示屏，最低刷新率覆盖为 `null`。[启动器回归日志](evidence/fold7-pocket-usb-direct-regression.log) · [外显与右镜对照](evidence/fold7-pocket-usb-direct-spatial-overview.png)
+
 ### 早期整合预览
 
 2026-11-27 02:40 香港时间，同一台 Fold7 和接线。ARM64 整合预览来自 `6e536a4`，包含内置 2D、3D 启动器及 Pocket XR 外显和头踪实验。正式预览包 SHA-256 为 `94fc866acb33f0def30ec4d3f03ffd11a09e918e44b30604635ea850c110f21c`。签名与 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 `PT_LOAD` 段均对齐到 16 KiB。本机页大小为 4 KiB。内置 3D 菜单进入 `XR_SESSION_STATE_FOCUSED`，右镜拍到应用卡片和手机指针。[内置 3D 菜单右镜实拍](evidence/fold7-pocket-integrated-menu-right.jpg)
