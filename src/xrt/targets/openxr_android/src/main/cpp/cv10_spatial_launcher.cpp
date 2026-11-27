@@ -6,6 +6,7 @@
 #include <android/bitmap.h>
 #include <android/log.h>
 #include <jni.h>
+#include <sys/system_properties.h>
 
 #define XR_USE_PLATFORM_ANDROID
 #define XR_USE_GRAPHICS_API_OPENGL_ES
@@ -38,6 +39,8 @@ constexpr uint32_t pocket_height = 1080;
 // The Pocket XR companion uses the symmetric OEM CV10 frustum at 47.5 degrees per side.
 constexpr float cv10_half_fov = 47.5f * 0.017453292519943295f;
 constexpr XrFovf cv10_fov = {-cv10_half_fov, cv10_half_fov, cv10_half_fov, -cv10_half_fov};
+constexpr float cv10_focus_scale = 0.4f;
+constexpr int32_t cv10_context_eye_limit = 1600;
 constexpr float panel_distance = 1.45f;
 constexpr float pocket_distance = 1.0f;
 constexpr XrExtent2Df pocket_size = {0.812f, 0.458f};
@@ -108,9 +111,11 @@ precision highp float;
 in vec2 uv;
 uniform samplerExternalOES panel;
 uniform mat4 textureTransform;
+uniform vec4 sourceRect;
 out vec4 color;
 void main() {
-    vec2 source = (textureTransform * vec4(uv.x, 1.0 - uv.y, 0.0, 1.0)).xy;
+    vec2 inputUv = sourceRect.xy + vec2(uv.x, 1.0 - uv.y) * sourceRect.zw;
+    vec2 source = (textureTransform * vec4(inputUv, 0.0, 1.0)).xy;
     color = vec4(texture(panel, source).rgb, 1.0);
 }
 )";
@@ -429,7 +434,11 @@ private:
 		instance_info.next = &android_info;
 		std::snprintf(instance_info.applicationInfo.applicationName,
 		              sizeof(instance_info.applicationInfo.applicationName), "CV10 Apps");
-		instance_info.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 0);
+		char quad_setting[PROP_VALUE_MAX]{};
+		const bool request_quad = capture_cv10_optics &&
+		                          __system_property_get("debug.cv10.pocket_quad", quad_setting) > 0 &&
+		                          std::strcmp(quad_setting, "1") == 0;
+		instance_info.applicationInfo.apiVersion = request_quad ? XR_MAKE_VERSION(1, 1, 0) : XR_MAKE_VERSION(1, 0, 0);
 		instance_info.enabledExtensionCount = 2;
 		instance_info.enabledExtensionNames = extensions;
 		XrResult result = xrCreateInstance(&instance_info, &instance);
@@ -437,6 +446,10 @@ private:
 			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR runtime unavailable, trying bundled Monado CV10");
 			runtime_property.value = runtime_manifest.c_str();
 			check(initialize_loader(loader_header), "xrInitializeLoaderKHR(bundled Monado CV10)");
+			result = xrCreateInstance(&instance_info, &instance);
+		}
+		if (request_quad && result == XR_ERROR_API_VERSION_UNSUPPORTED) {
+			instance_info.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 0);
 			result = xrCreateInstance(&instance_info, &instance);
 		}
 		check(result, "xrCreateInstance");
@@ -450,12 +463,43 @@ private:
 		system_info.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 		check(xrGetSystem(instance, &system_info, &system_id), "xrGetSystem");
 
+		if (request_quad) {
+			uint32_t count = 0;
+			check(xrEnumerateViewConfigurations(instance, system_id, 0, &count, nullptr),
+			      "xrEnumerateViewConfigurations");
+			std::vector<XrViewConfigurationType> configurations(count);
+			check(xrEnumerateViewConfigurations(instance, system_id, count, &count, configurations.data()),
+			      "xrEnumerateViewConfigurations");
+			constexpr auto quad = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO_WITH_FOVEATED_INSET;
+			if (std::find(configurations.begin(), configurations.end(), quad) != configurations.end()) {
+				view_configuration = quad;
+				projection_count = 4;
+			} else {
+				__android_log_print(ANDROID_LOG_INFO, tag, "CV10 four views unavailable; using stereo");
+			}
+		}
+		if (capture_cv10_optics) {
+			const int32_t eye_width = static_cast<int32_t>(capture_width / 2);
+			const int32_t eye_height = static_cast<int32_t>(capture_height);
+			const int32_t context_width = projection_count == 4 ? std::min(eye_width, cv10_context_eye_limit) : eye_width;
+			const int32_t context_height =
+			    projection_count == 4 ? std::min(eye_height, cv10_context_eye_limit) : eye_height;
+			const int32_t focus_width = static_cast<int32_t>(std::lround(eye_width * cv10_focus_scale));
+			const int32_t focus_height = static_cast<int32_t>(std::lround(eye_height * cv10_focus_scale));
+			for (int32_t eye = 0; eye < 2; ++eye) {
+				projection_rects[eye] = {{eye * context_width, 0}, {context_width, context_height}};
+				projection_rects[eye + 2] = {
+				    {eye * context_width + (context_width - focus_width) / 2, context_height},
+				    {focus_width, focus_height}};
+			}
+		}
+
 		uint32_t blend_count = 0;
-		check(xrEnumerateEnvironmentBlendModes(instance, system_id, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+		check(xrEnumerateEnvironmentBlendModes(instance, system_id, view_configuration,
 		                                       0, &blend_count, nullptr),
 		      "xrEnumerateEnvironmentBlendModes");
 		std::vector<XrEnvironmentBlendMode> modes(blend_count);
-		check(xrEnumerateEnvironmentBlendModes(instance, system_id, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
+		check(xrEnumerateEnvironmentBlendModes(instance, system_id, view_configuration,
 		                                       blend_count, &blend_count, modes.data()),
 		      "xrEnumerateEnvironmentBlendModes");
 		if (modes.empty()) {
@@ -565,10 +609,19 @@ private:
 		chain_info.sampleCount = 1;
 		chain_info.width = capture ? capture_width : canvas_width;
 		chain_info.height = capture ? capture_height : canvas_height;
+		if (projection_count == 4) {
+			chain_info.width = 2 * projection_rects[0].extent.width;
+			chain_info.height = projection_rects[0].extent.height + projection_rects[2].extent.height;
+			__android_log_print(ANDROID_LOG_INFO, tag,
+			                    "CV10 four-view atlas %ux%u from %ux%u: context %dx%d, center %dx%d per eye",
+			                    chain_info.width, chain_info.height, capture_width, capture_height,
+			                    projection_rects[0].extent.width, projection_rects[0].extent.height,
+			                    projection_rects[2].extent.width, projection_rects[2].extent.height);
+		}
 		if (capture_cv10_optics) {
 			GLint texture_size = 0;
 			glGetIntegerv(GL_MAX_TEXTURE_SIZE, &texture_size);
-			if (texture_size <= 0 || chain_info.width > static_cast<uint32_t>(texture_size)) {
+			if (texture_size <= 0 || std::max(chain_info.width, chain_info.height) > static_cast<uint32_t>(texture_size)) {
 				throw std::runtime_error("CV10 optical render size exceeds the GPU texture limit");
 			}
 		}
@@ -752,6 +805,8 @@ private:
 		glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		if (capture) {
 			transform_uniform = glGetUniformLocation(program, "textureTransform");
+			source_rect_uniform = glGetUniformLocation(program, "sourceRect");
+			glUniform4f(source_rect_uniform, 0.0f, 0.0f, 1.0f, 1.0f);
 			glViewport(0, 0, capture_width, capture_height);
 			capture.start(panel_texture, capture_width, capture_height);
 		} else {
@@ -790,7 +845,7 @@ private:
 			switch (changed.state) {
 			case XR_SESSION_STATE_READY: {
 				XrSessionBeginInfo begin_info{XR_TYPE_SESSION_BEGIN_INFO};
-				begin_info.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+				begin_info.primaryViewConfigurationType = view_configuration;
 				check(xrBeginSession(session, &begin_info), "xrBeginSession");
 				running = true;
 				break;
@@ -891,6 +946,11 @@ private:
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 			throw std::runtime_error("OpenXR swapchain framebuffer is incomplete");
 		}
+		if (capture_cv10_optics) {
+			// Every submitted rectangle below is fully overwritten, so skip reloading old tile contents.
+			constexpr GLenum color_attachment = GL_COLOR_ATTACHMENT0;
+			glInvalidateFramebuffer(GL_FRAMEBUFFER, 1, &color_attachment);
+		}
 		if (!capture) {
 			float x = 0.0f;
 			float y = 0.0f;
@@ -901,7 +961,18 @@ private:
 			glUniform3f(controller_aim_uniform, (controller_x + 1.0f) / 2.0f, (controller_y + 1.0f) / 2.0f,
 			            controller_visible ? 1.0f : 0.0f);
 		}
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		if (projection_count == 4) {
+			for (uint32_t i = 0; i < projection_count; ++i) {
+				const auto &rect = projection_rects[i];
+				const float extent = i < 2 ? 1.0f : cv10_focus_scale;
+				const float inset = (1.0f - extent) / 2.0f;
+				glViewport(rect.offset.x, rect.offset.y, rect.extent.width, rect.extent.height);
+				glUniform4f(source_rect_uniform, ((i % 2) + inset) / 2.0f, inset, extent / 2.0f, extent);
+				glDrawArrays(GL_TRIANGLES, 0, 3);
+			}
+		} else {
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glFlush();
 
@@ -910,27 +981,27 @@ private:
 	}
 
 	bool
-	locate_projection_views(XrTime display_time, std::array<XrCompositionLayerProjectionView, 2> &projection_views)
+	locate_projection_views(XrTime display_time, std::array<XrCompositionLayerProjectionView, 4> &projection_views)
 	{
 		XrViewLocateInfo info{XR_TYPE_VIEW_LOCATE_INFO};
-		info.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+		info.viewConfigurationType = view_configuration;
 		info.space = view_space;
 		info.displayTime = display_time;
 		XrViewState view_state{XR_TYPE_VIEW_STATE};
-		XrView views[] = {{XR_TYPE_VIEW}, {XR_TYPE_VIEW}};
+		XrView views[] = {{XR_TYPE_VIEW}, {XR_TYPE_VIEW}, {XR_TYPE_VIEW}, {XR_TYPE_VIEW}};
 		uint32_t count = 0;
-		check(xrLocateViews(session, &info, &view_state, 2, &count, views), "xrLocateViews(VIEW)");
-		if (count != 2 || (view_state.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
+		check(xrLocateViews(session, &info, &view_state, projection_count, &count, views), "xrLocateViews(VIEW)");
+		if (count != projection_count || (view_state.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
 			return false;
 		}
-		const auto eye_width = static_cast<int32_t>(capture_width / 2);
-		for (int eye = 0; eye < 2; ++eye) {
+		const float focus_half_fov = std::atan(cv10_focus_scale * std::tan(cv10_half_fov));
+		for (uint32_t eye = 0; eye < count; ++eye) {
 			auto &view = projection_views[eye];
 			view.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
 			view.pose = views[eye].pose;
-			view.fov = cv10_fov;
+			view.fov = eye < 2 ? cv10_fov : XrFovf{-focus_half_fov, focus_half_fov, focus_half_fov, -focus_half_fov};
 			view.subImage.swapchain = swapchain;
-			view.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, static_cast<int32_t>(capture_height)}};
+			view.subImage.imageRect = projection_rects[eye];
 		}
 		return true;
 	}
@@ -954,7 +1025,7 @@ private:
 		    reinterpret_cast<const XrCompositionLayerBaseHeader *>(&quads[1]),
 		};
 		XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
-		std::array<XrCompositionLayerProjectionView, 2> projection_views{};
+		std::array<XrCompositionLayerProjectionView, 4> projection_views{};
 		const auto capture_timestamp = frame.shouldRender && capture ? capture.update(transform_uniform) : 0;
 		if (capture_timestamp != 0) {
 			if (capture_cv10_optics) {
@@ -968,7 +1039,7 @@ private:
 						++reused_frames;
 					}
 					projection.space = view_space;
-					projection.viewCount = static_cast<uint32_t>(projection_views.size());
+					projection.viewCount = projection_count;
 					projection.views = projection_views.data();
 					layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projection);
 					end_info.layerCount = 1;
@@ -1040,6 +1111,9 @@ private:
 	XrSpace controller_space = XR_NULL_HANDLE;
 	XrPath controller_hand = XR_NULL_PATH;
 	XrSwapchain swapchain = XR_NULL_HANDLE;
+	XrViewConfigurationType view_configuration = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+	uint32_t projection_count = 2;
+	std::array<XrRect2Di, 4> projection_rects{};
 	XrEnvironmentBlendMode blend_mode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	std::vector<XrSwapchainImageOpenGLESKHR> images;
 	XrPosef anchor{};
@@ -1065,6 +1139,7 @@ private:
 	GLint aim_uniform = -1;
 	GLint controller_aim_uniform = -1;
 	GLint transform_uniform = -1;
+	GLint source_rect_uniform = -1;
 };
 
 jstring

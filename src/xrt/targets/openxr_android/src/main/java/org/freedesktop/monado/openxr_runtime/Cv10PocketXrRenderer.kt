@@ -62,7 +62,7 @@ internal class Cv10PocketXrRenderer(
     private inner class Capture {
         private var texture: SurfaceTexture? = null
         private var surface: Surface? = null
-        private var hasFrame = false
+        private var lastTimestamp = 0L
         var failure: String? = null
             private set
 
@@ -87,7 +87,7 @@ internal class Cv10PocketXrRenderer(
             try {
                 current.updateTexImage()
                 timestamp = current.timestamp
-                if (timestamp == 0L) return 0L
+                if (timestamp == 0L || timestamp == lastTimestamp) return timestamp
                 current.getTransformMatrix(transform)
             } catch (error: RuntimeException) {
                 if (!state.stop) {
@@ -97,14 +97,15 @@ internal class Cv10PocketXrRenderer(
                 }
                 return 0L
             }
-            if (!hasFrame) {
-                hasFrame = true
+            if (lastTimestamp == 0L) {
                 activity.runOnUiThread { if (!state.stop) onFirstFrame() }
             }
+            lastTimestamp = timestamp
             return timestamp
         }
 
         fun stopCapture() {
+            lastTimestamp = 0L
             surface?.release()
             surface = null
             texture?.release()

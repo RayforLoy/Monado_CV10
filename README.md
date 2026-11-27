@@ -140,6 +140,14 @@ CV10 驱动使用 P40 Pro+ 原厂运行时实测的双眼投影参数。每眼�
 
 Pocket XR 光学入口从每眼 1600 提到 3200 时，源画面的像素数增至四倍。普通 OpenXR 多图层合成还受现有中间纹理尺寸限制。原版 Pocket XR 兼容入口和 Half SBS 来源沿用各自的捕获规格。当前新增档位和增强开关尚待构建及设备验证。[原厂档位和增强处理证据](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/docs/cv10-oem-rendering.md) · [Fold7 已知问题](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/docs/fold7-openxr-known-issues.md)
 
+### Pocket XR 四视图实验
+
+光学视场桥接会重复使用已提交的交换链图像，直到 Android 虚拟屏交付新帧。写入新图像时可丢弃旧颜色内容，省去图块 GPU 的旧内容载入。
+
+将 `debug.xrt.XRT_COMPOSITOR_COMPUTE` 设为 `true`，将 `debug.cv10.pocket_quad` 设为 `1`，结束 Monado 进程并重新进入 Pocket XR 光学视场预览。运行时枚举出四视图后，桥接为每眼提交一张上限 1600 × 1600 的全视场图和一张原采样密度的中心图。中心覆盖全视场投影平面宽高的 40%。3200 档对应每眼 1280 × 1280，2240 档对应 896 × 896。四张图共用一个紧凑的交换链。当前中心图取自 Pocket XR 已渲染的双目源，保留对应区域原有采样。具备四视图渲染能力的 OpenXR 应用也可独立绘制中心和全视场图。
+
+检查 `Cv10SpatialLauncher` 的 `CV10 four-view atlas` 日志确认启用了四视图。如果运行时未枚举四视图，桥接继续使用双目投影。比较两条合成路径时请保持中心锐化设置一致。复测双目路径可将上面两项属性分别设为 `false` 和 `0`，再重启 Monado 进程。
+
 ## 手柄与定位套件
 
 - **更多选项 → CV10 蓝牙手柄** 提供 CF20 的扫描、配对和输入诊断。系统提示时允许附近设备访问。
