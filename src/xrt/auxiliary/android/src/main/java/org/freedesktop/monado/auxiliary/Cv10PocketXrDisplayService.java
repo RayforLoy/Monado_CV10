@@ -208,7 +208,10 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private void launchPocketXr(int displayId, int mode) throws ReflectiveOperationException {
         ComponentName target = mode == MODE_PC_SCREEN_SBS ? POCKET_PC_SCREEN : POCKET_SPACE;
         Intent intent = new Intent().setComponent(target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (mode == MODE_TEST_CARD) intent.putExtra("test_card", "eyes");
+        if (mode != MODE_PC_SCREEN_SBS) {
+            // Pocket XR retains the card mode while its process is alive.
+            intent.putExtra("test_card", mode == MODE_TEST_CARD ? "eyes" : "off");
+        }
         Bundle options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle();
         Object manager = ActivityManager.class.getDeclaredMethod("getService").invoke(null);
         // The explicit shell package and absent app thread match a shell-originated launch.
