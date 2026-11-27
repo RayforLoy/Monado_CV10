@@ -10,6 +10,7 @@
 #include "util/u_device.h"
 #include "util/u_distortion_mesh.h"
 #include "util/u_logging.h"
+#include "util/u_tracking_origin.h"
 #include <jni.h>
 #include <stdio.h>
 #include <math.h>
@@ -20,6 +21,8 @@ struct cv10_device
 	struct os_thread_helper worker;
 	struct m_relation_history *history;
 	struct m_imu_3dof fusion;
+	struct os_thread_helper kit_worker;
+	struct m_relation_history *kit_history;
 };
 
 static bool
@@ -31,8 +34,8 @@ jni_error(JNIEnv *env)
 	return true;
 }
 
-static jclass
-reader_class(JNIEnv *env, jobject context)
+jclass
+cv10_load_java_class(JNIEnv *env, jobject context, const char *class_name)
 {
 	jclass ctx_class = (*env)->GetObjectClass(env, context);
 	if (!ctx_class) return NULL;
@@ -44,9 +47,78 @@ reader_class(JNIEnv *env, jobject context)
 	if (!loader_class) return NULL;
 	jmethodID load = (*env)->GetMethodID(env, loader_class, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
 	if (!load) return NULL;
-	jstring name = (*env)->NewStringUTF(env, "org.freedesktop.monado.openxr_runtime.Cv10UsbReader");
+	jstring name = (*env)->NewStringUTF(env, class_name);
 	if (!name) return NULL;
 	return (jclass)(*env)->CallObjectMethod(env, loader, load, name);
+}
+
+bool
+cv10_kit_mode(const char *method_name)
+{
+	JavaVM *vm = (JavaVM *)android_globals_get_vm();
+	jobject context = android_globals_get_context();
+	JNIEnv *env = NULL;
+	if (!vm || !context) return false;
+	bool attached = (*vm)->GetEnv(vm, (void **)&env, JNI_VERSION_1_6) == JNI_EDETACHED;
+	if (attached && (*vm)->AttachCurrentThread(vm, &env, NULL) != JNI_OK) return false;
+	bool requested = false;
+	if (env && (*env)->PushLocalFrame(env, 16) == JNI_OK) {
+		jclass cls = cv10_load_java_class(env, context, CV10_KIT_TRACKING_SERVICE);
+		if (!jni_error(env) && cls) {
+			jmethodID method = (*env)->GetStaticMethodID(env, cls, method_name, "()Z");
+			if (method) requested = (*env)->CallStaticBooleanMethod(env, cls, method);
+			if (jni_error(env)) requested = false;
+		}
+		(*env)->PopLocalFrame(env, NULL);
+	}
+	if (env) jni_error(env);
+	if (attached) (*vm)->DetachCurrentThread(vm);
+	return requested;
+}
+
+static void *
+cv10_kit_worker(void *ptr)
+{
+	struct cv10_device *d = ptr;
+	JavaVM *vm = (JavaVM *)android_globals_get_vm();
+	jobject context = android_globals_get_context();
+	JNIEnv *env = NULL;
+	if (!vm || !context || (*vm)->AttachCurrentThread(vm, &env, NULL) != JNI_OK) return NULL;
+	jclass cls = cv10_load_java_class(env, context, CV10_KIT_TRACKING_SERVICE);
+	if (jni_error(env) || !cls) goto done;
+	jmethodID read = (*env)->GetStaticMethodID(env, cls, "readPose", "([F)J");
+	if (!read) goto done;
+	jfloatArray buffer = (*env)->NewFloatArray(env, 7);
+	if (!buffer) goto done;
+
+	int64_t previous = 0;
+	while (os_thread_helper_is_running(&d->kit_worker)) {
+		int64_t time_ns = (*env)->CallStaticLongMethod(env, cls, read, buffer);
+		if (jni_error(env)) break;
+		if (time_ns > previous) {
+			float v[7];
+			(*env)->GetFloatArrayRegion(env, buffer, 0, 7, v);
+			if (jni_error(env)) break;
+			struct xrt_space_relation relation = XRT_SPACE_RELATION_ZERO;
+			relation.pose.position = (struct xrt_vec3){v[0], v[1], v[2]};
+			relation.pose.orientation = (struct xrt_quat){v[3], v[4], v[5], v[6]};
+			relation.relation_flags = XRT_SPACE_RELATION_ORIENTATION_VALID_BIT |
+			                          XRT_SPACE_RELATION_ORIENTATION_TRACKED_BIT |
+			                          XRT_SPACE_RELATION_POSITION_VALID_BIT |
+			                          XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
+			m_relation_history_push(d->kit_history, &relation, time_ns);
+			previous = time_ns;
+		} else if (time_ns == 0 && previous != 0) {
+			m_relation_history_clear(d->kit_history);
+			previous = 0;
+		}
+		os_nanosleep(10000000);
+	}
+done:
+	m_relation_history_clear(d->kit_history);
+	jni_error(env);
+	(*vm)->DetachCurrentThread(vm);
+	return NULL;
 }
 
 static void *
@@ -60,7 +132,7 @@ cv10_worker(void *ptr)
 		U_LOG_E("CV10 JNI context unavailable");
 		return NULL;
 	}
-	jclass cls = reader_class(env, context);
+	jclass cls = cv10_load_java_class(env, context, "org.freedesktop.monado.openxr_runtime.Cv10UsbReader");
 	if (jni_error(env) || !cls) goto done;
 	jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Landroid/content/Context;)V");
 	if (!ctor) goto done;
@@ -143,11 +215,23 @@ cv10_pose(struct xrt_device *xdev, enum xrt_input_name name, int64_t at_ns, stru
 	if (name != XRT_INPUT_GENERIC_HEAD_POSE) return XRT_ERROR_INPUT_UNSUPPORTED;
 	int64_t latest = 0;
 	struct xrt_space_relation last;
-	if (!m_relation_history_get_latest(d->history, &latest, &last) || os_monotonic_get_ns() - latest > 250000000)
+	int64_t now = os_monotonic_get_ns();
+	if (d->kit_history && m_relation_history_get_latest(d->kit_history, &latest, &last) && now - latest <= 250000000) {
+		*out = last;
+		if (at_ns < latest) {
+			struct xrt_space_relation historic;
+			if (m_relation_history_get(d->kit_history, at_ns, &historic) != M_RELATION_HISTORY_RESULT_INVALID) {
+				*out = historic;
+			}
+		}
+		return XRT_SUCCESS;
+	}
+	if (!m_relation_history_get_latest(d->history, &latest, &last) || now - latest > 250000000)
 		return XRT_SUCCESS;
 	// Cap prediction even if a client requests a distant future pose.
 	int64_t query = at_ns > latest + 50000000 ? latest + 50000000 : at_ns;
 	m_relation_history_get(d->history, query, out);
+	if (d->kit_history) out->relation_flags &= ~XRT_SPACE_RELATION_POSITION_VALID_BIT;
 	return XRT_SUCCESS;
 }
 
@@ -155,10 +239,34 @@ static void
 cv10_destroy(struct xrt_device *xdev)
 {
 	struct cv10_device *d = (struct cv10_device *)xdev;
+	if (d->kit_history) {
+		os_thread_helper_destroy(&d->kit_worker);
+		m_relation_history_destroy(&d->kit_history);
+	}
 	os_thread_helper_destroy(&d->worker);
 	m_relation_history_destroy(&d->history);
 	m_imu_3dof_close(&d->fusion);
 	u_device_free(xdev);
+}
+
+static xrt_result_t
+cv10_get_view_poses(struct xrt_device *xdev,
+                    const struct xrt_vec3 *default_eye_relation,
+                    int64_t at_ns,
+                    enum xrt_view_type view_type,
+                    uint32_t view_count,
+                    struct xrt_space_relation *out_head_relation,
+                    struct xrt_fov *out_fovs,
+                    struct xrt_pose *out_poses)
+{
+	struct xrt_vec3 eye_relation = *default_eye_relation;
+	const int ipd_mm = android_globals_get_cv10_ipd_mm();
+	if (ipd_mm > 0) {
+		eye_relation.x = (float)ipd_mm / 1000.0f;
+	}
+
+	return u_device_get_view_poses(xdev, &eye_relation, at_ns, view_type, view_count, out_head_relation, out_fovs,
+	                               out_poses);
 }
 
 struct xrt_device *
@@ -172,7 +280,7 @@ cv10_device_create(void)
 	snprintf(xdev->str, sizeof(xdev->str), "Huawei VR Glass CV10 (USB IMU)");
 	snprintf(xdev->serial, sizeof(xdev->serial), "Huawei-CV10-USB");
 	u_device_populate_function_pointers(xdev, cv10_pose, cv10_destroy);
-	xdev->get_view_poses = u_device_get_view_poses;
+	xdev->get_view_poses = cv10_get_view_poses;
 	xdev->get_visibility_mask = u_device_get_visibility_mask;
 	xdev->inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
 	xdev->supported.orientation_tracking = true;
@@ -195,6 +303,16 @@ cv10_device_create(void)
 	if (!d->history || os_thread_helper_start(&d->worker, cv10_worker, d) != 0) {
 		cv10_destroy(xdev);
 		return NULL;
+	}
+	if (cv10_kit_mode("trackingRequested") && os_thread_helper_init(&d->kit_worker) == 0) {
+		m_relation_history_create(&d->kit_history);
+		if (d->kit_history && os_thread_helper_start(&d->kit_worker, cv10_kit_worker, d) == 0) {
+			xdev->supported.position_tracking = true;
+			u_tracking_origin_init(xdev->tracking_origin, XRT_TRACKING_TYPE_EXTERNAL_SLAM, "Huawei CV10 locator");
+		} else {
+			os_thread_helper_destroy(&d->kit_worker);
+			m_relation_history_destroy(&d->kit_history);
+		}
 	}
 	return xdev;
 }

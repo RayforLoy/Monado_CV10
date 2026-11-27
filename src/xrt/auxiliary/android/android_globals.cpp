@@ -10,6 +10,7 @@
 #include "android_globals.h"
 
 #include <android/native_window.h>
+#include <atomic>
 #include <mutex>
 #include <stddef.h>
 #include <utility>
@@ -27,6 +28,19 @@ static struct
 
 static std::mutex window_mutex;
 static ANativeWindow *cached_window = nullptr;
+static std::atomic<int> cv10_ipd_mm{0};
+
+int
+android_globals_get_cv10_ipd_mm(void)
+{
+	return cv10_ipd_mm.load(std::memory_order_relaxed);
+}
+
+void
+android_globals_set_cv10_ipd_mm(int ipd_mm)
+{
+	cv10_ipd_mm.store(ipd_mm, std::memory_order_relaxed);
+}
 
 void
 android_globals_store_vm_and_activity(struct _JavaVM *vm, void *activity)

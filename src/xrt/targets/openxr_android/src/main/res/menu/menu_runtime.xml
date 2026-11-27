@@ -13,6 +13,12 @@
 
     <item
         android:id="@+id/cv10_external_compatibility" />
+    <item
+        android:id="@+id/cv10_controller"
+        android:title="@string/cv10_controller_title" />
+    <item
+        android:id="@+id/cv10_ipd"
+        android:title="@string/cv10_ipd_title" />
 
     <item
         android:id="@+id/cv10_pocket_preview"

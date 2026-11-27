@@ -25,7 +25,7 @@ if(XRT_FEATURE_OPENXR)
 	add_subdirectory(binding_inspector)
 endif()
 
-if(ANDROID AND XRT_FEATURE_OPENXR AND XRT_BUILD_CV10_SPATIAL_LAUNCHER)
+if(ANDROID AND XRT_FEATURE_OPENXR)
 	add_subdirectory(openxr_android/src/main/cpp)
 endif()
 

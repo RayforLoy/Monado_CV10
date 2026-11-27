@@ -510,6 +510,7 @@ if(XRT_BUILD_DRIVER_ANDROID)
 	add_library(
 		drv_android STATIC android/android_prober.c android/android_prober.h
 				   android/cv10_device.c android/cv10_device.h
+				   android/cv10_controller.c android/cv10_controller.h
 		)
 	target_link_libraries(
 		drv_android

@@ -2,6 +2,11 @@
 <!-- SPDX-License-Identifier: BSL-1.0 -->
 <resources>
     <string name="cv10_app_launcher_title">Apps</string>
+    <string name="cv10_controller_title">CV10 Bluetooth controller</string>
+    <string name="cv10_ipd_title">CV10 software IPD</string>
+    <string name="cv10_ipd_value">%1$d mm</string>
+    <string name="cv10_ipd_description">Adjusts the separation between the two OpenXR views.</string>
+    <string name="cv10_ipd_reset">Restore default</string>
     <string name="cv10_open_spatial_launcher">Open 3D launcher</string>
     <string name="cv10_background_restricted">Background restrictions may freeze 3D app switching. Open app settings</string>
     <string name="cv10_app_settings_unavailable">Open this app’s information page in Android settings.</string>

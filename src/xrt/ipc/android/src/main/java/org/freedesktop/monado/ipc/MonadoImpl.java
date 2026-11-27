@@ -10,6 +10,7 @@
 package org.freedesktop.monado.ipc;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.provider.Settings;
@@ -18,6 +19,7 @@ import android.view.Surface;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import java.io.IOException;
+import org.freedesktop.monado.auxiliary.Cv10IpdSettings;
 import org.freedesktop.monado.auxiliary.MonadoView;
 
 /**
@@ -43,10 +45,20 @@ public class MonadoImpl extends IMonado.Stub {
     private final Context context;
 
     private final Runnable onAccepted;
+    private final SharedPreferences cv10Optics;
+    private final SharedPreferences.OnSharedPreferenceChangeListener cv10OpticsListener =
+            (preferences, key) -> {
+                if (key == null || Cv10IpdSettings.IPD_MM.equals(key)) {
+                    nativeSetCv10IpdMm(Cv10IpdSettings.readOverride(preferences));
+                }
+            };
 
     public MonadoImpl(@NonNull Context context, Runnable onAccepted) {
         this.onAccepted = onAccepted;
         this.context = context.getApplicationContext();
+        cv10Optics = Cv10IpdSettings.preferences(this.context);
+        cv10Optics.registerOnSharedPreferenceChangeListener(cv10OpticsListener);
+        nativeSetCv10IpdMm(Cv10IpdSettings.readOverride(cv10Optics));
         nativeStartServer(this.context);
     }
 
@@ -94,8 +106,12 @@ public class MonadoImpl extends IMonado.Stub {
 
     public void shutdown() {
         Log.i(TAG, "shutdown");
+        cv10Optics.unregisterOnSharedPreferenceChangeListener(cv10OpticsListener);
         nativeShutdownServer();
     }
+
+    @SuppressWarnings("JavaJniMissingFunction")
+    private static native void nativeSetCv10IpdMm(int ipdMm);
 
     /**
      * Native method that starts server.
