@@ -91,3 +91,5 @@
 08:55 至 09:10 香港时间，在同一模拟器复测。诊断构建对 OpenXR 交换链绑定的 GLES 帧缓冲取样。测试卡进入后，左右各自中心像素均为 `51/255/51/255`，`glGetError()` 为 `0`。系统截图持续为纯黑。显式改用 Vulkan `COLOR_ATTACHMENT` 与 FIFO，或将 Pocket XR 的 GLES 格式切到 `GL_RGBA8`，都复现黑屏。这把问题缩小到 OpenXR 交换链交给合成器后的路径，具体失败点仍待确认。诊断改动仅用于模拟器，测试后已恢复原包和调试属性。[帧缓冲取样与图形后端对照](evidence/android16-16k-pocket-output.txt)
 
 在模拟器创建一个名为 `HUAWEIAV03`、3200×1600、60 Hz 的测试显示屏后，原生产预览通过 CV10 的外显入口保持 OpenXR 会话，同时从 **打开手机控制** 进入原版 `TrackpadActivity`。按原版触控板的 Home 按钮，原版空间打开含 21 个应用的列表，源屏抓到了 2D 首页。模拟外显的合成输出仍为黑色。本轮证实手机控制和原版菜单可以在正式预览流程中同时运行。Fold7 授权后的一键启动、普通应用面板和光学输出仍待现场验收。[原版菜单源帧](evidence/android16-16k-pocket-launcher-flat.png) · [模拟外显与手机触控板日志](evidence/android16-16k-pocket-output.txt)
+
+09:25 用相同的生产 APK 和 Android 16 模拟器打开独立 3D 菜单。没有启动 Pocket XR 或创建其源虚拟屏，菜单的 1280×720 OpenXR 交换链仍在进入 `FOCUSED` 后输出全黑。将 Monado 的 GLES 驱动切到 Android 内置 ANGLE 后，Pocket XR 预览的 `eglCreateImageKHR` 导入失败，`xrCreateSwapchain` 返回 `XR_ERROR_RUNTIME_FAILURE`。恢复默认 GLES 后，原版空间再次进入 `FOCUSED` 并送来虚拟显示首帧，最终画面仍黑。模拟器黑屏也影响独立菜单，ANGLE 的导入错误仅解释该配置。Windows 原生模拟器在 GPU 枚举前退出，未取得硬件渲染对照。[独立菜单、ANGLE 导入与复测日志](evidence/android16-16k-gles-interop.txt)

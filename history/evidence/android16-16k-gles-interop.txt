@@ -1,0 +1,30 @@
+2026-11-27 09:21–09:27 HKT | Android 16 Google APIs x86_64 BE2A.250530.026.F3
+Emulator 37.4.2.0, -gpu swangle -feature Vulkan,GLESDynamicVersion
+getconf PAGE_SIZE=16384; wifi_on=0; mobile_data=0
+Monado a3d86e5 x86_64 production SHA-256 e739338fc1568ecc83f0586366b5212466d85fb09024d9d946bad2a90a3a74a7
+Stock Pocket XR 1.6.28 SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+
+Control: the integrated standard 3D launcher, without Pocket XR or a source virtual display.
+09:25:29.324  3566  3579 I EGL_emulation: Opening libGLESv2_emulation.so
+09:25:29.991  3485  3603 D monado.comp_swapchain_import_init: DEBUG [comp_swapchain_import_init] IMPORT 0x743664cc7030 1280x720 VK_FORMAT_R8G8B8A8_SRGB (43)
+09:25:30.059  3566  3581 I Cv10SpatialLauncher: OpenXR session state 5
+Screen SHA-256 05377a96972306b771d4474d00222af062992f86ab1a12b2688f0cf8da5ba55b; FFmpeg YMIN=16 YMAX=16.
+
+Intervention: select system ANGLE for the Monado application via Android's per-app GLES setting.
+09:25:42.944  3710  3710 V GraphicsEnvironment: ANGLE Developer option for 'org.cv10.monado.out_of_process.launcher_preview' set to: 'angle'
+09:25:43.090  3710  3723 I ANGLE   : Version (2.1 git hash: 1166eec4c0b125e9e945196acfc549983ef72b18), Renderer (Vulkan 1.3.0 (llvmpipe (LLVM 21.1.8, 256 bits) (0x00000000)))
+09:25:50.388  3710  3833 D monado.comp_swapchain_import_init: DEBUG [comp_swapchain_import_init] IMPORT 0x743664c741d0 3840x1080 VK_FORMAT_R8G8B8A8_SRGB (43)
+09:25:50.393  3710  3823 E monado.client_gl_eglimage_swapchain_create: ERROR [client_gl_eglimage_swapchain_create] eglCreateImageKHR failed
+09:25:50.393  3710  3823 D OXR     : XR_ERROR_RUNTIME_FAILURE in xrCreateSwapchain: Failed to create swapchain
+The visible screen after failure was Android UI, not an OpenXR frame.
+
+Retest after restoring native GLES: unmodified Pocket XR space, COLOR_ATTACHMENT plus FIFO.
+09:26:29.416  3907  4013 I Cv10SpatialLauncher: OpenXR session state 5
+09:26:30.290  3907  3907 I Cv10PocketXrPreview: First virtual display frame available on display 2
+OpenXR output SHA-256 4afb293f262964138b1d2e2a08733ad4d4216150e508b9f62e4610e47e0cb930; FFmpeg YMIN=16 YMAX=16.
+The swangle host log reported AHardwareBuffer import requests with VK_IMAGE_USAGE_STORAGE_BIT, absent from its reported supported usage mask. This was logged with both the default 3D launcher and the native-GLES capture while its presentation swapchain used COLOR_ATTACHMENT. The host messages do not identify the imported resource.
+Both launches restored the prior per-app GLES settings. The WSL emulator subsequently exited before post-run cleanup could reconnect. The isolated ADB server confirmed that no guest remained.
+
+Native Windows host GPU comparison could not reach Android: WHPX acceleration check passed.
+The headless QEMU processes from emulator 37.4.2 and locally installed 37.1.11 both exited with 0xC0000135 before the GPU was enumerated. The independent ADB server had no guest connection.
+The ANGLE import failure explains that configuration only. The cause of the native GLES black frame remains open.
