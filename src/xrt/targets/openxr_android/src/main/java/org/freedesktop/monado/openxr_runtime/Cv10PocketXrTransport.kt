@@ -37,7 +37,7 @@ internal class Cv10PocketXrTransport(
             .tag("cv10_pocket_xr_display")
             .processNameSuffix("cv10_pocket_xr_display")
             .daemon(false)
-            .version(8)
+            .version(10)
     private var connection: ServiceConnection? = null
     private var remote: ICv10PocketXrDisplay? = null
     private var startupResult: ((Result<Int>) -> Unit)? = null
@@ -139,6 +139,21 @@ internal class Cv10PocketXrTransport(
                 Log.w(TAG, "Pocket XR client display release failed", error)
             }
             main.post { if (!closing) onResult(result) }
+        }
+    }
+
+    fun turnOffPhonePanel(onResult: (Boolean) -> Unit) {
+        val service = remote
+        if (closing || service == null) {
+            onResult(false)
+            return
+        }
+        worker.execute {
+            val turnedOff = runCatching { service.turnOffPhonePanel(clientLife) }.getOrElse { error ->
+                Log.w(TAG, "Could not acquire the Pocket XR phone panel lease", error)
+                false
+            }
+            main.post { if (!closing) onResult(turnedOff) }
         }
     }
 

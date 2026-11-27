@@ -18,4 +18,10 @@
     <string name="cv10_spatial_next">下一页</string>
     <string name="cv10_spatial_empty">列表中没有应用</string>
     <string name="cv10_pocket_preview_cv10_optics">打开 Pocket XR（CV10 光学视场）</string>
+    <string name="cv10_pocket_direct_open">打开 Pocket XR（直接渲染实验）</string>
+    <string name="cv10_pocket_direct_receiving">正在直接接收 Pocket XR 画面。</string>
+    <string name="cv10_pocket_direct_timeout">Pocket XR 未提交直接渲染帧。请使用常规 CV10 光学视场入口重试。</string>
+    <string name="cv10_pocket_phone_off">熄灭手机屏幕以启用 CV10 90 Hz</string>
+    <string name="cv10_pocket_phone_off_summary">Pocket XR 会继续在眼镜上显示。会话结束或达到 10 分钟后，手机屏幕恢复系统控制。</string>
+    <string name="cv10_pocket_phone_off_failed">当前 CV10 会话无法熄灭手机屏幕。</string>
 </resources>

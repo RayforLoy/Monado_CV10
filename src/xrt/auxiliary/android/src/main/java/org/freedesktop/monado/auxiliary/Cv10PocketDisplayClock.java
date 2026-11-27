@@ -53,6 +53,11 @@ final class Cv10PocketDisplayClock implements AutoCloseable {
         }
     }
 
+    boolean hasActiveCv10Clock() {
+        String state = scheduler();
+        return glasses.equals(read(FORCED, state)) && glasses.equals(read(CURRENT, state));
+    }
+
     private static String scheduler() {
         return run("dumpsys", "-t", "1", "SurfaceFlinger", "--scheduler");
     }

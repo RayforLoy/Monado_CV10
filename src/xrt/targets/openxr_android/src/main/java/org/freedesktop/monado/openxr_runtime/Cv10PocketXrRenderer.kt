@@ -9,7 +9,7 @@ import android.util.Log
 import android.view.Surface
 import androidx.annotation.Keep
 
-/** Consumes a side-by-side virtual display in the same EGL context that submits OpenXR frames. */
+/** Consumes side-by-side output in the same EGL context that submits OpenXR frames. */
 internal class Cv10PocketXrRenderer(
     private val activity: Activity,
     private val captureWidth: Int? = null,
@@ -76,7 +76,7 @@ internal class Cv10PocketXrRenderer(
                 activity.runOnUiThread { if (!state.stop && output.isValid) onSurface(output) }
                 return true
             } catch (error: RuntimeException) {
-                Log.e(TAG, "Cannot create a virtual display surface", error)
+                Log.e(TAG, "Cannot create a Pocket XR capture surface", error)
                 return false
             }
         }
@@ -91,7 +91,7 @@ internal class Cv10PocketXrRenderer(
                 current.getTransformMatrix(transform)
             } catch (error: RuntimeException) {
                 if (!state.stop) {
-                    Log.e(TAG, "Cannot read the virtual display surface", error)
+                    Log.e(TAG, "Cannot read the Pocket XR capture surface", error)
                     failure = error.message ?: error.toString()
                     state.stop = true
                 }

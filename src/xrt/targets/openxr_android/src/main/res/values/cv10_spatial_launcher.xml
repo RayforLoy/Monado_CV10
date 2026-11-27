@@ -18,4 +18,10 @@
     <string name="cv10_spatial_next">Next</string>
     <string name="cv10_spatial_empty">No apps in this list</string>
     <string name="cv10_pocket_preview_cv10_optics">Open Pocket XR at CV10 optical FOV</string>
+    <string name="cv10_pocket_direct_open">Open Pocket XR with direct rendering (experimental)</string>
+    <string name="cv10_pocket_direct_receiving">Receiving Pocket XR frames directly.</string>
+    <string name="cv10_pocket_direct_timeout">Pocket XR sent no direct frames. Open the standard CV10 optical preview to retry.</string>
+    <string name="cv10_pocket_phone_off">Turn off phone panel for CV10 90 Hz</string>
+    <string name="cv10_pocket_phone_off_summary">Pocket XR stays on the glasses. The phone panel returns when the session closes or after 10 minutes.</string>
+    <string name="cv10_pocket_phone_off_failed">The phone panel could not be switched off for this CV10 session.</string>
 </resources>

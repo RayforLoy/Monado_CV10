@@ -9,6 +9,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -41,8 +42,11 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private static final ComponentName POCKET_SPACE = ComponentName.createRelative(
             "com.hayeco.flipspaces", ".spatial.SpaceActivity");
     public static final String POCKET_CV10_PACKAGE = "org.cv10.pocketxr";
-    private static final ComponentName POCKET_CV10_SPACE = new ComponentName(
+    public static final ComponentName POCKET_CV10_SPACE = new ComponentName(
             POCKET_CV10_PACKAGE, "com.hayeco.flipspaces.spatial.SpaceActivity");
+    public static final String DIRECT_SURFACE_CAPABILITY = "org.cv10.pocketxr.direct_surface_v1";
+    private static final String DIRECT_SURFACE_EXTRA = "org.cv10.pocketxr.extra.RENDER_SURFACE";
+    private static final String DIRECT_EYE_SIZE_EXTRA = "org.cv10.pocketxr.extra.RENDER_EYE_SIZE";
     static final String CV10_DISPLAY_NAME = "Monado CV10 Pocket XR Optics";
     static final String COMPATIBILITY_DISPLAY_NAME = "Monado CV10 Pocket XR";
     public static final ComponentName POCKET_PC_SCREEN = ComponentName.createRelative(
@@ -52,6 +56,8 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     private static final int DENSITY_DPI = 240;
     private static final int CLIENT_WIDTH = 1280;
     private static final int CLIENT_HEIGHT = 720;
+    private static final int OPTICS_UI_WIDTH = 1280;
+    private static final int OPTICS_UI_HEIGHT = 640;
     private static final int SYSTEM_USER = 0;
 
     // DisplayManager's hidden flag values. These match scrcpy v5.0.1's Android 14+ new display
@@ -92,6 +98,16 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
         }
     }
 
+    public static boolean supportsDirectSurface(PackageManager manager) {
+        if (Build.VERSION.SDK_INT < 35) return false;
+        try {
+            Bundle metadata = manager.getActivityInfo(POCKET_CV10_SPACE, PackageManager.GET_META_DATA).metaData;
+            return metadata != null && metadata.getBoolean(DIRECT_SURFACE_CAPABILITY);
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
     @Override
     public synchronized int start(Surface surface, IBinder clientLife, int mode, int opticalEyeSize)
             throws RemoteException {
@@ -107,12 +123,16 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             if (clientLife == null || !surface.isValid()) {
                 throw new IllegalArgumentException("Invalid Pocket XR display lease or Surface");
             }
-            boolean cv10Optics = mode == MODE_CV10_OPTICS;
+            boolean direct = mode == MODE_CV10_OPTICS_DIRECT;
+            boolean cv10Optics = mode == MODE_CV10_OPTICS || direct;
             if (mode != MODE_SPACE && mode != MODE_TEST_CARD && mode != MODE_PC_SCREEN_SBS && !cv10Optics) {
                 throw new IllegalArgumentException("Unknown Pocket XR display mode");
             }
             if (cv10Optics && !Cv10RenderSettings.isSupportedEyeSize(opticalEyeSize)) {
                 throw new IllegalArgumentException("Invalid CV10 optical render size");
+            }
+            if (direct && !supportsDirectSurface(context.getPackageManager())) {
+                throw new IllegalStateException("Pocket XR CV10 does not support the direct render surface");
             }
             int width = cv10Optics ? 2 * opticalEyeSize : (mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH);
             int height = cv10Optics ? opticalEyeSize : HEIGHT;
@@ -122,12 +142,26 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             clientLife.linkToDeath(lease, 0);
             currentLease = lease;
             if (cv10Optics) lease.clock = Cv10PocketDisplayClock.acquire();
-            lease.display = createDisplay(name, surface, width, height, FLAGS, cv10Optics);
+            if (direct) {
+                // Retain the display and its activity lifecycle. Pocket draws the scene into surface directly.
+                width = OPTICS_UI_WIDTH;
+                height = OPTICS_UI_HEIGHT;
+                lease.uiReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2);
+                lease.uiReader.setOnImageAvailableListener(reader -> {
+                    try (Image ignored = reader.acquireLatestImage()) {
+                        // No scene pixels are consumed from this display.
+                    } catch (IllegalStateException e) {
+                        // A pending callback can race teardown of the virtual display.
+                    }
+                }, new Handler(Looper.getMainLooper()));
+            }
+            Surface displaySurface = direct ? lease.uiReader.getSurface() : surface;
+            lease.display = createDisplay(name, displaySurface, width, height, FLAGS, cv10Optics);
             int displayId = lease.display.getDisplay().getDisplayId();
             if (displayId <= Display.DEFAULT_DISPLAY || !clientLife.isBinderAlive()) {
                 throw new IllegalStateException("Pocket XR display or caller was lost during startup");
             }
-            launchPocketXr(displayId, mode);
+            launchPocketXr(displayId, mode, direct ? surface : null, opticalEyeSize);
             started = true;
             Log.i(TAG, "Pocket XR mode " + mode + " start accepted on " + displayId
                     + " (" + width + "x" + height + " @ " + lease.display.getDisplay().getRefreshRate()
@@ -228,12 +262,32 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
         }
     }
 
+    @Override
+    public synchronized boolean turnOffPhonePanel(IBinder clientLife) {
+        verifyCaller();
+        Lease lease = currentLease;
+        if (lease == null || !lease.clientLife.equals(clientLife) || lease.clock == null) return false;
+        long identity = Binder.clearCallingIdentity();
+        try {
+            DisplayManager manager = context.getSystemService(DisplayManager.class);
+            Display phone = manager == null ? null : manager.getDisplay(Display.DEFAULT_DISPLAY);
+            if (phone == null || phone.getState() != Display.STATE_ON || !lease.clock.hasActiveCv10Clock()) return false;
+            if (lease.phonePanel != null) lease.phonePanel.close();
+            lease.phonePanel = Cv10PocketPhonePanel.turnOff();
+            return lease.phonePanel != null;
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+    }
+
     @SuppressLint({"PrivateApi", "DiscouragedPrivateApi"})
-    private void launchPocketXr(int displayId, int mode) throws ReflectiveOperationException {
+    private void launchPocketXr(int displayId, int mode, Surface directSurface, int opticalEyeSize)
+            throws ReflectiveOperationException {
         ComponentName target;
         switch (mode) {
         case MODE_PC_SCREEN_SBS: target = POCKET_PC_SCREEN; break;
-        case MODE_CV10_OPTICS: target = POCKET_CV10_SPACE; break;
+        case MODE_CV10_OPTICS:
+        case MODE_CV10_OPTICS_DIRECT: target = POCKET_CV10_SPACE; break;
         default: target = POCKET_SPACE;
         }
         Intent intent = new Intent().setComponent(target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -244,7 +298,15 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             // Pocket XR retains the card mode while its process is alive.
             intent.putExtra("test_card", mode == MODE_TEST_CARD ? "eyes" : "off");
         }
-        Bundle options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId).toBundle();
+        ActivityOptions launchOptions = ActivityOptions.makeBasic().setLaunchDisplayId(displayId);
+        if (directSurface != null) {
+            // The singleTask activity must create an EGL surface for this session's new producer.
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            intent.putExtra(DIRECT_SURFACE_EXTRA, directSurface);
+            intent.putExtra(DIRECT_EYE_SIZE_EXTRA, opticalEyeSize);
+            launchOptions.setShareIdentityEnabled(true);
+        }
+        Bundle options = launchOptions.toBundle();
         Object manager = ActivityManager.class.getDeclaredMethod("getService").invoke(null);
         // The explicit shell package and absent app thread match a shell-originated launch.
         Method startActivity = Class.forName("android.app.IActivityManager").getMethod(
@@ -276,16 +338,24 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
         lease.clientLife.unlinkToDeath(lease, 0);
         long identity = Binder.clearCallingIdentity();
         try {
+            if (lease.phonePanel != null) lease.phonePanel.close();
             lease.releaseClientDisplay();
             if (lease.display != null) lease.display.release();
         } catch (RuntimeException e) {
             Log.w(TAG, "Pocket XR virtual display could not be released", e);
         } finally {
             try {
-                if (lease.clock != null) lease.clock.close();
-                lease.surface.release();
+                if (lease.uiReader != null) lease.uiReader.close();
             } finally {
-                Binder.restoreCallingIdentity(identity);
+                try {
+                    if (lease.clock != null) lease.clock.close();
+                } finally {
+                    try {
+                        lease.surface.release();
+                    } finally {
+                        Binder.restoreCallingIdentity(identity);
+                    }
+                }
             }
         }
     }
@@ -301,10 +371,12 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
 
     private final class Lease implements IBinder.DeathRecipient {
         Cv10PocketDisplayClock clock;
+        Cv10PocketPhonePanel phonePanel;
         final IBinder clientLife;
         final Surface surface;
         final int mode;
         VirtualDisplay display;
+        ImageReader uiReader;
         VirtualDisplay clientDisplay;
         ImageReader clientReader;
 

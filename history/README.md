@@ -2,6 +2,8 @@
 
 [Fold7 离线启动器和 16 KB 预览包验收](fold7-offline-launcher.md) · [Pocket XR 测试卡外显记录](fold7-pocket-xr-display.md) · [Pocket XR 双运行时实测](fold7-pocket-dual-runtime.md)
 
+[Fold7 亮屏 60 Hz 与 CV10 独立呈现实测](fold7-independent-present.md)
+
 本目录的 `cv10.patch` 适用于 Monado 提交 `ce2b721eb4ffcbd726fb88357625f55871a8f262`。定制运行时包名为 `org.cv10.monado.out_of_process`，可与官方 `org.freedesktop.monado.openxr_runtime.out_of_process` 共存。在 Khronos OpenXR Runtime Broker 中选择 **Monado CV10** 使用定制版，选择 **Monado XR** 恢复官方版。[Monado 固定源码](https://gitlab.freedesktop.org/monado/monado/-/tree/ce2b721eb4ffcbd726fb88357625f55871a8f262)
 
 v0.1.0 发布的是 MAILBOX 版，启动器与 Broker 均使用 **Monado CV10**。从固定上游提交依次应用 `cv10.patch`、`framevote90.patch`、`primary-mailbox.patch`、`launcher-name.patch` 后构建。最后一个补丁让启动 Activity 继承应用名。本地已安装产物为 `resources/Monado-CV10-primary-mailbox-named-arm64.apk`，SHA-256 为 `ee7a8f1d7e4124a381d32a4cef13aac36c19e5b8f3a98961b81c104b392da41c`。与上一版 MAILBOX 安装包对照，只有 AndroidManifest.xml 的内容发生变化。

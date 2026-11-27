@@ -27,6 +27,7 @@ import org.freedesktop.monado.auxiliary.Cv10ExternalPresentation
 import org.freedesktop.monado.auxiliary.Cv10PocketXrDisplayService
 import org.freedesktop.monado.auxiliary.Cv10RenderSettings
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_CV10_OPTICS
+import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_CV10_OPTICS_DIRECT
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_PC_SCREEN_SBS
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_SPACE
 import org.freedesktop.monado.auxiliary.ICv10PocketXrDisplay.MODE_TEST_CARD
@@ -37,6 +38,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var status: TextView
     private lateinit var open: Button
     private lateinit var openCv10Optics: Button
+    private lateinit var openCv10Direct: Button
+    private lateinit var blankPhonePanel: Button
     private lateinit var pcSetup: Button
     private lateinit var pcScreen: Button
     private lateinit var test: Button
@@ -58,6 +61,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private var activePocketPackage = Cv10PocketHeadLinkService.POCKET_PACKAGE
     private var clientDisplayOpen = false
     private var changingClientDisplay = false
+    private var turningOffPhonePanel = false
+    private val directFrameTimeout = Runnable {
+        stopPreview(getString(R.string.cv10_pocket_direct_timeout))
+    }
     private val usbLaunch = Cv10UsbLaunch(this) {
         status.setText(R.string.cv10_pocket_usb_retry)
         updateButtons()
@@ -109,6 +116,31 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         openCv10Optics = Button(this).apply {
             setText(R.string.cv10_pocket_preview_cv10_optics)
             setOnClickListener { startPreview(MODE_CV10_OPTICS) }
+        }
+        openCv10Direct = Button(this).apply {
+            setText(R.string.cv10_pocket_direct_open)
+            setOnClickListener { startPreview(MODE_CV10_OPTICS_DIRECT) }
+        }
+        blankPhonePanel = Button(this).apply {
+            setText(R.string.cv10_pocket_phone_off)
+            setOnClickListener {
+                val session = transport ?: return@setOnClickListener
+                AlertDialog.Builder(this@Cv10PocketXrPreviewActivity)
+                    .setTitle(R.string.cv10_pocket_phone_off)
+                    .setMessage(R.string.cv10_pocket_phone_off_summary)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(android.R.string.ok) { _, _ ->
+                        if (transport !== session) return@setPositiveButton
+                        turningOffPhonePanel = true
+                        updateButtons()
+                        session.turnOffPhonePanel { turnedOff ->
+                            if (transport !== session) return@turnOffPhonePanel
+                            turningOffPhonePanel = false
+                            if (!turnedOff) status.setText(R.string.cv10_pocket_phone_off_failed)
+                            updateButtons()
+                        }
+                    }.show()
+            }
         }
         pcSetup = Button(this).apply {
             setText(R.string.cv10_pocket_pc_setup)
@@ -171,6 +203,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         panel.addView(wideCanvas)
         panel.addView(open)
         panel.addView(openCv10Optics)
+        panel.addView(openCv10Direct)
+        panel.addView(blankPhonePanel)
         panel.addView(recenter)
         panel.addView(controls)
         panel.addView(openXrApp)
@@ -385,7 +419,8 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         }
 
         status.setText(R.string.cv10_pocket_preview_starting)
-        val cv10Optics = mode == MODE_CV10_OPTICS
+        val direct = mode == MODE_CV10_OPTICS_DIRECT
+        val cv10Optics = mode == MODE_CV10_OPTICS || direct
         val opticalEyeSize = if (cv10Optics) {
             Cv10RenderSettings.readSupersamplingEyeSize(Cv10RenderSettings.preferences(this))
                 .coerceAtLeast(Cv10RenderSettings.BASELINE_EYE_SIZE)
@@ -405,7 +440,9 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             val id = displayId ?: return
             if (transport !== nextTransport) return
             if (hasFrame) {
-                status.text = getString(R.string.cv10_pocket_preview_receiving, id)
+                openCv10Direct.removeCallbacks(directFrameTimeout)
+                status.text = if (direct) getString(R.string.cv10_pocket_direct_receiving)
+                    else getString(R.string.cv10_pocket_preview_receiving, id)
                 Log.i(TAG, "First virtual display frame available on display $id")
                 controlsAvailable = space
                 updateButtons()
@@ -423,7 +460,11 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 if (transport === nextTransport) {
                     nextTransport.start(surface) { result ->
                         if (transport === nextTransport) {
-                            result.onSuccess { id -> displayId = id; updateStatus() }.onFailure(::showError)
+                            result.onSuccess { id ->
+                                displayId = id
+                                if (direct && !hasFrame) openCv10Direct.postDelayed(directFrameTimeout, 10_000L)
+                                updateStatus()
+                            }.onFailure(::showError)
                         }
                     }
                 }
@@ -464,6 +505,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     }
 
     private fun stopPreview(message: String) {
+        openCv10Direct.removeCallbacks(directFrameTimeout)
         val previousTransport = transport
         val previousRenderer = renderer
         transport = null
@@ -471,6 +513,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         controlsAvailable = false
         clientDisplayOpen = false
         changingClientDisplay = false
+        turningOffPhonePanel = false
         releaseSpaceSession()
         if (headLinkStarted) {
             Cv10PocketHeadLinkService.stop(this)
@@ -499,6 +542,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         openCv10Optics.visibility = if (packageManager.getLaunchIntentForPackage(Cv10PocketXrDisplayService.POCKET_CV10_PACKAGE) != null)
             View.VISIBLE else View.GONE
         openCv10Optics.isEnabled = available
+        openCv10Direct.visibility = if (Cv10PocketXrDisplayService.supportsDirectSurface(packageManager))
+            View.VISIBLE else View.GONE
+        openCv10Direct.isEnabled = available
+        blankPhonePanel.visibility = if (controlsAvailable && activePocketPackage == Cv10PocketXrDisplayService.POCKET_CV10_PACKAGE)
+            View.VISIBLE else View.GONE
+        blankPhonePanel.isEnabled = !turningOffPhonePanel
         pcSetup.isEnabled = available
         pcScreen.isEnabled = available
         test.isEnabled = available
