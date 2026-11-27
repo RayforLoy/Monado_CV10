@@ -181,11 +181,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     }
 
     private fun openPhoneControls(): Boolean {
-        if (!controlsAvailable || keepSessionWhilePaused) return false
+        if (!controlsAvailable) return false
         try {
             val launch = checkNotNull(packageManager.getLaunchIntentForPackage(Cv10PocketHeadLinkService.POCKET_PACKAGE))
-            startForegroundService(Cv10PocketControlsService.intent(this))
-            keepSessionWhilePaused = true
+            keepSessionForPhoneControls()
             startActivity(launch)
             Log.i(TAG, "Opened Pocket XR phone controls with the external session active")
             return true
@@ -281,6 +280,12 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 null
             }
         }
+    }
+
+    private fun keepSessionForPhoneControls() {
+        if (keepSessionWhilePaused) return
+        startForegroundService(Cv10PocketControlsService.intent(this))
+        keepSessionWhilePaused = true
     }
 
     private fun leavePhoneControls() {
@@ -390,10 +395,14 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         )
         transport = nextTransport
         renderer = nextRenderer
-        if (mode == MODE_SPACE && headLink.isChecked) {
+        if (mode == MODE_SPACE) {
             try {
-                startForegroundService(Cv10PocketHeadLinkService.intent(this))
-                headLinkStarted = true
+                // The original SpaceActivity can open its phone trackpad before the first frame.
+                keepSessionForPhoneControls()
+                if (headLink.isChecked) {
+                    startForegroundService(Cv10PocketHeadLinkService.intent(this))
+                    headLinkStarted = true
+                }
             } catch (error: RuntimeException) {
                 showError(error)
                 return
