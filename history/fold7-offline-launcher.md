@@ -188,6 +188,14 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 头显读取的来源为手机 `0`，`AT^TYPECSTATE?` 返回 `2`，佩戴状态为 `1`，开屏收到 `OK`。延长读取窗口后，逐眼命令实际都收到头显字符串 `READ LCD timeout!`。此前 Fold7 普通 C-C 直连且镜片可见图案时也收到相同回显，因此 LCD 查询不能区分这次故障。现有对照将复现范围缩小到 Android 已提交外显画面之后，仍需同机、同版本的原厂线与直连对照才能判断链路和头显各自的影响。[诊断补丁](fold7-panel-status-probe.patch) · [读数日志](evidence/fold7-panel-status-probe.log) · [该轮外显和右镜](evidence/fold7-panel-status-probe.jpg) · [主项目直连对照](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/d41cad9/docs/cv10-original-cable-overnight-20261126.md)
 
+### 2D USB 授权后继续启动
+
+2026-11-27 13:28–13:30 香港时间，在同一台 Fold7 上保留 C9.53.6 原厂线、外接 5 V、三星镜像及右镜相机位置。源码提交 `463702b` 在 USB 权限对话框关闭、启动器重新获得焦点后，检查仍连接的 CV10 和它的授权状态。允许后继续启动刚才点选的应用。拒绝或眼镜已断开时留在列表。此流程依赖 Android 在关闭系统对话框前授予 USB 设备访问权。[AOSP USB 授权对话框](https://android.googlesource.com/platform/frameworks/base/%2B/c231302191e6/packages/SystemUI/src/com/android/systemui/usb/UsbPermissionActivity.java)
+
+用临时包名取得全新的 USB 授权状态。该 APK 的 SHA-256 为 `023e8c1f135eae3dcdb1d08915e0fc6ed663680c859bc25803d9210fc3e2900e`。首次拒绝后停留在 2D 列表。再次点选原版 `hello_xr` 后，只按系统的 **允许**，约 0.75 秒后样例进入 `FOCUSED`。按返回后完成 `xrDestroyInstance` 并回到列表。再次点选时未弹出授权，样例在同一 PID 26288 进入 `FOCUSED`，随后正常退出。与授权成功同期的外显帧有双目蓝块，右镜相机仍未拍到图案。测试结束后卸载临时包。[首次授权日志](evidence/fold7-direct-usb-continuation-fresh.log) · [同期外显和右镜](evidence/fold7-direct-usb-continuation-photo.jpg)
+
+常用包名 `org.cv10.monado.out_of_process.launcher_preview` 的 APK SHA-256 为 `c09cbfae6db51145e78638e60f32306dbd38d00b77bfc92ca057fe4b8894e079`。五个 ARM64 原生库使用安装时解包方式，15 个 ELF `PT_LOAD` 均通过 16 KiB 对齐检查。保留已有授权后依次从 2D 列表及竖屏 3D 菜单启动同一原版样例，两次均在 PID 26288 进入 `FOCUSED`，返回后均完成 `xrDestroyInstance`。Fold7 保留这个预览包和对应 Broker 选项，系统最低刷新率为 `null`。[常用预览包实机日志](evidence/fold7-direct-usb-continuation-preview.log)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。

@@ -1,0 +1,20 @@
+11-27 13:28:38.000
+Disposable preview SHA-256 023E8C1F135EAE3DCDB1D08915E0FC6ED663680C859BC25803D9210FC3E2900E
+Row: 0 package_name=org.cv10.monado.usbverify.out_of_process.launcher_preview
+topResumedActivity=ActivityRecord{52852530 u0 com.android.systemui/.usb.UsbPermissionActivity t34718}
+topResumedActivity=ActivityRecord{233770739 u0 org.cv10.monado.usbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34714}
+topResumedActivity=ActivityRecord{233770739 u0 org.cv10.monado.usbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34714}
+Rejected USB request. Launcher stayed in the 2D list.
+topResumedActivity=ActivityRecord{99932697 u0 com.android.systemui/.usb.UsbPermissionActivity t34721}
+Sent only the USB Allow tap at 11-27 13:29:03.000.
+11-27 13:29:03.750 26288 26311 V hello_xr: [13:29:03.750][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520357561094
+11-27 13:29:03.332 26288 26311 I OpenXR-Loader: Got runtime: package: org.cv10.monado.usbverify.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+topResumedActivity=ActivityRecord{94185511 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34723}
+11-27 13:29:09.752 26288 26311 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+topResumedActivity=ActivityRecord{233770739 u0 org.cv10.monado.usbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34714}
+11-27 13:29:12.791 26288 26687 V hello_xr: [13:29:12.791][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520303042083
+11-27 13:29:14.606 26288 26687 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+topResumedActivity=ActivityRecord{233770739 u0 org.cv10.monado.usbverify.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t34714}
+Second selection launched directly with the existing USB grant.
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview; minimum refresh null
