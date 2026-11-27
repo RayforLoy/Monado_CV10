@@ -7,9 +7,11 @@
 #include <android/log.h>
 #include <jni.h>
 #include <sys/system_properties.h>
+#include <time.h>
 
 #define XR_USE_PLATFORM_ANDROID
 #define XR_USE_GRAPHICS_API_OPENGL_ES
+#define XR_USE_TIMESPEC
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
@@ -428,8 +430,28 @@ private:
 		XrInstanceCreateInfoAndroidKHR android_info{XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR};
 		android_info.applicationVM = vm;
 		android_info.applicationActivity = activity;
-		const char *extensions[] = {XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME,
-		                            XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME};
+		std::vector<const char *> extensions{XR_KHR_ANDROID_CREATE_INSTANCE_EXTENSION_NAME,
+		                                     XR_KHR_OPENGL_ES_ENABLE_EXTENSION_NAME};
+		char trace_setting[PROP_VALUE_MAX]{};
+		const bool request_trace = capture_cv10_optics && use_bundled_runtime &&
+		                           __system_property_get("debug.xrt.CV10_PRESENT_TRACE", trace_setting) > 0 &&
+		                           std::strcmp(trace_setting, "true") == 0;
+		if (request_trace) {
+			uint32_t count = 0;
+			if (XR_SUCCEEDED(xrEnumerateInstanceExtensionProperties(nullptr, 0, &count, nullptr))) {
+				std::vector<XrExtensionProperties> available(count, {XR_TYPE_EXTENSION_PROPERTIES});
+				if (XR_SUCCEEDED(xrEnumerateInstanceExtensionProperties(nullptr, count, &count,
+				                                                        available.data()))) {
+					for (const auto &extension : available) {
+						if (std::strcmp(extension.extensionName,
+						                XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME) == 0) {
+							extensions.push_back(XR_KHR_CONVERT_TIMESPEC_TIME_EXTENSION_NAME);
+							break;
+						}
+					}
+				}
+			}
+		}
 		XrInstanceCreateInfo instance_info{XR_TYPE_INSTANCE_CREATE_INFO};
 		instance_info.next = &android_info;
 		std::snprintf(instance_info.applicationInfo.applicationName,
@@ -439,8 +461,8 @@ private:
 		                          __system_property_get("debug.cv10.pocket_quad", quad_setting) > 0 &&
 		                          std::strcmp(quad_setting, "1") == 0;
 		instance_info.applicationInfo.apiVersion = request_quad ? XR_MAKE_VERSION(1, 1, 0) : XR_MAKE_VERSION(1, 0, 0);
-		instance_info.enabledExtensionCount = 2;
-		instance_info.enabledExtensionNames = extensions;
+		instance_info.enabledExtensionCount = extensions.size();
+		instance_info.enabledExtensionNames = extensions.data();
 		XrResult result = xrCreateInstance(&instance_info, &instance);
 		if (!use_bundled_runtime && result == XR_ERROR_RUNTIME_UNAVAILABLE && !runtime_manifest.empty()) {
 			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR runtime unavailable, trying bundled Monado CV10");
@@ -453,6 +475,12 @@ private:
 			result = xrCreateInstance(&instance_info, &instance);
 		}
 		check(result, "xrCreateInstance");
+		if (extensions.size() > 2) {
+			PFN_xrVoidFunction convert = nullptr;
+			if (XR_SUCCEEDED(xrGetInstanceProcAddr(instance, "xrConvertTimeToTimespecTimeKHR", &convert))) {
+				convert_time = reinterpret_cast<PFN_xrConvertTimeToTimespecTimeKHR>(convert);
+			}
+		}
 
 		XrInstanceProperties properties{XR_TYPE_INSTANCE_PROPERTIES};
 		check(xrGetInstanceProperties(instance, &properties), "xrGetInstanceProperties");
@@ -1087,6 +1115,14 @@ private:
 			}
 		}
 		check(xrEndFrame(session, &end_info), "xrEndFrame");
+		if (convert_time && end_info.layerCount > 0 && capture_timestamp != 0) {
+			timespec time{};
+			if (XR_SUCCEEDED(convert_time(instance, end_info.displayTime, &time))) {
+				const auto layer_time = static_cast<long long>(time.tv_sec) * 1'000'000'000 + time.tv_nsec;
+				__android_log_print(ANDROID_LOG_INFO, tag, "CV10_SOURCE stamp=%lld layer=%lld",
+				                    static_cast<long long>(capture_timestamp), layer_time);
+			}
+		}
 	}
 
 	JavaState &state;
@@ -1097,6 +1133,7 @@ private:
 	const uint32_t capture_height;
 	const XrExtent2Df capture_size;
 	jlong submitted_capture_timestamp = 0;
+	PFN_xrConvertTimeToTimespecTimeKHR convert_time = nullptr;
 	uint32_t copied_frames = 0;
 	uint32_t reused_frames = 0;
 	XrInstance instance = XR_NULL_HANDLE;

@@ -57,6 +57,7 @@
 #include <math.h>
 
 DEBUG_GET_ONCE_LOG_OPTION(comp_frame_lag_level, "XRT_COMP_FRAME_LAG_LOG_AS_LEVEL", U_LOGGING_WARN)
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_present_trace, "CV10_PRESENT_TRACE", false)
 #define LOG_FRAME_LAG(...) U_LOG_IFL(debug_get_log_option_comp_frame_lag_level(), u_log_get_global_level(), __VA_ARGS__)
 
 /*
@@ -877,8 +878,9 @@ renderer_wait_for_present(struct comp_renderer *r, uint64_t desired_present_time
 
 	// For estimating frame misses.
 	uint64_t before_ns = os_monotonic_get_ns();
+	const bool explicit_wait = c->target->wait_for_present_supported;
 
-	if (c->target->wait_for_present_supported) {
+	if (explicit_wait) {
 		// reasonable timeout
 		time_duration_ns timeout_ns = c->frame_interval_ns * 2.5f;
 
@@ -906,6 +908,9 @@ renderer_wait_for_present(struct comp_renderer *r, uint64_t desired_present_time
 
 	// How long did it take?
 	uint64_t after_ns = os_monotonic_get_ns();
+	if (c->is_cv10 && debug_get_bool_option_cv10_present_trace()) {
+		U_LOG_I("CV10_WAIT start=%" PRIu64 " end=%" PRIu64 " explicit=%d", before_ns, after_ns, explicit_wait);
+	}
 
 	/*
 	 * Make sure we at least waited 1ms before warning. Then check
@@ -1098,6 +1103,14 @@ comp_renderer_draw(struct comp_renderer *r)
 
 	// Move waited frame to rendering frame, clear waited.
 	comp_frame_move_and_clear_locked(&c->frame.rendering, &c->frame.waited);
+	const bool trace = c->is_cv10 && debug_get_bool_option_cv10_present_trace();
+	if (trace) {
+		const struct comp_layer_accum *accum = &c->base.layer_accum;
+		const int64_t layer_time = accum->layer_count > 0 ? accum->layers[0].data.timestamp : 0;
+		U_LOG_I("CV10_DRAW id=%" PRIi64 " at=%" PRIi64 " predicted=%" PRIi64 " layer=%" PRIi64,
+		        c->frame.rendering.id, os_monotonic_get_ns(), c->frame.rendering.predicted_display_time_ns,
+		        layer_time);
+	}
 
 	// Tell the target we are starting to render, for frame timing.
 	comp_target_mark_begin(ct, c->frame.rendering.id, os_monotonic_get_ns());
@@ -1258,6 +1271,10 @@ comp_renderer_draw(struct comp_renderer *r)
 		uint64_t gpu_start_ns, gpu_end_ns;
 		if (render_resources_get_timestamps(&c->nr, &gpu_start_ns, &gpu_end_ns)) {
 			uint64_t now_ns = os_monotonic_get_ns();
+			if (trace) {
+				U_LOG_I("CV10_GPU id=%" PRIu64 " start=%" PRIu64 " end=%" PRIu64 " now=%" PRIu64,
+				        frame_id, gpu_start_ns, gpu_end_ns, now_ns);
+			}
 			comp_target_info_gpu(ct, frame_id, gpu_start_ns, gpu_end_ns, now_ns);
 		}
 	}

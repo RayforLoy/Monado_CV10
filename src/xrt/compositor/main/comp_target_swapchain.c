@@ -49,6 +49,7 @@
 DEBUG_GET_ONCE_NUM_OPTION(preferred_at_least_image_count, "XRT_COMPOSITOR_PREFERRED_IMAGE_COUNT", 2)
 DEBUG_GET_ONCE_BOOL_OPTION(use_present_wait, "XRT_COMPOSITOR_USE_PRESENT_WAIT", false)
 DEBUG_GET_ONCE_BOOL_OPTION(use_display_timing, "XRT_COMPOSITOR_USE_DISPLAY_TIMING", true)
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_present_trace, "CV10_PRESENT_TRACE", false)
 
 static inline struct vk_bundle *
 get_vk(struct comp_target_swapchain *cts)
@@ -426,6 +427,12 @@ do_update_timings_google_display_timing(struct comp_target_swapchain *cts)
 	    timings);                          //
 	int64_t now_ns = os_monotonic_get_ns();
 	for (uint32_t i = 0; i < count; i++) {
+		if (cts->base.c->is_cv10 && debug_get_bool_option_cv10_present_trace()) {
+			U_LOG_I("CV10_FEEDBACK id=%u desired=%" PRIu64 " actual=%" PRIu64 " earliest=%" PRIu64
+			        " margin=%" PRIu64 " now=%" PRIi64,
+			        timings[i].presentID, timings[i].desiredPresentTime, timings[i].actualPresentTime,
+			        timings[i].earliestPresentTime, timings[i].presentMargin, now_ns);
+		}
 		u_pc_info(cts->upc,                       //
 		          timings[i].presentID,           //
 		          timings[i].desiredPresentTime,  //
@@ -1082,9 +1089,17 @@ comp_target_swapchain_present(struct comp_target *ct,
 
 
 	// Need to take the queue lock for present.
+	const bool trace = cts->base.c->is_cv10 && debug_get_bool_option_cv10_present_trace();
+	int64_t start_ns = trace ? os_monotonic_get_ns() : 0;
 	vk_queue_lock(present_queue);
 	VkResult ret = vk->vkQueuePresentKHR(present_queue->queue, &present_info);
 	vk_queue_unlock(present_queue);
+	if (trace) {
+		U_LOG_I("CV10_PRESENT id=%" PRIi64 " image=%u start=%" PRIi64 " end=%" PRIi64
+		        " desired=%" PRIi64 " result=%d fb=%d",
+		        cts->current_frame_id, index, start_ns, os_monotonic_get_ns(), desired_present_time_ns,
+		        (int)ret, vk->has_GOOGLE_display_timing);
+	}
 
 
 #ifdef VK_EXT_display_control
