@@ -1,0 +1,39 @@
+2026-11-27 08:24–08:29 HKT | Android 16 16 KiB Google APIs x86_64 guest
+Emulator: -gpu swangle -feature Vulkan,GLESDynamicVersion
+Pocket XR 1.6.28 original SHA-256: 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Monado a3d86e5 release x86_64 SHA-256: e739338fc1568ecc83f0586366b5212466d85fb09024d9d946bad2a90a3a74a7
+Test card source PNG SHA-256: f6fb285cc451f83af6f25feae8196cd8e4797100f762b5ad1d1a28c85c9e3fe3
+Guest composed screen PNG SHA-256: 4afb293f262964138b1d2e2a08733ad4d4216150e508b9f62e4610e47e0cb930
+Composed screen FFmpeg signalstats: YMIN=16 YMAX=16
+
+SHOW LEFT AND RIGHT TEST CARD -> lock -> unlock -> OPEN POCKET XR SPACE -> lock
+Physical display IDs 11529215049713142728 -> 11529215048302563936; Monado PID 3161 -> 3161; Pocket XR PID 2799 -> 2799
+Guest: page bytes, API, GLES version, wifi_on, mobile_data
+16384
+36
+196609
+0
+0
+org.cv10.monado.out_of_process.launcher_preview
+        moe.shizuku.manager.permission.API_V23: granted=true
+com.hayeco.flipspaces
+        moe.shizuku.manager.permission.API_V23: granted=true
+11-27 08:28:41.935  3161  3302 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 08:28:42.071  3319  3319 I ShizukuServiceStarter: starting service org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.auxiliary.Cv10PocketXrDisplayService...
+11-27 08:28:42.110   661  1785 I DisplayDeviceRepository: Display device added: Monado CV10 Pocket XR lease 0 | 3840 x 1080, modeId 2, renderFrameRate 60.0; owner uid 2000; FLAG_TRUSTED
+11-27 08:28:42.133   661  1221 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.hayeco.flipspaces/.spatial.SpaceActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+11-27 08:28:42.254  2799  2799 I FlipSpaces/Mode: test card: eyes from the intent extra test_card
+11-27 08:28:42.816  3161  3161 I Cv10PocketXrPreview: First virtual display frame available on display 2
+11-27 08:28:46.903   661  1221 I DisplayDeviceRepository: Display device removed: Monado CV10 Pocket XR lease 0 | 3840 x 1080, modeId 2, renderFrameRate 60.0; owner uid 2000; FLAG_TRUSTED
+11-27 08:28:46.949  3161  3302 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:28:49.684   661  1788 I DisplayDeviceRepository: Display device added: Monado CV10 Pocket XR lease 1 | 3840 x 1080, modeId 3, renderFrameRate 60.0; owner uid 2000; FLAG_TRUSTED
+11-27 08:28:49.691  3161  3548 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 08:28:49.701   661  1785 I ActivityTaskManager: START u0 {flg=0x10000000 cmp=com.hayeco.flipspaces/.spatial.SpaceActivity (has extras)} with LAUNCH_SINGLE_TASK from uid 2000 (BAL_ALLOW_PERMISSION) result code=0
+11-27 08:28:49.712  2799  2799 I FlipSpaces/Mode: test card: off from the intent extra test_card
+11-27 08:28:50.038  3161  3161 I Cv10PocketXrPreview: First virtual display frame available on display 3
+Second lock released the second virtual display.
+
+Earlier debug profiles with Vulkan enabled
+11-27 08:14:08.272  3591  3591 F DEBUG   :       #00 pc 00000000000f551b  /vendor/lib64/hw/vulkan.ranchu.so (vk_common_SetDebugUtilsObjectNameEXT+283) (BuildId: 2382e7136b40a899db31be33fce20645)
+11-27 08:16:05.062  3988  3988 F DEBUG   :       #00 pc 00000000000f551b  /vendor/lib64/hw/vulkan.ranchu.so (vk_common_SetDebugUtilsObjectNameEXT+283) (BuildId: 2382e7136b40a899db31be33fce20645)
+11-27 08:18:35.475  4278  4443 E EGL_emulation: eglCreateContext: EGL_BAD_CONFIG: no ES 3.1 support

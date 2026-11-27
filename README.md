@@ -63,6 +63,8 @@ Fold7 接 53 版原厂线和 5 V 外部供电时，**已镜像**为 3200×1600�
 
 在关闭 Wi-Fi 和移动数据的 Android 16 模拟器中，给原版 Pocket XR 授权 Shizuku 后，可从其 3D 启动器打开时钟面板。ANGLE 后端的双目画面显示秒表实时更新，关闭面板后系统释放其虚拟屏。预览使用的 Shizuku 传输代码也通过了原版空间、电脑屏幕入口与显示清理测试。Fold7 上的正式一键启动、原版应用面板、实时头踪和左镜实拍仍待验收。[原版应用面板对照](history/fold7-pocket-xr-display.md#android-16-模拟器原版应用面板) · [显示传输实测](history/fold7-pocket-xr-display.md#android-16-模拟器-shizuku-显示传输)
 
+在 16 KiB 页的 Android 16 模拟器中，原版 Pocket XR 1.6.28 首次启动会显示内存页兼容提示。确认后，从 Monado 预览菜单可启动原版左右眼测试卡，再锁屏、解锁并在同一进程切换到普通空间。两次都收到虚拟显示首帧。该环境的 Monado 合成输出为黑屏。[菜单、首帧和退出记录](history/fold7-pocket-xr-display.md#android-16-16-kib-页正式菜单)
+
 ### Pocket XR 外显实验预览
 
 本分支用 3840×1080 虚拟显示屏接收未修改的 Pocket XR，并用 OpenXR 的左右眼 Quad 分别提交两半画面。以 `-Pcv10LauncherPreview=true` 构建。在 Fold7 保持三星外接显示为 **已镜像**，允许运行时访问 CV10 USB，再打开 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览**。虚拟显示服务需要 Android 14 或更新版本、设备所有者用户，以及以 ADB shell 身份运行的 Shizuku 13 或更新版本。预览 APK 使用单独的包名与 Shizuku 授权。

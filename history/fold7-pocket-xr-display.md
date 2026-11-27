@@ -75,3 +75,13 @@
 - 空间仍在运行时，探针创建并关闭 OpenXR 客户端虚拟屏，随后可再次创建。强制停止探针后，空间和客户端虚拟屏都从系统显示列表消失。[传输日志](evidence/android16-pocket-transport.txt)
 
 用 [构建脚本](pocket-transport-probe/build.py) 可在已有 Android 构建缓存的电脑上复现。在仓库根目录运行 `python history/pocket-transport-probe/build.py --sdk <Android SDK> --jdk <JDK 17> --output <APK>`。重建的 `classes.dex` 和最终验证包逐字节一致。探针使用 `ImageReader` 接收显示传输的画面。Fold7 上仍需串联预览 APK、已授权的 Shizuku、OpenXR 合成器和 CV10。
+
+## Android 16 16 KiB 页正式菜单
+
+2026-11-27 08:24 至 08:29（香港时间），Android 16 Google APIs x86_64 模拟器使用 16 KiB 页，Wi-Fi 和移动数据关闭。仅在该模拟器分别向 Monado 预览和未修改的 Pocket XR 1.6.28 授予 Shizuku 权限，官方 Shizuku 13.6.0 以 Shell 身份运行。
+
+- 使用 `-gpu swangle -feature Vulkan,GLESDynamicVersion`，模拟器报告 OpenGL ES 3.1。从 **Monado CV10 Preview → 更多选项 → Pocket XR 外显预览 → 显示左右眼测试卡** 启动。OpenXR 进入 `FOCUSED`，预览经 Shizuku 建立 3840×1080、60 Hz 的受信任虚拟屏，原版 `SpaceActivity` 开始渲染，预览收到首帧。虚拟屏原图上的左右眼标记均正常。[原版双目源帧](evidence/android16-16k-pocket-menu-test-card.png)
+- 锁屏后虚拟屏消失，`xrDestroyInstance` 完成。解锁后点 **打开 Pocket XR 空间**，两款应用均保留各自的进程。原版此前会沿用同进程内的眼别测试卡。`a3d86e5` 的普通空间入口显式请求关闭测试卡。原版日志先确认 `test_card=eyes`，重开后确认 `test_card=off`。第二个虚拟屏收到首帧，再次锁屏后释放。[切换与清理日志](evidence/android16-16k-pocket-menu.txt)
+- 模拟器主屏的 Monado 输出全黑，同轮 Vulkan 后端报告 AHardwareBuffer 导入不支持请求的 `VK_IMAGE_USAGE_STORAGE_BIT`。SwiftShader 下，调试构建在模拟器驱动的 `vkSetDebugUtilsObjectNameEXT` 崩溃，ARM64 转译和原生 x86_64 都可复现。发布构建越过了该调用，原 SwiftShader 配置随后因仅提供 OpenGL ES 3.0 而无法建立 OpenXR 会话。本节的截图从原版 Pocket XR 所在虚拟屏采集。Fold7 的一键开流和镜片验收仍需设备上的 Shizuku 授权。
+
+测试包用 `-Pcv10LauncherPreview=true -Pcv10Abi=x86_64` 构建并以本机开发证书签名。修复前 `39250d1` 发布构建 APK 的 SHA-256 为 `3debac366ed52908189a74c02774b6aee3ba82b2e4bbef6e1da2b5364709bcf9`，修复后 `a3d86e5` 的 SHA-256 为 `e739338fc1568ecc83f0586366b5212466d85fb09024d9d946bad2a90a3a74a7`。修复版签名、16 KiB ZIP 对齐及全部 15 个 ELF `PT_LOAD` 段通过校验。原版 1.6.28 首次启动时出现 16 KiB 兼容提示，确认后继续执行上述流程。原版的 `libLiteRt.so` 和 `libLiteRtDispatch_Samsung.so` 仍有对齐为 4 KiB 的 ELF 段。
