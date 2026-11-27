@@ -171,6 +171,14 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 
 ARM64 预览 APK SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293`，v2、v3 签名和 16 KiB ZIP 对齐均通过。五个原生库与 `5b650d6` 预览逐字节相同。重复恢复旧面板并关闭空间，从 Monado 2D 列表长按样例后进入 Android 系统的 **应用信息**。核对标题为 **Hello XR (OpenGL ES)**，在系统页确认 **强制停止**。返回列表重新点按后，新样例进程进入 `FOCUSED`，返回时正常销毁实例。手机回到桌面，保留 Preview Broker、既有授权和无线 ADB，测试虚拟屏均已释放。[Fold7 筛选日志](evidence/fold7-pocket-panel-to-phone.log)
 
+### Vulkan 应用屏与同进程重进
+
+2026-11-27 15:39 至 15:41 香港时间。Fold7 SM-F9660 经 C9.53.6 原厂线及外接 5 V 连接 CV10，三星镜像输出为 3200×1600 @ 90 Hz。使用 `6d2fb4c` 预览、原版 Pocket XR 1.6.28 和 **Pocket XR (Monado CV10)** Broker。安装 Khronos 发布的 Vulkan 版 `hello_xr` 1.1.65，安装前后校验 SHA-256 为 `80eaa7105fdefda2936fc74622ac91fec7cf60a9940090b6bb58d92e0a73c2ab`。[Khronos 发布页](https://github.com/KhronosGroup/OpenXR-SDK-Source/releases/tag/release-1.1.65)
+
+从 Monado 的 **在 Pocket XR 中打开 OpenXR 应用** 两次点选 **Hello XR (Vulkan)**。独立应用屏分别为 369 和 370，两个视图各建立 2688×1512 交换链。两次均进入 `FOCUSED`，样例进程始终为 12993。两张静止外显截图内容一致，左右半屏均显示蓝块。同轮固定相机未拍到右镜测试图案，双目光学输出待验收。[筛选日志](evidence/fold7-pocket-vulkan-app.log) · [CV10 外显帧](evidence/fold7-pocket-vulkan-external.jpg) · [右镜实拍](evidence/fold7-pocket-vulkan-right.jpg)
+
+第一次关闭应用屏即完成实例销毁。第二次退出时，原版空间恢复的旧 **Hello XR (OpenGL ES)** 普通面板因焦点事件超时弹出无响应提示。只结束旧 OpenGL ES 样例后，Vulkan 应用屏正常释放、实例完成销毁，Pocket XR 空间继续运行。最后停止预览，卸载临时安装的 Vulkan 样例，恢复 **Monado CV10 Preview** Broker、原有显示和手机桌面。原有 Shizuku 授权保留。[关闭与恢复日志](evidence/fold7-pocket-vulkan-app.log)
+
 ### 右镜输出对照
 
 11:55 至 12:00 用同一接线复测黑屏。预览版的 Pocket XR、内置 2D 直开和 3D 菜单，以及稳定版 Monado CV10 v0.1.2 均让样例进入 `FOCUSED`。Fold7 采集到的 CV10 外显帧有左右两个蓝方块。固定相机在这四次复测中均未从右镜捕捉到测试画面，与 11:40 至 11:43 的明亮实拍结果不同。重置外显电源状态及从 Android 禁用后重新启用外显，均未恢复右镜实拍。接线和相机位置未做物理调整，原因待确认。[Pocket XR 外显帧](evidence/fold7-pocket-client-close-display-stereo.png) · [3D 菜单启动后的外显帧](evidence/fold7-pocket-menu-optical-control-stereo.png) · [稳定版外显帧](evidence/fold7-pocket-stable-optical-control-stereo.png) · [稳定版右镜实拍](evidence/fold7-pocket-stable-optical-control-right.jpg)

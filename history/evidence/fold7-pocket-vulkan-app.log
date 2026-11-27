@@ -1,0 +1,38 @@
+11-27 15:38:59.000
+Initial displays: 0, 247; charge: 79%
+Installed official Vulkan sample SHA-256 80eaa7105fdefda2936fc74622ac91fec7cf60a9940090b6bb58d92e0a73c2ab
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 15:39:23.747  5742  5742 I Cv10PocketXrPreview: First virtual display frame available on display 365
+11-27 15:39:31.611  5742  5742 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 369
+11-27 15:39:32.176 12993 13044 V hello_xr: [15:39:32.176][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598475056 time=2820009320706
+Round 1 sample PID 12993, displays 0, 247, 365, 366, 367, 368, 369
+CV10 screenshot SHA-256 0c8884790375102ecc329b89d13c2f4cb059964266db9ac70757f6865ff95ed6
+Round 1 released the Vulkan client display 369 and kept Pocket XR display 365
+11-27 15:39:42.895 12993 13044 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:39:49.255  5742  5742 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.vulkan/android.app.NativeActivity on display 370
+11-27 15:39:49.805 12993 13829 V hello_xr: [15:39:49.805][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598183456 time=2818562795379
+Round 2 sample PID 12993, displays 0, 247, 365, 366, 367, 368, 370
+CV10 screenshot SHA-256 0c8884790375102ecc329b89d13c2f4cb059964266db9ac70757f6865ff95ed6
+Dismissed the restored OpenGL ES sample ANR by stopping only the OpenGL ES sample
+Round 2 released the Vulkan client display 370 and kept Pocket XR display 365
+11-27 15:41:03.855 12993 13829 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Removed temporary Vulkan sample: Success
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+
+Selected Vulkan sample logcat lines
+11-27 15:39:32.064 12993 13044 V hello_xr: [15:39:32.064][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 15:39:32.082 12993 13044 V hello_xr: [15:39:32.082][Info   ] Creating color and depth swapchain for view 0 with dimensions Width=2688 Height=1512 SampleCount=1
+11-27 15:39:32.133 12993 13044 V hello_xr: [15:39:32.133][Info   ] Creating color and depth swapchain for view 1 with dimensions Width=2688 Height=1512 SampleCount=1
+11-27 15:39:32.176 12993 13044 V hello_xr: [15:39:32.176][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598475056 time=2820009320706
+11-27 15:39:42.895 12993 13044 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 15:39:49.725 12993 13829 V hello_xr: [15:39:49.725][Info   ] Instance RuntimeName=Monado(XRT) by Collabora et al 'v25.1.0-1070-gc865e3f57' RuntimeVersion=25.1.0
+11-27 15:39:49.747 12993 13829 V hello_xr: [15:39:49.747][Info   ] Creating color and depth swapchain for view 0 with dimensions Width=2688 Height=1512 SampleCount=1
+11-27 15:39:49.777 12993 13829 V hello_xr: [15:39:49.777][Info   ] Creating color and depth swapchain for view 1 with dimensions Width=2688 Height=1512 SampleCount=1
+11-27 15:39:49.805 12993 13829 V hello_xr: [15:39:49.805][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598183456 time=2818562795379
+11-27 15:41:03.855 12993 13829 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+Restored OpenGL ES panel logcat lines
+11-27 15:39:50.086  2961 13338 E ActivityManager: ANR in org.khronos.openxr.hello_xr.opengles (org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity)
+11-27 15:39:50.086  2961 13338 E ActivityManager: Reason: Input dispatching timed out (b6dfe3f org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity is not responding. Waited 10000ms for FocusEvent(hasFocus=false)).
+11-27 15:40:48.336  2961  8222 I ActivityManager: Force stopping org.khronos.openxr.hello_xr.opengles appid=10835 user=0: from pid 14805
