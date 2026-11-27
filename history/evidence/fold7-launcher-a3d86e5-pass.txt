@@ -27,3 +27,12 @@ Restored Broker provider: package_name=org.cv10.monado.out_of_process
 Restored APK SHA-256: 8d1bbb5bc75e24e8d225872e0def4ecbc5768ad0cd849c5d21e00af50c4713db
 min_refresh_rate=null, preview RUN_ANY_IN_BACKGROUND=ignore, Wi-Fi=1
 Shizuku grant absent for Monado preview and stock Pocket XR. No VPN grant added.
+
+=== Stock Pocket XR 1.6.28 phone-entry repeat, 08:47 HKT ===
+Stock APK SHA-256: 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Same a3d86e5 preview APK. Show only XR apps was disabled in the Monado 2D list.
+11-27 08:47:05.125  2961  8627 I ActivityTaskManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 xflg=0x4 cmp=com.hayeco.flipspaces/.MainActivity} with LAUNCH_SINGLE_TOP from uid 1084
+11-27 08:47:05.287  2961  3281 I ActivityTaskManager: Displayed com.hayeco.flipspaces/.TrackpadActivity for user 0: +169ms
+topResumedActivity=ActivityRecord{56224310 u0 com.hayeco.flipspaces/.TrackpadActivity t33915}
+System Back returned to the Monado 2D launcher. No Shizuku or VPN grant added.
+Restored the original preview APK and background AppOp. Phone rotation restored from temporary portrait lock to lock 1. Broker remained on org.cv10.monado.out_of_process.

@@ -122,6 +122,8 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 08:42–08:43，点按 Broker 列表中的 **Monado CV10 Preview** 名称一次。Broker 内容提供器确认活动包为 `org.cv10.monado.out_of_process.launcher_preview`，样例的 OpenXR Loader 日志也确认加载该包。2D 直启和底部上滑停留置中后 3D 点选，均由同一原版 `hello_xr` 进程（PID 31344）进入 `FOCUSED`。两次系统返回后都到达 `IDLE` 并完成 `xrDestroyInstance`。CV10 右镜拍到 3D 菜单与指针、两次样例的蓝方块。未新增 Shizuku 或 VPN 授权。原预览 APK、稳定 Broker、后台 `ignore` 和最低刷新率 `null` 已恢复。[筛选日志](evidence/fold7-launcher-a3d86e5-pass.txt) · [2D 直启右镜](evidence/fold7-launcher-a3d86e5-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-a3d86e5-menu-right.jpg) · [3D 点选右镜](evidence/fold7-launcher-a3d86e5-select-right.jpg)
 
+08:47，使用同一预览包，在 2D 列表关闭 **仅显示 XR 应用** 后打开原版 Pocket XR 1.6.28。系统记录 `com.hayeco.flipspaces/.TrackpadActivity` 已显示并处于前台。系统返回后重新进入 Monado 的 2D 列表。这条手机入口未新增 Shizuku 或 VPN 授权。测试时临时固定手机竖屏，结束后恢复原横屏方向、原预览 APK 和后台限制。Broker 一直选中稳定运行时。[手机入口与返回记录](evidence/fold7-launcher-a3d86e5-pass.txt)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。
