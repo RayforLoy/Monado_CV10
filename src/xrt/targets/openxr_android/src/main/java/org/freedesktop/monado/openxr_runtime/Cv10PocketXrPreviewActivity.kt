@@ -53,6 +53,10 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private var controlsAvailable = false
     private var clientDisplayOpen = false
     private var changingClientDisplay = false
+    private val usbLaunch = Cv10UsbLaunch(this) {
+        status.setText(R.string.cv10_pocket_usb_retry)
+        updateButtons()
+    }
     override var keepSessionWhilePaused = false
         private set
 
@@ -171,10 +175,19 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     }
 
     override fun onStop() {
+        if (usbLaunch.isWaiting) {
+            usbLaunch.cancel()
+            updateButtons()
+        }
         if (renderer != null && !keepSessionWhilePaused) {
             stopPreview(getString(R.string.cv10_pocket_preview_intro))
         }
         super.onStop()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && !isFinishing) usbLaunch.onWindowFocused()
     }
 
     override fun onDestroy() {
@@ -337,10 +350,14 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     }
 
     private fun startPreview(mode: Int) {
-        if (renderer != null || stopping || pendingPermission != null || pendingVpn) return
+        if (renderer != null || stopping || pendingPermission != null || pendingVpn || usbLaunch.isWaiting) return
         try {
             if (!Shizuku.pingBinder()) {
                 status.setText(R.string.cv10_pocket_preview_needs_shizuku)
+                return
+            }
+            if (usbLaunch.requestIfMissing { startPreview(mode) }) {
+                updateButtons()
                 return
             }
             if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
@@ -451,7 +468,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     }
 
     private fun updateButtons() {
-        val available = renderer == null && !stopping && pendingPermission == null && !pendingVpn
+        val available = renderer == null && !stopping && pendingPermission == null && !pendingVpn && !usbLaunch.isWaiting
         headLink.isEnabled = available
         worldAnchor.isEnabled = available
         open.isEnabled = available

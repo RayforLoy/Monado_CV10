@@ -14,6 +14,7 @@
     <string name="cv10_launch_anyway">Launch anyway</string>
     <string name="cv10_pocket_preview_title">Pocket XR display preview</string>
     <string name="cv10_pocket_preview_intro">Allow access to the CV10 USB device. To see Pocket XR Space in stereo, open its launcher from Spatial windows and select Depth (3D side by side).</string>
+    <string name="cv10_pocket_usb_retry">USB access to the CV10 is unavailable. Choose the Pocket XR mode again to retry.</string>
     <string name="cv10_pocket_preview_open">Open Pocket XR Space</string>
     <string name="cv10_pocket_pc_setup">Set up PC Screen on phone</string>
     <string name="cv10_pocket_pc_sbs">PC Screen 3D (side by side)</string>
