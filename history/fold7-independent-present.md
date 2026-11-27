@@ -66,6 +66,20 @@ Android 16 QPR2 上游还可把部分 GPU 虚拟显示从主批次移出，这�
 
 手机 ON/60 的追加对照保持工作区、每眼 2240×2240、GLES FFR、后期投影和模拟头动，尝试省掉 Pocket XR 的首个全幅清屏，让最后的双眼重投影完全覆盖输出。转头期间两边实际呈现均为 60.36 次/秒。有清屏与省清屏时，EGL 提交至 CV10 实呈的 p50 分别为 46.98 和 47.34 ms，p95 分别为 58.10 和 59.14 ms。两轮热状态分别为 0→1 和 1→2，Bilibili 动态内容也有变动，因此不能从本轮推断省清屏的纯 GPU 成本。正常版保留原有清屏顺序。Pocket XR 另外修正了 32 位 GPU 计时读数饱和时污染统计的问题，单独报告饱和计数。
 
+### Direct Vulkan sampling of Pocket XR output
+
+The direct bridge still draws each new `SurfaceTexture` frame into the launcher’s OpenXR swapchain. A standalone Fold7 probe replaced that step with a GLES 3.2 window backed by an `AImageReader`. On the Adreno 830, Vulkan imported each RGBA8 `AHardwareBuffer` by buffer ID and sampled it through an ordinary image view. It imported the EGL producer fence and exported a release fence. The previous `AImage` stayed retained until the next image arrived, and the producer alternated between two buffers at every size. [Android NDK media APIs](https://developer.android.com/ndk/reference/group/media) · [Vulkan Android hardware-buffer import](https://docs.vulkan.org/refpages/latest/refpages/source/VK_ANDROID_external_memory_android_hardware_buffer.html)
+
+| Stereo dimensions | Imported bytes per buffer | Verified frames | Matching EGL timestamps | Acquire / release sync FDs |
+| --- | ---: | ---: | ---: | ---: |
+| 3200×1600 | 20,582,400 | 180 | 180/180 | 180 / 180 |
+| 4480×2240 | 40,321,024 | 180 | 180/180 | 180 / 180 |
+| 6400×3200 | 82,280,448 | 180 | 180/180 | 180 / 180 |
+
+The probe validated the full crop and sampled four distinguishable quadrant texels per frame. Raw Vulkan sampling was top-first at all sizes. Each frame waited for its four-pixel verification readback. The results establish format, timestamp, and fence compatibility on the device. Pocket XR’s existing session still uses the `SurfaceTexture` bridge. Its frame rate, optical orientation, and lifetime across process exit need an integrated comparison.
+
+The generic Monado swapchain import currently transitions images from `UNDEFINED` during creation. Producer-filled buffers require a path that preserves their contents and acquires ownership from `VK_QUEUE_FAMILY_FOREIGN_EXT` after the producer fence. Keep the image and associated pose together until the compositor has finished its final use, including repeated reprojections. Return its slot with the compositor’s release fence. Keep imported views in a bounded cache per reader generation and use an explicit mapping for the top-first stereo crop. [Vulkan external memory ownership](https://docs.vulkan.org/spec/latest/chapters/resources.html#resources-external-sharing)
+
 ## 直出帧的姿态记录
 
 按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。
@@ -121,6 +135,8 @@ The final build also displayed the workspace through the original cable with the
 - `hello-lit-layer-state-*-sched*.perfetto-trace`、`pocket-lit-layer-state-control-sched-no-snapshots.perfetto-trace`、`hello-lit-wakeup-control-summary.txt`、`hello-lit-wakeup-no-snapshots-summary.txt` 和 `fold7-wakeup-dispatch.txt` 记录关闭快照前后的等待位置。用 `trace-static-phone-layers.ps1 -CadenceProbe schedule-composite -RendererLeadMs 8 -ScheduleTrace -WithoutLayerSnapshots` 重新采集，用 `analyze-present-wakeups.py` 和 `analyze-sf-main-thread.py` 对齐时间戳和主线程片段。
 - `window-clear-ab-lit-{0,1}-2-summary.txt`、`*-submit.txt` 和 `*-thermal-*.txt`，记录清屏对照。用于两组的 Pocket XR APK SHA-256 为 `e3c5139228b39ecc9e28c7a66ce16c3ad38eaea8aaa83d8f464936170699c06c`。
 - `gpu-timer-device.log` 和 `gpu-timer-device-right.jpg`，记录 GPU 计时修正版的 GLES FFR 与右眼画面。一个 5 秒日志窗口的有效 GPU 查询总时间为 p50 1.10 ms、p99 2.32 ms，当时累计排除了 105 个饱和样本。APK SHA-256 为 `818e885e76fcc5fb62041d1e2806ffe429579e916808678c1bc65136c061a260`。
+
+- `ahb-probe/fold7-size-{1600,2240,3200}.txt` records the Vulkan sampler verification. `ahb-probe/run.ps1 -Serial <Fold7 ADB serial>` builds, validates the shader, runs the three sizes and removes the temporary device files.
 - `compare-lit-vd-yaw-summary.txt`、`compare-lit-direct-retry-yaw-summary.txt` 和 `resume2-off-{vd,direct}-yaw-summary.txt`，记录模拟转头和逐帧匹配。
 - `panel-lease-visual-{before,active,client-death,lifecycle}.txt`、`panel-lease-visual-right.jpg`，记录实验开关的画面与回收。
 
