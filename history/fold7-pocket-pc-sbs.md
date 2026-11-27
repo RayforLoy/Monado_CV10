@@ -30,3 +30,7 @@ Fold7 的 Shizuku 管理应用原有后台限制。在服务版本升级后的�
 2026-11-27 16:18–16:19 香港时间，Fold7（SM-F9660）通过视频 USB-C 线直连 CV10，以三星 **已镜像** 的 3200×1600、90 Hz 输出。使用源码 `6d2fb4c` 的 ARM64 预览包，SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293`。继续使用原版 Pocket XR 1.6.28、已有 Shizuku 授权和本地网络配对。
 
 从 **电脑屏幕 3D（左右并排）** 启动原版电脑屏幕，Pocket XR 在虚拟显示屏 394 上与 Sunshine 自动连接，记录硬件解码器 `c2.qti.hevc.decoder`，协商为 1920×1080 HEVC、请求 120 fps。测试卡实际入流读数约 45–46 fps。将 CV10 外显帧的左右眼区域按镜片安装方向旋转和裁剪后，左眼区可读蓝色 **LEFT**，右眼区可读红色 **RIGHT**。两帧的计时从 00:20.99 走到 00:44.71，黄点位置也发生变化。停止预览后释放虚拟显示，Windows 测试卡和 Sunshine 均已退出。[双眼外显测试卡](evidence/fold7-pocket-pc-sbs-direct-stereo.png) · [串流和显示筛选日志](evidence/fold7-pocket-pc-sbs-direct.log)
+
+## Fold7 USB-C 直连双眼佩戴验收
+
+同日 16:36–16:39 香港时间，使用同一 Fold7、直连 CV10、`6d2fb4c` 预览、原版 Pocket XR 1.6.28、已有 Shizuku 授权和 Sunshine 配对。临时串流 1920×1080 HEVC Half SBS 测试卡。验收要求分别遮挡另一只眼，检查左眼蓝色 **LEFT**、右眼红色 **RIGHT** 以及活动黄点。用户回复「佩戴测试正常」。同轮外显截图在 00:36.65 显示对应颜色与标记，左、右眼区按镜片方向旋转和裁剪以便阅读。停止后虚拟显示 405 消失，OpenXR 实例正常销毁，Windows 测试卡及 Sunshine 退出，Fold7 回到桌面。[同轮双目外显帧](evidence/fold7-pocket-pc-sbs-wearer-display.png) · [串流与释放日志](evidence/fold7-pocket-pc-sbs-wearer.log)

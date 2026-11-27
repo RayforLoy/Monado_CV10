@@ -1,0 +1,11 @@
+# 2026-11-27 Hong Kong time. Galaxy Z Fold7 SM-F9660, direct USB-C to CV10, mirrored 3200x1600 @ 90 Hz.
+# Monado CV10 Preview 6d2fb4c APK SHA-256 37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293.
+# Stock Pocket XR 1.6.28 APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337.
+# Existing LAN pairing and Shizuku authorizations. Sunshine was running only for the timed test card.
+11-27 16:37:01.804 30642 30654 I Cv10PocketXrDisplay: Pocket XR mode 2 start accepted on 405 (1920x1080, 240 dpi)
+11-27 16:37:02.173 27124 27124 I Cv10PocketXrPreview: First virtual display frame available on display 405
+11-27 16:37:17.287 30726 30849 I PcScreen: decoder c2.qti.hevc.decoder video/hevc 1920x1080@120, try 0: {max-height=1080, vdec-lowlatency=1, vendor.qti-ext-dec-low-latency.enable=1, mime=video/hevc, priority=0, vendor.qti-ext-dec-picture-order.enable=1, color-standard=1, operating-rate=120, color-transfer=3, max-width=1920, low-latency=1, width=1920, color-range=2, frame-rate=120, height=1080}
+11-27 16:37:17.361 30726 30849 I PcScreen: streaming
+11-27 16:38:44.891 27124 30626 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+# After Stop Preview, logical displays 0 and 390 remained. Sunshine and the Windows test card were stopped.
+# The wearer was asked to check each eye separately for the correct label, color, and moving dot. User reply: 佩戴测试正常
