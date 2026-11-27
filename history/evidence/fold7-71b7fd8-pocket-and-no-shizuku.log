@@ -1,0 +1,22 @@
+Fold7 SM-F9660, C9.53.6 original cable, external 5 V, Samsung mirror mode
+Monado ARM64 APK SHA-256: 71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8
+Unmodified Pocket XR 1.6.28 APK SHA-256: 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+
+Pocket XR: normal application entry and live restored Clock panel
+11-27 11:22:29.255 14831 14844 I Cv10PocketXrDisplay: Pocket XR mode 0 start accepted on 203 (3840x1080, 240 dpi)
+11-27 11:22:29.597  9424  9424 I Cv10PocketXrPreview: First virtual display frame available on display 203
+11-27 11:22:30.372  2961  3281 I ActivityTaskManager: Displayed com.sec.android.app.clockpackage/.ClockPackage for user 0: +518ms
+Dumpsys: display 0 = com.hayeco.flipspaces/.TrackpadActivity; display 203 = com.hayeco.flipspaces/.spatial.SpaceActivity; display 205 = com.sec.android.app.clockpackage/.ClockPackage
+After Stop Preview: 0 Pocket XR virtual displays, no Cv10PocketControlsService ServiceRecord
+
+Fold7 launch with Shizuku stopped, Wi-Fi on for ADB
+Before runtime launch: no shizuku_server process.
+After both launches: no shizuku_server process.
+11-27 11:29:36.466  9702 18213 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+11-27 11:29:36.856  9702 18213 V hello_xr: [11:29:36.856][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2520291868125
+11-27 11:29:39.404  9702 18213 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 11:29:42.886  9702 18569 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so
+11-27 11:29:43.009  9702 18569 V hello_xr: [11:29:43.009][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598463392 time=2521319420000
+11-27 11:29:52.699  9702 18569 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+After restarting from the visible Shizuku Start button: shizuku_server PID 19056
+Fold7 post-test: 2D launcher resumed, Wi-Fi on, system min_refresh_rate null

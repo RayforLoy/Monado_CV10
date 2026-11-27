@@ -43,9 +43,9 @@ Fold7（SM-F9660）使用 C9.53.6 原厂线和外接 5 V，在 **已镜像** 的
 
 Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停留置中和轻触确认，也通过了 Android 返回键。使用系统导航条的上滑手势回到了三星桌面。以 Fold7 实时姿态为基准合成四向转动，验证了俯仰修正、左右指向和上滑停留置中。早期两路外显截图与右镜实拍一致。后续在 Fold7 竖屏控制页手持转动手机，确认光点离开菜单后仍可见，菜单外点按不触发操作。[激光笔方向与越界复测](history/fold7-phone-laser-axis.md)
 
-使用无 `INTERNET` 权限且未获得 Shizuku 授权的诊断包，从 2D 直启和 3D 点选原版 `hello_xr` 均已实测在 CV10 出图和正常退出。整合源码也通过同一测试。诊断使用默认后台策略，保留系统 Wi-Fi 用于无线 ADB。关闭系统 Wi-Fi 的实机复测待做。[应用网络隔离复测](history/fold7-offline-launcher.md#整合预览的应用网络隔离)
+使用无 `INTERNET` 权限且未获得 Shizuku 授权的诊断包，从 2D 直启和 3D 点选原版 `hello_xr` 均已实测在 CV10 出图和正常退出。整合预览 `71b7fd8` 在停止 Shizuku 服务后，再次通过两条实机启动和退出路径。Fold7 保留系统 Wi-Fi 用于无线 ADB，关闭系统 Wi-Fi 的实机复测待做。[应用网络隔离复测](history/fold7-offline-launcher.md#整合预览的应用网络隔离) · [关闭 Shizuku 的实机记录](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照)
 
-整合预览提供离线启动器和 Pocket XR 外显入口。`a3d86e5` 的 ARM64 包在 Fold7 复测了 2D 直启、3D 点选、右镜出图和正常退出。早期整合构建在 16 KiB 的 Android 16 模拟器验证了安装、原生运行时加载和 Vulkan 初始化失败后的重试与返回。[整合 APK 校验与复测记录](history/fold7-offline-launcher.md#启动器与-pocket-xr-整合预览)
+整合预览提供离线启动器和 Pocket XR 外显入口。`71b7fd8` 的 ARM64 包也在关闭 Wi-Fi 和移动数据的 16 KiB Android 16 模拟器上安装成功。从 2D 列表能打开原版 Pocket XR 手机触控板并返回。内置 3D 启动器两次成功加载原生运行时，模拟器因缺少 Vulkan 扩展未能出图。这个版本的原版 `hello_xr` 自带 ARM64 库采用 4 KiB 对齐，16 KiB 系统在进入 OpenXR 前即拒绝加载。[16 KiB 断网对照](history/fold7-offline-launcher.md#android-16-16-kib-系统断网对照)
 
 如果 2D 列表提示 **后台运行受限**，在 **应用程序信息 → 电池 → 后台运行** 中可为 Monado CV10 Preview 选择 **不受限制**。Fold7 的 One UI 8.5 即使在该设置下也曾冻结 Preview，导致 2D 直启或 3D 点选后黑屏、定格或无法返回。当前整合预览在三星 Android 16 设备上检测到外部 OpenXR 应用的 IPC 回复超时后，通过 Android 服务绑定唤醒运行时。Fold7 从 3D 菜单启动和退出原版 `hello_xr` 五轮通过，最初数秒仍可能有短暂停顿。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
 

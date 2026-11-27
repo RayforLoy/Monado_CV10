@@ -106,6 +106,8 @@
 
 五轮都先从 2D 列表直启，再从 3D 菜单点选原版 `hello_xr`。3D 点选至 `FOCUSED` 为 134–658 毫秒，五次均在同一 PID 进入 `FOCUSED`，均在系统返回后完成 `xrDestroyInstance`，其中两次在启动约一秒后返回，未出现 ANR。三轮延长测试采样到最初数秒外屏约 54.75–55.47 次呈现每秒，最大间隔 66.33 毫秒，稍后稳定至约 60.32 次每秒，最大间隔 16.58 毫秒。CV10 右镜实拍有蓝块。三星仍在最初数秒触发 Freecess，预览通过绑定缩短冻结；这次测量未覆盖佩戴时的流畅度。[筛选日志和呈现数据摘要](evidence/fold7-launcher-3d-freecess-20261127.log) · [右镜实拍](evidence/fold7-launcher-71b7fd8-right.jpg)
 
+11:29，仍用同一 `71b7fd8` APK，通过 Shizuku 的停止操作关闭服务，测试前后均查不到 `shizuku_server` 进程。2D 直启和 3D 点选原版 `hello_xr` 分别在 419 毫秒和 145 毫秒进入 `FOCUSED`，随后均正常完成 `xrDestroyInstance`。3D 点选的右镜实拍拍到蓝块。Fold7 保持 Wi-Fi 用于唯一的 ADB 连接。完成后重新启动 Shizuku，手机回到 Monado 的 2D 列表，系统最低刷新率为 `null`。[无 Shizuku 时的筛选日志](evidence/fold7-71b7fd8-pocket-and-no-shizuku.log) · [右镜实拍](evidence/fold7-launcher-71b7fd8-shizuku-off-right.jpg)
+
 2026-11-27 香港时间。沿用同一台 Fold7、原厂线、供电及原版 `hello_xr`。经手机菜单打开 2D 列表后等待 40 秒，避免 ADB 启动产生的临时豁免覆盖 2D 直启。先在 2D 列表直启并退出样例，再从 3D 菜单点选同一个样例。记录 `FOCUSED`、SurfaceFlinger 呈现计数、右镜画面及返回后的 `xrDestroyInstance`。前三轮预览包的 `RUN_ANY_IN_BACKGROUND` 为 `ignore`。
 
 - 基线 `76ad245` 经 2D 直启后持续出帧至第 78 秒，外屏图层约 60 次不同的呈现时间戳每秒，CV10 面板模式为 90 Hz。3D 点选于 07:28:46.252 进入 `FOCUSED`，Freecess 随后以 `Bg-buff` 冻结预览包的两个进程。第 2 秒右镜为黑色，`ActivityDestroyTimeout` 约十秒后解冻并恢复出图，样例可退出。[第 2 秒右镜](evidence/fold7-launcher-76ad245-handoff-black-right.jpg) · [第 38 秒右镜](evidence/fold7-launcher-76ad245-handoff-recovered-right.jpg)
@@ -131,6 +133,12 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 08:09–08:11，使用 `39250d1` 派生的诊断提交 `a05f274`，仅从合并后的 Android 清单移除 `INTERNET`。APK SHA-256 为 `305cfe8ef6c47ea0feb1fcbbb1702b36f7eb6602ebfdac49e4d885e3ffb60b4e`。v2 签名、16 KiB ZIP 对齐及五个 ARM64 库的 15 个 ELF `PT_LOAD` 段通过校验。预览和未修改的 Khronos `hello_xr` 均无 `INTERNET` 权限。预览未获 Shizuku 授权。运行于预览 UID 的探针创建 IPv4、IPv6 套接字时均得到 `Operation not permitted`。
 
 移除临时回环映射后，从 2D 列表直启和 3D 菜单点选 `hello_xr`。同一 PID 11235 两次进入 `FOCUSED` 并正常退出。3D 点选第 24 秒仍有约 60.32 次/秒的不同呈现时间戳，右镜拍到蓝块。手机 Wi-Fi 保持打开以维持无线 ADB。结束后确认稳定 Broker、后台 `ignore`、最低刷新率 `null` 和原预览 APK 已恢复。[隔离测试日志](evidence/fold7-launcher-a05f274-isolated.txt) · [第 24 秒右镜](evidence/fold7-launcher-a05f274-isolated-24s-right.jpg)
+
+### Android 16 16 KiB 系统断网对照
+
+2026-11-27 11:33–11:37 香港时间，Android 16（API 36）模拟器报告 `PAGE_SIZE=16384`。使用与 Fold7 相同的 `71b7fd8` ARM64 APK，Broker 选择 **Monado CV10 Preview**。测试期间系统 Wi-Fi 与移动数据均关闭，`shizuku_server` 未运行。
+
+从 2D 列表点选原版 `hello_xr`，Android 收到启动请求。强制使用 `arm64-v8a` 的样例因 `libhello_xr.so` 的 4 KiB 对齐在加载时退出。从同一列表打开 3D 启动器，首次和重试均成功加载运行时，创建并销毁实例。模拟器缺少 `VK_KHR_external_memory_capabilities`，两次 `xrGetSystem` 都返回 `XR_ERROR_RUNTIME_FAILURE`。通过 **取消** 和 Android 返回键回到 2D 列表。关闭 **仅显示 XR 应用** 后，同一列表可打开未修改的 Pocket XR 1.6.28 手机触控板，按返回回到列表。这项测试只覆盖手机入口和运行时加载，CV10 出图另见 Fold7 实机记录。[安装、系统状态与筛选日志](evidence/android16-16k-launcher-71b7fd8-offline.txt)
 
 ### Pocket XR 测试卡修订版的 Fold7 安装回归
 

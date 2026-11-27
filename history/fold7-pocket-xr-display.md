@@ -34,6 +34,10 @@
 
 再从原版菜单选中 **时钟**，保留原有虚拟屏 198，时钟窗口回到视野。两只眼的 CV10 外显先后读到 `00:09.31` 和 `00:13.67`，右镜随后拍到 `00:14.51`。这轮验证了场景和 CV10 外显都能显示持续更新的普通应用面板。恢复旧会话后若窗口不可见，可在原版启动器重新选中。测试未改变系统驱动或 Pocket XR APK。点击 **停止预览** 后，空间屏和两个应用屏均已释放。[CV10 双眼对照](evidence/fold7-pocket-live-panels-stereo.png) · [右镜计算器](evidence/fold7-pocket-live-calculator-right.jpg) · [右镜秒表](evidence/fold7-pocket-live-clock-right.jpg)
 
+### 启动器冻结修复后的原版空间回归
+
+11:22–11:25，沿用同一接线，Fold7 安装 `71b7fd8` ARM64 预览，APK SHA-256 为 `71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8`。原版 Pocket XR 1.6.28 APK 摘要保持一致。使用既有 Shizuku 授权从 **打开 Pocket XR 空间** 启动，Monado 收到 3840×1080 虚拟屏的首帧，原版触控板自动到手机前台。上次的计算器和时钟面板各自重建了显示屏，时钟直接恢复到眼镜画面。向时钟屏点按开始后，CV10 的两个输出眼区均从 `00:00.00` 更新至 `00:08.64`，右镜实拍拍到了正在计时的窗口。手机切回预览并点按 **停止预览** 后，三个虚拟屏及手机控制前台服务均已释放。[双眼输出对照](evidence/fold7-pocket-71b7fd8-clock-stereo.png) · [右镜实拍](evidence/fold7-pocket-71b7fd8-clock-right.jpg) · [筛选日志](evidence/fold7-71b7fd8-pocket-and-no-shizuku.log)
+
 ### 早期整合预览
 
 2026-11-27 02:40 香港时间，同一台 Fold7 和接线。ARM64 整合预览来自 `6e536a4`，包含内置 2D、3D 启动器及 Pocket XR 外显和头踪实验。正式预览包 SHA-256 为 `94fc866acb33f0def30ec4d3f03ffd11a09e918e44b30604635ea850c110f21c`。签名与 16 KiB ZIP 对齐检查通过，五个 ARM64 库的 15 个 `PT_LOAD` 段均对齐到 16 KiB。本机页大小为 4 KiB。内置 3D 菜单进入 `XR_SESSION_STATE_FOCUSED`，右镜拍到应用卡片和手机指针。[内置 3D 菜单右镜实拍](evidence/fold7-pocket-integrated-menu-right.jpg)

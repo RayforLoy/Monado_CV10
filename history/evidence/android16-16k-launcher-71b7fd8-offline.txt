@@ -1,0 +1,38 @@
+Android 16 Google APIs emulator, API 36, 16 KiB system pages
+2026-11-27 11:33–11:37 HKT
+
+Installed APK SHA-256
+  Monado CV10 Preview (71b7fd8): 71f1f6d788df303d9049a96feba5f4ad9fccf2bcf2070985cb41339214cd49d8
+  Original Khronos hello_xr OpenGL ES: 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+  Original Pocket XR 1.6.28: 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+
+getconf PAGE_SIZE: 16384
+settings get global wifi_on: 0
+settings get global mobile_data: 0
+pidof shizuku_server: no process
+ARM64 Broker active: package_name=org.cv10.monado.out_of_process.launcher_preview
+Preview and hello_xr primaryCpuAbi: arm64-v8a
+
+2D list -> original hello_xr (selected ARM64 library)
+11-27 11:33:45.561 ActivityTaskManager: START ... cmp=org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity ... result code=0
+11-27 11:33:45.750 linker: .../lib/arm64/libhello_xr.so program alignment (4096) cannot be smaller than system page size (16384)
+
+2D list -> OPEN 3D LAUNCHER -> RETRY -> CANCEL -> Android Back
+11-27 11:33:52.092 OpenXR-Loader: RuntimeInterface::LoadRuntime succeeded ... OpenXR API version 1.1
+11-27 11:33:52.233 monado.vk_check_required_extensions: VK_KHR_external_memory_capabilities
+11-27 11:33:52.497 OXR: XR_ERROR_RUNTIME_FAILURE in xrGetSystem ... XRT_ERROR_VULKAN
+11-27 11:33:52.505 OpenXR-Loader: [xrDestroyInstance] RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 11:33:52.506 Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+11-27 11:33:55.597 OpenXR-Loader: RuntimeInterface::LoadRuntime succeeded ... OpenXR API version 1.1
+11-27 11:33:55.620 monado.vk_check_required_extensions: VK_KHR_external_memory_capabilities
+11-27 11:33:55.892 OpenXR-Loader: [xrDestroyInstance] RuntimeInterface::UnloadRuntime - Unloading RuntimeInterface
+11-27 11:33:55.892 Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+topResumedActivity after Back: org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity
+
+2D list, XR apps only unchecked -> original Pocket XR -> Android Back
+11-27 11:37:20.042 ActivityTaskManager: START ... cmp=com.hayeco.flipspaces/.MainActivity ... result code=0
+11-27 11:37:20.314 ActivityTaskManager: START ... cmp=com.hayeco.flipspaces/.TrackpadActivity ... result code=0
+11-27 11:37:20.784 ActivityTaskManager: Displayed com.hayeco.flipspaces/.TrackpadActivity for user 0: +749ms
+topResumedActivity before Back: com.hayeco.flipspaces/.TrackpadActivity
+topResumedActivity after Back: org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity
+Wi-Fi and mobile data remained off. Shizuku was still stopped.
