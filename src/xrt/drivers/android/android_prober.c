@@ -18,6 +18,7 @@
 #include "util/u_logging.h"
 
 #include "android_prober.h"
+#include "cv10_controller.h"
 #include "cv10_device.h"
 
 
@@ -71,7 +72,18 @@ android_prober_autoprobe(struct xrt_auto_prober *xap,
 {
 	if (no_hmds) return 0;
 	out_xdevs[0] = cv10_device_create();
-	return out_xdevs[0] != NULL ? 1 : 0;
+	if (out_xdevs[0] == NULL) return 0;
+	if (out_xdevs[0]->supported.position_tracking && cv10_kit_mode("handsRequested")) {
+		int count = 1;
+		struct xrt_tracking_origin *origin = out_xdevs[0]->tracking_origin;
+		struct xrt_device *left = cv10_kit_controller_create(origin, false);
+		struct xrt_device *right = cv10_kit_controller_create(origin, true);
+		if (left) out_xdevs[count++] = left;
+		if (right) out_xdevs[count++] = right;
+		return count;
+	}
+	out_xdevs[1] = cv10_controller_create();
+	return out_xdevs[1] != NULL ? 2 : 1;
 }
 
 

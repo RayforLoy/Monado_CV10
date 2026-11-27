@@ -9,6 +9,7 @@
 
 #include "android_globals.h"
 
+#include <atomic>
 #include <stddef.h>
 #include <wrap/android.app.h>
 
@@ -22,6 +23,20 @@ static struct
 	jni::Object context = {};
 	struct _ANativeWindow *window = nullptr;
 } android_globals;
+
+static std::atomic<int> cv10_ipd_mm{0};
+
+int
+android_globals_get_cv10_ipd_mm(void)
+{
+	return cv10_ipd_mm.load(std::memory_order_relaxed);
+}
+
+void
+android_globals_set_cv10_ipd_mm(int ipd_mm)
+{
+	cv10_ipd_mm.store(ipd_mm, std::memory_order_relaxed);
+}
 
 void
 android_globals_store_vm_and_activity(struct _JavaVM *vm, void *activity)

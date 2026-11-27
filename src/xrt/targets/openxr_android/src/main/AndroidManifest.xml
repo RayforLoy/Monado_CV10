@@ -8,6 +8,17 @@
     -->
 
     <uses-feature android:name="android.hardware.usb.host" android:required="true" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- We may try to use OpenGL|ES 3.0 -->
     <uses-feature
@@ -71,6 +82,17 @@
         <activity
             android:name=".Cv10LauncherActivity"
             android:exported="false" />
+        <activity
+            android:name=".Cv10ControllerActivity"
+            android:exported="false" />
+        <activity
+            android:name=".Cv10KitActivity"
+            android:exported="false" />
+
+        <service
+            android:name=".Cv10KitTrackingService"
+            android:exported="false"
+            android:foregroundServiceType="camera" />
 
         <activity
             android:name=".Cv10SpatialLauncherActivity"

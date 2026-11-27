@@ -246,7 +246,7 @@ android {
         flavor.dimension 'deployment'
         flavor.applicationIdSuffix '.in_process'
         flavor.externalNativeBuild.cmake.arguments += "-DXRT_FEATURE_SERVICE=OFF"
-        flavor.externalNativeBuild.cmake.targets "openxr_monado"
+        flavor.externalNativeBuild.cmake.targets "openxr_monado", "cv10-kit-slam"
         flavor.buildConfigField "boolean", "inProcess", "true"
         flavor.resValue "string", "app_name", appName
     }
@@ -255,7 +255,7 @@ android {
         flavor.dimension 'deployment'
         flavor.applicationIdSuffix '.out_of_process'
         flavor.externalNativeBuild.cmake.arguments += ["-DXRT_FEATURE_SERVICE=ON", "-DXRT_BUILD_CV10_SPATIAL_LAUNCHER=ON"]
-        flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service", "cv10-spatial-launcher"
+        flavor.externalNativeBuild.cmake.targets "openxr_monado", "monado-service", "cv10-spatial-launcher", "cv10-kit-slam"
         flavor.buildConfigField "boolean", "inProcess", "false"
         flavor.resValue "string", "app_name", appName
     }

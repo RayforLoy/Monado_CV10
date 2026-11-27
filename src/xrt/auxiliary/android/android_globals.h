@@ -68,6 +68,12 @@ android_globals_get_activity(void);
 void *
 android_globals_get_context(void);
 
+//! CV10 application eye separation in millimetres, or zero to use the default.
+int
+android_globals_get_cv10_ipd_mm(void);
+
+void
+android_globals_set_cv10_ipd_mm(int ipd_mm);
 
 void
 android_globals_store_window(struct _ANativeWindow *window);

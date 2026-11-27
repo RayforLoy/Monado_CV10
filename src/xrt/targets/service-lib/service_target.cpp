@@ -181,6 +181,12 @@ private:
 } // namespace
 
 extern "C" JNIEXPORT void JNICALL
+Java_org_freedesktop_monado_ipc_MonadoImpl_nativeSetCv10IpdMm(JNIEnv *, jclass, jint ipd_mm)
+{
+	android_globals_set_cv10_ipd_mm(ipd_mm);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_org_freedesktop_monado_ipc_MonadoImpl_nativeStartServer(JNIEnv *env, jobject thiz, jobject context)
 {
 	JavaVM *jvm = nullptr;
