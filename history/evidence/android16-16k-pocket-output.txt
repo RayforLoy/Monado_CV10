@@ -1,0 +1,44 @@
+2026-11-27 08:55–09:10 HKT | Isolated Android 16 Google APIs x86_64 guest
+getconf PAGE_SIZE=16384; OpenGL ES 3.1; Wi-Fi and mobile data off.
+Guest Shizuku shell service. Monado preview and stock Pocket XR grants existed before the retest.
+Monado a3d86e5 x86_64 release SHA-256 e739338fc1568ecc83f0586366b5212466d85fb09024d9d946bad2a90a3a74a7
+Stock Pocket XR 1.6.28 SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+
+Same production APK, -gpu swangle -feature Vulkan,GLESDynamicVersion
+08:55:32.918 3461 3571 I Cv10SpatialLauncher: OpenXR session state 5
+08:55:33.867 3461 3461 I Cv10PocketXrPreview: First virtual display frame available on display 2
+Default presentation swapchain imageUsage: VK_IMAGE_USAGE_STORAGE_BIT; presentMode: VK_PRESENT_MODE_MAILBOX_KHR.
+08:55:46.661 3811 3916 I Cv10SpatialLauncher: OpenXR session state 5
+08:55:47.438 3811 3811 I Cv10PocketXrPreview: First virtual display frame available on display 3
+debug.xrt.XRT_COMPOSITOR_COMPUTE=false read back as VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT on the presentation swapchain. Capture stayed black.
+-gpu host reported llvmpipe as the physical Vulkan adapter and logged the same AHardwareBuffer usage diagnostic. Guest ADB closed before a screen capture could be collected.
+
+GLES swapchain readback probe SHA-256 af5406e2f2c2fa1cd22173844805eb13ace20a59487ec30a76c49ddb31e19bbc
+Probe replaces only lib/x86_64/libcv10-spatial-launcher.so before alignment and signing. After glDrawArrays, it reads one GL_RGBA pixel from the center of each half of the bound OpenXR framebuffer every 30 frames.
+09:01:05.040 3293 3402 I Cv10SpatialLauncher: OpenXR session state 5
+09:01:05.880 3293 3293 I Cv10PocketXrPreview: First virtual display frame available on display 2
+09:01:05.899 3293 3402 I Cv10SpatialLauncher: GLES capture readback frame 1, L=216/217/228/255 R=216/217/228/255 error=0x0
+09:01:07.617 3293 3402 I Cv10SpatialLauncher: GLES capture readback frame 31, L=51/255/51/255 R=51/255/51/255 error=0x0
+09:01:49.532 3655 3762 I Cv10SpatialLauncher: GLES capture readback frame 1, L=216/217/228/255 R=216/217/228/255 error=0x0
+09:01:51.942 3655 3762 I Cv10SpatialLauncher: GLES capture readback frame 31, L=51/255/51/255 R=51/255/51/255 error=0x0
+Second readback run used COLOR_ATTACHMENT and FIFO confirmed by VkSwapchainCreateInfoKHR.
+
+Linear GL_RGBA8 probe SHA-256 0660704ab3ea1c183897b3f310d180a5e00f00f44c21885f437c6b1babea3169
+09:09:53.415 7141 7260 I Cv10SpatialLauncher: Diagnostic: Pocket XR GL_RGBA8 swapchain
+09:09:53.454 7141 7260 I Cv10SpatialLauncher: OpenXR session state 5
+09:09:54.387 7141 7141 I Cv10PocketXrPreview: First virtual display frame available on display 8
+Vulkan present swapchain: COLOR_ATTACHMENT and FIFO. Final screen remained black for the original, readback, and linear-format runs.
+Final 1080x1920 black PNG SHA-256 4afb293f262964138b1d2e2a08733ad4d4216150e508b9f62e4610e47e0cb930; FFmpeg YMIN=16 YMAX=16.
+Idle 1080x1920 guest screen SHA-256 a1102550cc76c78bf90aeda3b5c7baf66022a147bc35053f96325f0aff992c23; YMIN=16 YMAX=220.
+
+Production preview, separate emulated presentation
+Shell published a guest-only HUAWEIAV03 display, logical ID 5, 3200x1600 at 60 Hz. Production preview installed from the same a3d86e5 artifact.
+09:06:02.646 5037 5065 I FlipSpaces/Space: launcher opened: 3 pages (the home tray and 2 of All apps), 21 apps, 4 pinned
+Source capture android16-16k-pocket-launcher-flat.png is the stock 2D Home tray on the Pocket XR source display, SHA-256 df0b5fd0058f2b323c653e5f039aecc19328f9fcc6c1d5ed42cab2ba1dd7f918.
+09:07:58.561 6272 6379 I Cv10SpatialLauncher: OpenXR session state 5
+09:07:58.564 6272 6388 I MonadoView: CV10 target id=5 name=HUAWEIAV03 active=3200x1600@60 (guest virtual display)
+09:07:59.597 6272 6272 I Cv10PocketXrPreview: First virtual display frame available on display 7
+09:08:03.797 6272 6272 I Cv10PocketXrPreview: Opened Pocket XR phone controls with the external session active
+09:08:26.397 6406 6432 I FlipSpaces/Space: launcher opened: 3 pages (the home tray and 2 of All apps), 21 apps, 4 pinned
+ActivityManager top resumed: com.hayeco.flipspaces/.TrackpadActivity on display 0; com.hayeco.flipspaces/.spatial.SpaceActivity on display 7.
+Synthetic output stayed black. Released synthetic display, cleared guest debug properties, and verified the restored production APK digest.

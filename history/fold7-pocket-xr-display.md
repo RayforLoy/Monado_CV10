@@ -85,3 +85,9 @@
 - 模拟器主屏的 Monado 输出全黑，同轮 Vulkan 后端报告 AHardwareBuffer 导入不支持请求的 `VK_IMAGE_USAGE_STORAGE_BIT`。SwiftShader 下，调试构建在模拟器驱动的 `vkSetDebugUtilsObjectNameEXT` 崩溃，ARM64 转译和原生 x86_64 都可复现。发布构建越过了该调用，原 SwiftShader 配置随后因仅提供 OpenGL ES 3.0 而无法建立 OpenXR 会话。本节的截图从原版 Pocket XR 所在虚拟屏采集。Fold7 的一键开流和镜片验收仍需设备上的 Shizuku 授权。
 
 测试包用 `-Pcv10LauncherPreview=true -Pcv10Abi=x86_64` 构建并以本机开发证书签名。修复前 `39250d1` 发布构建 APK 的 SHA-256 为 `3debac366ed52908189a74c02774b6aee3ba82b2e4bbef6e1da2b5364709bcf9`，修复后 `a3d86e5` 的 SHA-256 为 `e739338fc1568ecc83f0586366b5212466d85fb09024d9d946bad2a90a3a74a7`。修复版签名、16 KiB ZIP 对齐及全部 15 个 ELF `PT_LOAD` 段通过校验。原版 1.6.28 首次启动时出现 16 KiB 兼容提示，确认后继续执行上述流程。原版的 `libLiteRt.so` 和 `libLiteRtDispatch_Samsung.so` 仍有对齐为 4 KiB 的 ELF 段。
+
+### 16 KiB 模拟器的合成黑屏边界
+
+08:55 至 09:10 香港时间，在同一模拟器复测。诊断构建对 OpenXR 交换链绑定的 GLES 帧缓冲取样。测试卡进入后，左右各自中心像素均为 `51/255/51/255`，`glGetError()` 为 `0`。系统截图持续为纯黑。显式改用 Vulkan `COLOR_ATTACHMENT` 与 FIFO，或将 Pocket XR 的 GLES 格式切到 `GL_RGBA8`，都复现黑屏。这把问题缩小到 OpenXR 交换链交给合成器后的路径，具体失败点仍待确认。诊断改动仅用于模拟器，测试后已恢复原包和调试属性。[帧缓冲取样与图形后端对照](evidence/android16-16k-pocket-output.txt)
+
+在模拟器创建一个名为 `HUAWEIAV03`、3200×1600、60 Hz 的测试显示屏后，原生产预览通过 CV10 的外显入口保持 OpenXR 会话，同时从 **打开手机控制** 进入原版 `TrackpadActivity`。按原版触控板的 Home 按钮，原版空间打开含 21 个应用的列表，源屏抓到了 2D 首页。模拟外显的合成输出仍为黑色。本轮证实手机控制和原版菜单可以在正式预览流程中同时运行。Fold7 授权后的一键启动、普通应用面板和光学输出仍待现场验收。[原版菜单源帧](evidence/android16-16k-pocket-launcher-flat.png) · [模拟外显与手机触控板日志](evidence/android16-16k-pocket-output.txt)
