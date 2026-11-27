@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: BSL-1.0 -->
 <resources>
+    <string name="cv10_phone_start">Phone control for OpenXR apps</string>
+    <string name="cv10_phone_active">OpenXR phone controller is on</string>
+    <string name="cv10_phone_stop">Stop phone controller</string>
+    <string name="cv10_phone_select">Select</string>
+    <string name="cv10_phone_recenter">Center aim</string>
+    <string name="cv10_phone_unavailable">Phone control needs overlay permission and a rotation sensor.</string>
     <string name="cv10_app_launcher_title">Apps</string>
     <string name="cv10_controller_title">CV10 Bluetooth controller</string>
     <string name="cv10_ipd_title">CV10 software IPD</string>

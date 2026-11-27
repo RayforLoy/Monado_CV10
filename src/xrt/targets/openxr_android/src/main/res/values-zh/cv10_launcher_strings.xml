@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: BSL-1.0 -->
 <resources>
+    <string name="cv10_phone_start">手机操控 OpenXR 应用</string>
+    <string name="cv10_phone_active">已开启 OpenXR 手机手柄</string>
+    <string name="cv10_phone_stop">停止手机手柄</string>
+    <string name="cv10_phone_select">确认</string>
+    <string name="cv10_phone_recenter">瞄准回正</string>
+    <string name="cv10_phone_unavailable">手机操控需要悬浮窗权限和旋转传感器。</string>
     <string name="cv10_ipd_title">CV10 软件瞳距</string>
     <string name="cv10_ipd_value">%1$d 毫米</string>
     <string name="cv10_ipd_description">调整 OpenXR 左右虚拟眼位的间距。</string>

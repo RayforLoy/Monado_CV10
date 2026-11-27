@@ -12,6 +12,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
@@ -98,6 +99,10 @@
             android:name=".Cv10KitTrackingService"
             android:exported="false"
             android:foregroundServiceType="camera" />
+
+        <service
+            android:name=".Cv10PhoneControllerService"
+            android:exported="false" />
 
         <activity
             android:name=".Cv10SpatialLauncherActivity"

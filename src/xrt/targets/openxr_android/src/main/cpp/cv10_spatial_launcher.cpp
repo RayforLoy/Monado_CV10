@@ -20,19 +20,23 @@
 #include <cstdio>
 #include <cstring>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "cv10_launcher_pointer.hpp"
+
 namespace {
+
+using namespace cv10_launcher;
 
 constexpr char tag[] = "Cv10SpatialLauncher";
 constexpr uint32_t panel_width = 1280;
 constexpr uint32_t panel_height = 720;
-// Preserve the menu's scale while giving the laser a transparent border.
-constexpr uint32_t canvas_width = 2048;
-constexpr uint32_t canvas_height = 1280;
+constexpr uint32_t scene_eye_size = 1280;
+constexpr uint32_t scene_width = 2 * scene_eye_size;
 constexpr uint32_t pocket_width = 3840;
 constexpr uint32_t pocket_height = 1080;
 // The Pocket XR companion uses the symmetric OEM CV10 frustum at 47.5 degrees per side.
@@ -45,6 +49,7 @@ constexpr float pocket_wide_scale = 1.3f;
 constexpr XrExtent2Df pocket_wide_size = {pocket_size.width * pocket_wide_scale,
                                           pocket_size.height * pocket_wide_scale};
 constexpr float panel_width_m = 1.62f;
+constexpr float panel_height_m = panel_width_m * panel_height / panel_width;
 std::mutex session_mutex;
 
 // Matches LauncherControllerMode in Cv10SpatialLauncherActivity.kt.
@@ -65,42 +70,57 @@ void main() {
 }
 )";
 
-constexpr char fragment_shader[] = R"(#version 300 es
+constexpr char scene_vertex_shader[] = R"(#version 300 es
+uniform vec3 vertices[4];
+uniform vec3 eye;
+uniform vec4 inverseRotation;
+uniform vec4 fovTangents;
+uniform highp int material;
+out vec2 uv;
+void main() {
+    vec3 vertex = vertices[gl_VertexID] - eye;
+    vec3 axis = inverseRotation.xyz;
+    vec3 t = 2.0 * cross(axis, vertex);
+    vec3 view = vertex + inverseRotation.w * t + cross(axis, t);
+    vec2 range = fovTangents.yw - fovTangents.xz;
+    vec2 shift = fovTangents.yw + fovTangents.xz;
+    const float nearPlane = 0.035;
+    const float farPlane = 30.0;
+    float depth = -view.z;
+    gl_Position = vec4((2.0 * view.xy - shift * depth) / range,
+                       ((farPlane + nearPlane) * depth - 2.0 * farPlane * nearPlane) / (farPlane - nearPlane), depth);
+    vec2 corner = vec2(float(gl_VertexID & 1), float((gl_VertexID >> 1) & 1));
+    uv = material == 1 ? corner.yx : vec2(corner.x, 1.0 - corner.y);
+}
+)";
+
+constexpr char scene_fragment_shader[] = R"(#version 300 es
 precision highp float;
 in vec2 uv;
 uniform sampler2D panel;
-uniform vec3 phoneAim;
-uniform vec3 controllerAim;
-uniform vec2 panelSize;
-uniform vec2 canvasSize;
+uniform highp int material;
 out vec4 color;
-float pointerOpacity(vec2 position, vec2 cursor, vec2 origin) {
-    vec2 ray = cursor - origin;
-    float along = clamp(dot(position - origin, ray) / max(dot(ray, ray), 0.0001), 0.0, 1.0);
-    float rayDistance = length(position - origin - along * ray);
-    float rayOpacity = (1.0 - smoothstep(0.7, 2.5, rayDistance)) * along * 0.32;
-    float cursorDistance = length(position - cursor);
-    float ring = 1.0 - smoothstep(1.7, 3.2, abs(cursorDistance - 9.0));
-    float centerDot = 1.0 - smoothstep(2.2, 3.5, cursorDistance);
-    return max(rayOpacity, max(ring, centerDot));
-}
 void main() {
-    vec2 position = (uv - 0.5) * canvasSize + 0.5 * panelSize;
-    vec2 panelUv = position / panelSize;
-    vec4 background = vec4(0.0);
-    if (all(greaterThanEqual(panelUv, vec2(0.0))) && all(lessThan(panelUv, vec2(1.0)))) {
-        background = vec4(texture(panel, panelUv).rgb, 1.0);
-    }
-    color = background;
-    if (controllerAim.z > 0.0) {
-        float opacity = pointerOpacity(position, controllerAim.xy * panelSize, vec2(1.12, 1.18) * panelSize);
-        color = vec4(vec3(1.0, 0.77, 0.27) * opacity, opacity) + color * (1.0 - opacity);
-    } else if (phoneAim.z > 0.0) {
-        float opacity = pointerOpacity(position, phoneAim.xy * panelSize, vec2(0.76, 1.32) * panelSize);
-        color = vec4(vec3(0.34, 1.0, 0.75) * opacity, opacity) + color * (1.0 - opacity);
+    if (material == 0) {
+        color = vec4(texture(panel, uv).rgb, 1.0);
+    } else if (material == 1) {
+        color = vec4(1.0, 1.0, 1.0, mix(153.0, 26.0, uv.x) / 255.0);
+    } else {
+        float radius = length(uv - 0.5);
+        float feather = max(0.006, fwidth(radius) * 0.5);
+        float outer = 1.0 - smoothstep(0.232 - feather, 0.232 + feather, radius);
+        float inner = smoothstep(0.107 - feather, 0.107 + feather, radius);
+        color = vec4(1.0, 1.0, 1.0, outer * inner);
     }
 }
 )";
+
+enum class SceneMaterial : GLint
+{
+	Panel,
+	Beam,
+	Ring,
+};
 
 constexpr char capture_shader[] = R"(#version 300 es
 #extension GL_OES_EGL_image_external_essl3 : require
@@ -161,7 +181,9 @@ public:
 		panel_method = env->GetMethodID(cls, "takePanel", "()Landroid/graphics/Bitmap;");
 		aim_method = env->GetMethodID(cls, "aimBits", "()J");
 		recenter_method = env->GetMethodID(cls, "recenterGeneration", "()I");
-		controller_click_method = env->GetMethodID(cls, "controllerClick", "(FF)V");
+		pointer_target_method = env->GetMethodID(cls, "pointerTarget", "(FF)Z");
+		pointer_click_method = env->GetMethodID(cls, "pointerClick", "(FFZ)V");
+		phone_click_method = env->GetMethodID(cls, "takePhoneClick", "()Z");
 		controller_back_method = env->GetMethodID(cls, "controllerBack", "()V");
 		controller_mode_method = env->GetMethodID(cls, "controllerMode", "()I");
 		env->DeleteLocalRef(cls);
@@ -201,10 +223,22 @@ public:
 		return env->CallIntMethod(state, recenter_method);
 	}
 
-	void
-	controller_click(float x, float y) const
+	bool
+	pointer_target(float x, float y) const
 	{
-		env->CallVoidMethod(state, controller_click_method, static_cast<jfloat>(x), static_cast<jfloat>(y));
+		return env->CallBooleanMethod(state, pointer_target_method, x, y);
+	}
+
+	void
+	pointer_click(float x, float y, bool phone) const
+	{
+		env->CallVoidMethod(state, pointer_click_method, x, y, static_cast<jboolean>(phone));
+	}
+
+	bool
+	take_phone_click() const
+	{
+		return env->CallBooleanMethod(state, phone_click_method);
 	}
 
 	void
@@ -228,7 +262,9 @@ private:
 	jmethodID panel_method = nullptr;
 	jmethodID aim_method = nullptr;
 	jmethodID recenter_method = nullptr;
-	jmethodID controller_click_method = nullptr;
+	jmethodID pointer_target_method = nullptr;
+	jmethodID pointer_click_method = nullptr;
+	jmethodID phone_click_method = nullptr;
 	jmethodID controller_back_method = nullptr;
 	jmethodID controller_mode_method = nullptr;
 };
@@ -351,6 +387,7 @@ public:
 		if (display != EGL_NO_DISPLAY) {
 			if (eglGetCurrentContext() == context && context != EGL_NO_CONTEXT) {
 				glDeleteFramebuffers(1, &framebuffer);
+				glDeleteRenderbuffers(1, &scene_depth);
 				glDeleteTextures(1, &panel_texture);
 				glDeleteProgram(program);
 				eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -557,8 +594,8 @@ private:
 		chain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
 		chain_info.format = panel_format;
 		chain_info.sampleCount = 1;
-		chain_info.width = capture ? capture_width : canvas_width;
-		chain_info.height = capture ? capture_height : canvas_height;
+		chain_info.width = capture ? capture_width : scene_width;
+		chain_info.height = capture ? capture_height : scene_eye_size;
 		if (capture_cv10_optics) {
 			GLint texture_size = 0;
 			glGetIntegerv(GL_MAX_TEXTURE_SIZE, &texture_size);
@@ -641,8 +678,22 @@ private:
 		return button;
 	}
 
-	void
-	update_controller(XrTime time)
+	Aim
+	arm_aim(PointerSource source, XrVector3f head, XrQuaternionf rotation) const
+	{
+		const auto arm_offset = rotate(anchor.orientation, {0.20f, -0.30f, -0.35f});
+		const auto forward = unit(anchor.position - anchor_origin - arm_offset);
+		const auto right = unit(cross(forward, rotate(anchor.orientation, {0.0f, 1.0f, 0.0f})));
+		const auto up = cross(right, forward);
+		const auto to_local = [&](XrVector3f axis) {
+			const auto v = rotate(rotation, axis);
+			return right * v.x + up * v.y - forward * v.z;
+		};
+		return {source, head + arm_offset, to_local({0, 0, -1}), to_local({0, 1, 0})};
+	}
+
+	std::optional<Aim>
+	controller_aim(XrTime time, XrVector3f head, bool &clicked)
 	{
 		const auto mode = state.controller_mode();
 		if (mode != controller_mode) {
@@ -650,12 +701,10 @@ private:
 			controller_calibrated = false;
 			controller_mode = mode;
 		}
-		controller_visible = false;
-		if (controller_hand == XR_NULL_PATH || !focused || controller_mode == ControllerMode::Cf20Waiting ||
-		    controller_mode == ControllerMode::PhoneFallback) {
+		if (controller_hand == XR_NULL_PATH || !focused) {
 			controller_calibrated = false;
 			controller_buttons_armed = false;
-			return;
+			return std::nullopt;
 		}
 		const XrActiveActionSet active{controller_actions, controller_hand};
 		XrActionsSyncInfo sync{XR_TYPE_ACTIONS_SYNC_INFO};
@@ -664,7 +713,18 @@ private:
 		if (xrSyncActions(session, &sync) != XR_SUCCESS) {
 			controller_calibrated = false;
 			controller_buttons_armed = false;
-			return;
+			return std::nullopt;
+		}
+		XrSpaceLocation aim{XR_TYPE_SPACE_LOCATION};
+		if (XR_FAILED(xrLocateSpace(controller_space, local_space, time, &aim)) ||
+		    (aim.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT) == 0) {
+			controller_calibrated = false;
+			controller_buttons_armed = false;
+			return std::nullopt;
+		}
+		const bool kit = (aim.locationFlags & XR_SPACE_LOCATION_POSITION_TRACKED_BIT) != 0;
+		if (!kit && controller_mode != ControllerMode::Cf20) {
+			return std::nullopt;
 		}
 		const auto select = read_controller_button(controller_select);
 		const auto back = read_controller_button(controller_menu);
@@ -676,54 +736,59 @@ private:
 		}
 		if (controller_buttons_armed && back.isActive && back.changedSinceLastSync && back.currentState) {
 			state.controller_back();
-			return;
+			return std::nullopt;
 		}
-		XrSpaceLocation aim{XR_TYPE_SPACE_LOCATION};
-		if (XR_FAILED(xrLocateSpace(controller_space, local_space, time, &aim)) ||
-		    (aim.locationFlags & XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT) == 0) {
-			controller_calibrated = false;
-			return;
+		clicked = controller_buttons_armed && select.isActive && select.changedSinceLastSync && select.currentState;
+		const auto q = aim.pose.orientation;
+		if (kit) {
+			return Aim{PointerSource::Kit, aim.pose.position, rotate(q, {0, 0, -1}), rotate(q, {0, 1, 0})};
 		}
-		const XrQuaternionf q = aim.pose.orientation;
 		if (!controller_calibrated) {
 			controller_center = q;
 			controller_calibrated = true;
 			__android_log_print(ANDROID_LOG_INFO, tag, "OpenXR controller aim acquired and centered");
 		}
+		return arm_aim(PointerSource::Cf20, head, multiply(conjugate(controller_center), q));
+	}
 
-		// CF20 tracks orientation. Take the first direction as the center of the anchored menu.
-		const XrQuaternionf c = controller_center;
-		const XrQuaternionf rotation = {
-		    c.w * q.x - c.x * q.w - c.y * q.z + c.z * q.y,
-		    c.w * q.y + c.x * q.z - c.y * q.w - c.z * q.x,
-		    c.w * q.z - c.x * q.y + c.y * q.x - c.z * q.w,
-		    c.w * q.w + c.x * q.x + c.y * q.y + c.z * q.z,
-		};
-		const float forward_z = 1.0f - 2.0f * (rotation.x * rotation.x + rotation.y * rotation.y);
-		if (forward_z <= 0.05f) {
-			return;
+	std::optional<Pointer>
+	update_pointer(XrTime time, XrVector3f head)
+	{
+		bool clicked = false;
+		auto aim = controller_aim(time, head, clicked);
+		const bool phone_click = state.take_phone_click();
+		if (!aim && focused &&
+		    (controller_mode == ControllerMode::Phone || controller_mode == ControllerMode::PhoneFallback)) {
+			float x = 0.0f;
+			float y = 0.0f;
+			state.read_aim(x, y);
+			// Cv10LaserInput reports yaw / 0.52 and downward pitch / 0.40.
+			const float yaw = -x * 0.52f * 0.5f;
+			const float pitch = -y * 0.40f * 0.5f;
+			const XrQuaternionf q = multiply({0, std::sin(yaw), 0, std::cos(yaw)},
+			                                {std::sin(pitch), 0, 0, std::cos(pitch)});
+			aim = arm_aim(PointerSource::Phone, head, q);
+			clicked = phone_click;
 		}
-		const float forward_x = -2.0f * (rotation.x * rotation.z + rotation.w * rotation.y);
-		const float forward_y = -2.0f * (rotation.y * rotation.z - rotation.w * rotation.x);
-		const float scale = 2.0f * panel_distance / (panel_width_m * forward_z);
-		controller_x = forward_x * scale;
-		controller_y = -forward_y * scale * panel_width / panel_height;
-		controller_visible = true;
-		if (controller_buttons_armed && select.isActive && select.changedSinceLastSync && select.currentState) {
-			__android_log_print(ANDROID_LOG_DEBUG, tag, "OpenXR controller select at %.3f, %.3f",
-			                    controller_x, controller_y);
-			state.controller_click(controller_x, controller_y);
+		if (!aim) {
+			return std::nullopt;
 		}
+		auto hit = intersect_panel(*aim, anchor, panel_width_m, panel_height_m);
+		hit.valid = hit.valid && state.pointer_target(hit.x, hit.y);
+		if (clicked && hit.valid) {
+			state.pointer_click(hit.x, hit.y, aim->source == PointerSource::Phone);
+		}
+		return pointer_geometry(*aim, hit);
 	}
 
 	void
 	initialize_drawing()
 	{
 		program = glCreateProgram();
-		const GLuint vertex = compile_shader(GL_VERTEX_SHADER, vertex_shader);
+		const GLuint vertex = compile_shader(GL_VERTEX_SHADER, capture ? vertex_shader : scene_vertex_shader);
 		glAttachShader(program, vertex);
 		glDeleteShader(vertex);
-		const GLuint fragment = compile_shader(GL_FRAGMENT_SHADER, capture ? capture_shader : fragment_shader);
+		const GLuint fragment = compile_shader(GL_FRAGMENT_SHADER, capture ? capture_shader : scene_fragment_shader);
 		glAttachShader(program, fragment);
 		glDeleteShader(fragment);
 		glLinkProgram(program);
@@ -749,12 +814,18 @@ private:
 			glViewport(0, 0, capture_width, capture_height);
 			capture.start(panel_texture, capture_width, capture_height);
 		} else {
-			glUniform2f(glGetUniformLocation(program, "panelSize"), panel_width, panel_height);
-			glUniform2f(glGetUniformLocation(program, "canvasSize"), canvas_width, canvas_height);
-			aim_uniform = glGetUniformLocation(program, "phoneAim");
-			controller_aim_uniform = glGetUniformLocation(program, "controllerAim");
 			glTexStorage2D(target, 1, panel_format, panel_width, panel_height);
-			glViewport(0, 0, canvas_width, canvas_height);
+			vertices_uniform = glGetUniformLocation(program, "vertices[0]");
+			eye_uniform = glGetUniformLocation(program, "eye");
+			rotation_uniform = glGetUniformLocation(program, "inverseRotation");
+			fov_uniform = glGetUniformLocation(program, "fovTangents");
+			material_uniform = glGetUniformLocation(program, "material");
+			glGenRenderbuffers(1, &scene_depth);
+			glBindRenderbuffer(GL_RENDERBUFFER, scene_depth);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, scene_width, scene_eye_size);
+			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, scene_depth);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 	}
 
@@ -830,6 +901,7 @@ private:
 		anchor.position = {origin.x - distance * std::sin(yaw) * std::cos(pitch),
 		                   origin.y + distance * std::sin(pitch),
 		                   origin.z - distance * std::cos(yaw) * std::cos(pitch)};
+		anchor_origin = origin;
 		anchor_valid = true;
 		recent_generation = generation;
 		controller_calibrated = false;
@@ -869,11 +941,8 @@ private:
 	}
 
 	void
-	draw_panel()
+	bind_image()
 	{
-		if (!capture) {
-			upload_panel();
-		}
 		uint32_t index = 0;
 		const XrSwapchainImageAcquireInfo acquire{XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
 		check(xrAcquireSwapchainImage(swapchain, &acquire, &index), "xrAcquireSwapchainImage");
@@ -885,22 +954,118 @@ private:
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
 			throw std::runtime_error("OpenXR swapchain framebuffer is incomplete");
 		}
-		if (!capture) {
-			float x = 0.0f;
-			float y = 0.0f;
-			state.read_aim(x, y);
-			const bool phone_visible =
-			    controller_mode == ControllerMode::Phone || controller_mode == ControllerMode::PhoneFallback;
-			glUniform3f(aim_uniform, (x + 1.0f) / 2.0f, (y + 1.0f) / 2.0f, phone_visible ? 1.0f : 0.0f);
-			glUniform3f(controller_aim_uniform, (controller_x + 1.0f) / 2.0f, (controller_y + 1.0f) / 2.0f,
-			            controller_visible ? 1.0f : 0.0f);
-		}
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+	}
+
+	void
+	release_image()
+	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glFlush();
 
 		const XrSwapchainImageReleaseInfo release{XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
 		check(xrReleaseSwapchainImage(swapchain, &release), "xrReleaseSwapchainImage");
+	}
+
+	void
+	draw_capture()
+	{
+		bind_image();
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		release_image();
+	}
+
+	void
+	draw_vertices(SceneMaterial material, XrVector3f a, XrVector3f b, XrVector3f c, XrVector3f d)
+	{
+		const float vertices[] = {a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, d.x, d.y, d.z};
+		glUniform3fv(vertices_uniform, 4, vertices);
+		glUniform1i(material_uniform, static_cast<GLint>(material));
+		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	}
+
+	void
+	draw_quad(SceneMaterial material, XrVector3f center, XrVector3f right, XrVector3f up)
+	{
+		draw_vertices(material, center - right - up, center + right - up, center - right + up, center + right + up);
+	}
+
+	void
+	draw_pointer(const Pointer &pointer, XrVector3f eye)
+	{
+		const auto line = pointer.beam_end - pointer.beam_start;
+		const auto midpoint = (pointer.beam_end + pointer.beam_start) * 0.5f;
+		const auto half_width = unit(cross(line, eye - midpoint)) * 0.0025f;
+		glEnable(GL_BLEND);
+		glDepthMask(GL_FALSE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		draw_vertices(SceneMaterial::Beam, pointer.beam_start - half_width, pointer.beam_start + half_width,
+		              pointer.beam_end, pointer.beam_end);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_CULL_FACE);
+		// Hit rings sit on the same plane as the menu. Resolve coplanar depth rounding.
+		if (pointer.near_hit) {
+			glEnable(GL_POLYGON_OFFSET_FILL);
+			glPolygonOffset(-1.0f, -1.0f);
+		}
+		const float half_size = pointer.ring_size * 0.5f;
+		draw_quad(SceneMaterial::Ring, pointer.ring_center, {half_size, 0, 0}, {0, half_size, 0});
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		glDisable(GL_CULL_FACE);
+		glDepthMask(GL_TRUE);
+		glDisable(GL_BLEND);
+	}
+
+	bool
+	draw_scene(XrTime time, std::array<XrCompositionLayerProjectionView, 2> &projection_views)
+	{
+		XrViewLocateInfo info{XR_TYPE_VIEW_LOCATE_INFO};
+		info.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+		info.space = local_space;
+		info.displayTime = time;
+		XrViewState view_state{XR_TYPE_VIEW_STATE};
+		XrView views[] = {{XR_TYPE_VIEW}, {XR_TYPE_VIEW}};
+		uint32_t count = 0;
+		check(xrLocateViews(session, &info, &view_state, 2, &count, views), "xrLocateViews(LOCAL)");
+		if (count != 2 || (view_state.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
+			return false;
+		}
+		const auto head = (views[0].pose.position + views[1].pose.position) * 0.5f;
+		const auto pointer = update_pointer(time, head);
+		const auto panel_right = rotate(anchor.orientation, {panel_width_m * 0.5f, 0, 0});
+		const auto panel_up = rotate(anchor.orientation, {0, panel_height_m * 0.5f, 0});
+
+		upload_panel();
+		bind_image();
+		glClearColor(0, 0, 0, 1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+		constexpr auto size = static_cast<int32_t>(scene_eye_size);
+		for (int eye = 0; eye < 2; ++eye) {
+			const auto &view = views[eye];
+			const auto q = conjugate(view.pose.orientation);
+			const auto p = view.pose.position;
+			glViewport(eye * size, 0, size, size);
+			glUniform3f(eye_uniform, p.x, p.y, p.z);
+			glUniform4f(rotation_uniform, q.x, q.y, q.z, q.w);
+			glUniform4f(fov_uniform, std::tan(view.fov.angleLeft), std::tan(view.fov.angleRight),
+			            std::tan(view.fov.angleDown), std::tan(view.fov.angleUp));
+			glEnable(GL_CULL_FACE);
+			draw_quad(SceneMaterial::Panel, anchor.position, panel_right, panel_up);
+			glDisable(GL_CULL_FACE);
+			if (pointer) {
+				draw_pointer(*pointer, p);
+			}
+			auto &projection = projection_views[eye];
+			projection = {XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW};
+			projection.pose = view.pose;
+			projection.fov = view.fov;
+			projection.subImage.swapchain = swapchain;
+			projection.subImage.imageRect = {{eye * size, 0}, {size, size}};
+		}
+		glDisable(GL_DEPTH_TEST);
+		release_image();
+		return true;
 	}
 
 	bool
@@ -952,7 +1117,7 @@ private:
 		if (frame.shouldRender && capture && capture.update(transform_uniform)) {
 			if (capture_cv10_optics) {
 				if (locate_projection_views(frame.predictedDisplayTime, projection_views)) {
-					draw_panel();
+					draw_capture();
 					projection.space = view_space;
 					projection.viewCount = static_cast<uint32_t>(projection_views.size());
 					projection.views = projection_views.data();
@@ -965,7 +1130,7 @@ private:
 					update_anchor(frame.predictedDisplayTime, pocket_distance);
 				}
 				if (!capture_world_anchored || anchor_valid) {
-					draw_panel();
+					draw_capture();
 					// The capture is either Pocket XR's stereo canvas or a side-by-side PC video.
 					constexpr int32_t eye_width = pocket_width / 2;
 					const XrPosef view_pose = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -pocket_distance}};
@@ -985,18 +1150,11 @@ private:
 			}
 		} else if (frame.shouldRender && !capture) {
 			update_anchor(frame.predictedDisplayTime, panel_distance);
-			if (anchor_valid) {
-				update_controller(frame.predictedDisplayTime);
-				auto &quad = quads[0];
-				draw_panel();
-				quad.space = local_space;
-				quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
-				quad.subImage.swapchain = swapchain;
-				quad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
-				quad.subImage.imageRect.extent = {canvas_width, canvas_height};
-				quad.pose = anchor;
-				quad.size = {panel_width_m * canvas_width / panel_width,
-				             panel_width_m * canvas_height / panel_width};
+			if (anchor_valid && draw_scene(frame.predictedDisplayTime, projection_views)) {
+				projection.space = local_space;
+				projection.viewCount = static_cast<uint32_t>(projection_views.size());
+				projection.views = projection_views.data();
+				layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projection);
 				end_info.layerCount = 1;
 				end_info.layers = layers;
 			}
@@ -1026,6 +1184,7 @@ private:
 	XrEnvironmentBlendMode blend_mode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE;
 	std::vector<XrSwapchainImageOpenGLESKHR> images;
 	XrPosef anchor{};
+	XrVector3f anchor_origin{};
 	bool anchor_valid = false;
 	bool running = false;
 	bool focused = false;
@@ -1033,9 +1192,6 @@ private:
 	ControllerMode controller_mode = ControllerMode::Phone;
 	bool controller_buttons_armed = false;
 	bool controller_calibrated = false;
-	bool controller_visible = false;
-	float controller_x = 0.0f;
-	float controller_y = 0.0f;
 	jint recent_generation = 0;
 	EGLDisplay display = EGL_NO_DISPLAY;
 	EGLContext context = EGL_NO_CONTEXT;
@@ -1044,9 +1200,13 @@ private:
 	GLenum panel_format = GL_RGBA8;
 	GLuint panel_texture = 0;
 	GLuint framebuffer = 0;
+	GLuint scene_depth = 0;
 	GLuint program = 0;
-	GLint aim_uniform = -1;
-	GLint controller_aim_uniform = -1;
+	GLint vertices_uniform = -1;
+	GLint eye_uniform = -1;
+	GLint rotation_uniform = -1;
+	GLint fov_uniform = -1;
+	GLint material_uniform = -1;
 	GLint transform_uniform = -1;
 };
 

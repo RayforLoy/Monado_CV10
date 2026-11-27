@@ -38,6 +38,7 @@ struct cv10_controller
 	bool select;
 	bool menu;
 	bool orientation_valid;
+	bool phone;
 	bool kit;
 	bool right;
 };
@@ -109,6 +110,13 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 		d->select = false;
 		d->menu = false;
 	} else {
+		const bool phone = !d->kit && values[7] != 0;
+		if (d->phone != phone) {
+			m_relation_history_clear(d->history);
+			d->pose_ns = 0;
+			d->report_ns = 0;
+			d->phone = phone;
+		}
 		const bool select = values[5] != 0;
 		const bool menu = values[6] != 0;
 		if (d->report_ns == 0 || d->select != select) {
@@ -132,7 +140,7 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 				relation.pose.position = (struct xrt_vec3){values[7], values[8], values[9]};
 				relation.relation_flags |= XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
 			} else {
-				// Fixed aim-ray origin for the CF20's orientation-only measurements.
+				// Simulated hand position for orientation-only sources.
 				relation.pose.position = (struct xrt_vec3){0.20f, -0.30f, -0.35f};
 			}
 			m_relation_history_push(d->history, &relation, pose_ns);
@@ -209,7 +217,7 @@ controller_worker(void *ptr)
 	if (close == NULL) {
 		goto done;
 	}
-	jfloatArray buffer = (*env)->NewFloatArray(env, 7);
+	jfloatArray buffer = (*env)->NewFloatArray(env, 8);
 	if (buffer == NULL) {
 		goto done;
 	}
@@ -228,8 +236,8 @@ controller_worker(void *ptr)
 			if (current == 0) {
 				update_report(d, 0, 0, NULL);
 			} else {
-				float values[7];
-				(*env)->GetFloatArrayRegion(env, buffer, 0, 7, values);
+				float values[8];
+				(*env)->GetFloatArrayRegion(env, buffer, 0, 8, values);
 				if (clear_exception(env)) {
 					break;
 				}
@@ -318,8 +326,8 @@ controller_create(struct xrt_tracking_origin *origin, bool right)
 		snprintf(xdev->str, sizeof(xdev->str), "Huawei CV10 6DoF %s controller", right ? "right" : "left");
 		snprintf(xdev->serial, sizeof(xdev->serial), "Huawei-CV10-Kit-%s", right ? "right" : "left");
 	} else {
-		snprintf(xdev->str, sizeof(xdev->str), "Huawei CF20 Bluetooth Controller");
-		snprintf(xdev->serial, sizeof(xdev->serial), "Huawei-CF20");
+		snprintf(xdev->str, sizeof(xdev->str), "CV10 Right Controller");
+		snprintf(xdev->serial, sizeof(xdev->serial), "CV10-Right");
 	}
 	u_device_populate_function_pointers(xdev, controller_pose, controller_destroy);
 	xdev->update_inputs = controller_update_inputs;
