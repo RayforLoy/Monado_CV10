@@ -118,7 +118,9 @@ Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 
 
 08:30–08:39，使用同一 Fold7、C9.53.6 原厂线和 5 V 供电。源码 `a3d86e5` 的 ARM64 预览 APK SHA-256 为 `7b4c258ada835cc6f07882231aa9d9ae99504676e52c5a38bb1413c633b1e216`。v2 签名、16 KiB ZIP 对齐及 15 个 ELF `PT_LOAD` 段检查均通过。Fold7 覆盖安装后能打开 **应用启动器** 和启动原版 `hello_xr` 的 Activity。尝试在 Broker 选择 **Monado CV10 Preview** 时，自动化读回仍为稳定版 v0.1.2。
 
-使用稳定版作对照时，2D 启动路径两次都已加载稳定运行时。IPC 服务绑定失败，`xrCreateInstance` 返回 `XR_ERROR_RUNTIME_UNAVAILABLE`。第二次在卸载后还出现 `__cxa_thread_finalize` 崩溃。在两次对照之间，先打开稳定 Monado 再启动同一原版样例，可从手机进入 `FOCUSED`。该修订包的两路预览运行时复测未完成。原预览 APK、稳定 Broker、后台 `ignore` 和最低刷新率 `null` 已恢复。[修订版安装与稳定运行时对照](evidence/fold7-launcher-a3d86e5-install.txt)
+使用稳定版作对照时，2D 启动路径两次都已加载稳定运行时。IPC 服务绑定失败，`xrCreateInstance` 返回 `XR_ERROR_RUNTIME_UNAVAILABLE`。第二次在卸载后还出现 `__cxa_thread_finalize` 崩溃。在两次对照之间，先打开稳定 Monado 再启动同一原版样例，可从手机进入 `FOCUSED`。[修订版安装与稳定运行时对照](evidence/fold7-launcher-a3d86e5-install.txt)
+
+08:42–08:43，点按 Broker 列表中的 **Monado CV10 Preview** 名称一次。Broker 内容提供器确认活动包为 `org.cv10.monado.out_of_process.launcher_preview`，样例的 OpenXR Loader 日志也确认加载该包。2D 直启和底部上滑停留置中后 3D 点选，均由同一原版 `hello_xr` 进程（PID 31344）进入 `FOCUSED`。两次系统返回后都到达 `IDLE` 并完成 `xrDestroyInstance`。CV10 右镜拍到 3D 菜单与指针、两次样例的蓝方块。未新增 Shizuku 或 VPN 授权。原预览 APK、稳定 Broker、后台 `ignore` 和最低刷新率 `null` 已恢复。[筛选日志](evidence/fold7-launcher-a3d86e5-pass.txt) · [2D 直启右镜](evidence/fold7-launcher-a3d86e5-direct-right.jpg) · [3D 菜单右镜](evidence/fold7-launcher-a3d86e5-menu-right.jpg) · [3D 点选右镜](evidence/fold7-launcher-a3d86e5-select-right.jpg)
 
 ## 华为 VR 桌面的源码与许可
 

@@ -30,7 +30,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 离线应用启动器
 
-此功能已在预览构建中验证。在 **Monado CV10 Preview → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。启动器读取本机安装列表，无需账户或 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。在 Broker 中选择 **Monado CV10 Preview**，保持三星外接显示为 **已镜像**。
+此功能已在预览构建中验证。在 **Monado CV10 Preview → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。启动器读取本机安装列表，无需账户或 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。在 Broker 中点按 **Monado CV10 Preview** 的名称并确认右侧已勾选，保持三星外接显示为 **已镜像**。
 
 - 首次使用或重新插入眼镜后，可先从 Monado 菜单选择 **CV10 USB access**，允许访问 **HUAWEI GLASS HID**，再进入应用启动器。
 - 应用列表默认筛选声明了 OpenXR 沉浸式入口的应用，并直接启动该入口。另有一些应用从普通界面进入 XR，例如 PiliPlus，可关闭 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。
@@ -45,7 +45,7 @@ Fold7 上注入触摸事件验证了左右内侧手势返回、底部上滑停�
 
 使用无 `INTERNET` 权限且未获得 Shizuku 授权的诊断包，从 2D 直启和 3D 点选原版 `hello_xr` 均已实测在 CV10 出图和正常退出。整合源码也通过同一测试。诊断使用默认后台策略，保留系统 Wi-Fi 用于无线 ADB。关闭系统 Wi-Fi 的实机复测待做。[应用网络隔离复测](history/fold7-offline-launcher.md#整合预览的应用网络隔离)
 
-整合预览 `39250d1` 提供离线启动器和 Pocket XR 外显入口。同一 APK 在 Fold7 验证了 2D 直启、3D 点选、右镜出图和正常退出，也在 16 KiB 的 Android 16 模拟器验证了安装、原生运行时加载和 Vulkan 初始化失败后的重试与返回。[整合 APK 校验与复测记录](history/fold7-offline-launcher.md#启动器与-pocket-xr-整合预览)
+整合预览提供离线启动器和 Pocket XR 外显入口。`a3d86e5` 的 ARM64 包在 Fold7 复测了 2D 直启、3D 点选、右镜出图和正常退出。早期整合构建在 16 KiB 的 Android 16 模拟器验证了安装、原生运行时加载和 Vulkan 初始化失败后的重试与返回。[整合 APK 校验与复测记录](history/fold7-offline-launcher.md#启动器与-pocket-xr-整合预览)
 
 如果 2D 列表显示 **后台运行受限**，点击提示可进入 Monado CV10 的 Android 应用详情，在 **电池** 页面核对后台使用设置。Fold7 在受限时曾冻结运行时，出现黑屏、画面停止更新或退出无响应。临时使用默认后台策略复测时，3D 点选持续出帧并正常退出。启动器会读取 Android 报告的状态，电池设置由用户决定。[后台冻结对照](history/fold7-offline-launcher.md#fold7-的-3d-点选与后台冻结对照) · [Android 后台限制说明](https://developer.android.com/topic/performance/background-optimization#user-initiated-restrictions)
 

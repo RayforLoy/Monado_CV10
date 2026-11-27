@@ -1,0 +1,29 @@
+2026-11-27 08:42–08:43 HKT | Fold7 SM-F9660 + 53 original cable + 5 V + CV10 mirrored 3200x1600 90 Hz
+Monado a3d86e5 ARM64 SHA-256: 7b4c258ada835cc6f07882231aa9d9ae99504676e52c5a38bb1413c633b1e216
+Official Khronos hello_xr OpenGLES SHA-256: 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Broker provider before app launch: package_name=org.cv10.monado.out_of_process.launcher_preview
+Frame capture: fixed right lens camera. Default-background AppOp used for preview during test.
+
+=== direct.log ===
+11-27 08:42:39.088 31344 31376 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+11-27 08:42:40.133 31344 31376 V hello_xr: [08:42:40.133][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_UNKNOWN->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2520648735364
+11-27 08:42:40.145 31344 31376 V hello_xr: [08:42:40.145][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520716519323
+=== back-direct.log ===
+11-27 08:42:45.434 31344 31376 V hello_xr: [08:42:45.434][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2526005144164
+=== menu.log ===
+11-27 08:42:48.454 31344 31376 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:42:53.563 31915 32148 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+11-27 08:42:54.324 31915 32148 I Cv10SpatialLauncher: OpenXR session state 5
+=== select.log ===
+11-27 08:42:59.802 31915 32148 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:42:59.900 31344 32309 I OpenXR-Loader: Got runtime: package: org.cv10.monado.out_of_process.launcher_preview, so filename: libopenxr_monado.so, has functions: no
+11-27 08:43:00.401 31344 32309 V hello_xr: [08:43:00.401][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_UNKNOWN->XR_SESSION_STATE_IDLE session=-5476376638598486720 time=2526537017497
+11-27 08:43:00.405 31344 32309 V hello_xr: [08:43:00.405][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2526569603122
+=== back.log ===
+11-27 08:43:05.597 31344 32309 V hello_xr: [08:43:05.597][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598486720 time=2531762082027
+11-27 08:43:06.498 31344 32309 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+
+Restored Broker provider: package_name=org.cv10.monado.out_of_process
+Restored APK SHA-256: 8d1bbb5bc75e24e8d225872e0def4ecbc5768ad0cd849c5d21e00af50c4713db
+min_refresh_rate=null, preview RUN_ANY_IN_BACKGROUND=ignore, Wi-Fi=1
+Shizuku grant absent for Monado preview and stock Pocket XR. No VPN grant added.
