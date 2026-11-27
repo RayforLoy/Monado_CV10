@@ -1,0 +1,78 @@
+Fold7 SM-F9660, 2026-11-27 HKT. Stock C9.53.6 cable with 5 V auxiliary power and wired mirroring.
+Original Pocket XR 1.6.28 and original Khronos hello_xr OpenGLES. The preview and companion were unchanged. Restricted battery mode.
+
+Restored app failed before the manual launch:
+11-27 14:29:58.000
+Restricted reference: RUN_ANY_IN_BACKGROUND: ignore. Preview SHA-256: 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281.
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:30:19.104 15800 15800 I Cv10PocketXrPreview: First virtual display frame available on display 318
+direct - 11-27 14:30:30.423 15800 15800 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 322
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+11-27 14:30:20.408 17388 17419 I OpenXR-Loader: Got runtime: package: org.cv10.monado.pocket_client, so filename: libopenxr_monado.so, native lib dir: /data/app/~~Hu6k5DmVhewnmIQFIu_a-Q==/org.cv10.monado.pocket_client-bqAWzSclk_cG2H21s8bszg==/lib/arm64, has functions: no
+11-27 14:30:20.450 17388 17419 E monado-ipc-client: bindService: Service Intent { act=org.freedesktop.monado.ipc.CONNECT xflg=0x4 pkg=com.hayeco.flipspaces } could not be found to bind!
+11-27 14:30:20.450 17388 17419 D OXR     : XR_ERROR_RUNTIME_UNAVAILABLE in xrCreateInstance: Failed to create instance '-1'
+11-27 14:30:20.452 17388 17419 E hello_xr: [14:30:20.452][Error  ] XrResult failure [XR_ERROR_RUNTIME_UNAVAILABLE]
+11-27 14:30:30.390  2961  7140 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [17388] reason: activity
+11-27 14:30:35.484  2961  6748 D InputDispatcher: Focus left window (321): 75347ea org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity
+11-27 14:30:35.484  2961  6748 D InputDispatcher: Focus entered window (322): 75347ea org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity
+
+Restored app entered FOCUSED. Forced stop and immediate re-open were followed by freezing:
+11-27 14:34:25.000
+Restricted reference: RUN_ANY_IN_BACKGROUND: ignore. Preview SHA-256: 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281.
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:34:36.488 15800 15800 I Cv10PocketXrPreview: First virtual display frame available on display 330
+direct - sample PID before tap: 23608
+direct - 11-27 14:34:46.934 15800 15800 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 334
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+11-27 14:34:37.598 23608 23636 V hello_xr: [14:34:37.598][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2819455687750
+11-27 14:34:37.617  2961  5763 D FreecessController: FZ : com.hayeco.flipspaces(10846) [3500] reason: Bg-buff
+11-27 14:34:44.157  2961  7392 D FreecessController: UFZ : com.hayeco.flipspaces(10846) [3500] reason: ServiceANR
+11-27 14:34:47.711  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [24096] reason: Bg-buff
+
+Three close and re-entry trials without force-stopping the app between launches:
+11-27 14:36:14.000
+Restricted reference: RUN_ANY_IN_BACKGROUND: ignore. Preview SHA-256: 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281.
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:36:27.789 15800 15800 I Cv10PocketXrPreview: First virtual display frame available on display 335
+direct - sample PID before tap:
+direct - 11-27 14:36:35.909 15800 15800 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 336
+11-27 14:36:36.543 26697 26720 V hello_xr: [14:36:36.543][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819362953761
+11-27 14:36:41.408  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: Bg-buff
+11-27 14:36:41.000 Before action - cached-app isfrozen: true
+11-27 14:36:42.000 Tapping close for screen 336.
+11-27 14:36:42.000 After release - cached-app isfrozen: false
+Screen 336 gone and space 335 kept. 11-27 14:36:52.155 26697 26720 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:36:41.408  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: Bg-buff
+11-27 14:36:42.159  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: bf_input
+11-27 14:36:42.646  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: Bg-buff
+11-27 14:36:52.136  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: ActivityDestroyTimeout
+unfreeze after release - sample PID before tap: 26697
+unfreeze after release - 11-27 14:36:57.621 15800 15800 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 337
+11-27 14:36:58.110 26697 27443 V hello_xr: [14:36:58.110][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598463392 time=2818320206228
+11-27 14:37:03.053  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: Bg-buff
+11-27 14:37:03.000 Before action - cached-app isfrozen: true
+11-27 14:37:03.000 Tapping close for screen 337.
+11-27 14:37:03.000 After release - cached-app isfrozen: false
+Unfreezing process org.khronos.openxr.hello_xr.opengles (26697) sticky=false
+11-27 14:37:04.000 After unfreeze command - cached-app isfrozen: false
+Screen 337 gone and space 335 kept. 11-27 14:37:13.822 26697 27443 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:37:03.053  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: Bg-buff
+11-27 14:37:03.856  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: bf_input
+11-27 14:37:04.359  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: Bg-buff
+11-27 14:37:13.810  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: ActivityDestroyTimeout
+unfreeze before Back - sample PID before tap: 26697
+unfreeze before Back - 11-27 14:37:19.275 15800 15800 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 338
+11-27 14:37:19.725 26697 28206 V hello_xr: [14:37:19.725][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598440064 time=2820079577692
+11-27 14:37:25.000 Before action - cached-app isfrozen: true
+Unfreezing process org.khronos.openxr.hello_xr.opengles (26697) sticky=false
+11-27 14:37:25.000 Immediately after unfreeze, before Back - cached-app isfrozen: true
+Before release: No completed xrDestroyInstance in the observation window.
+11-27 14:37:29.000 After Back - cached-app isfrozen: true
+11-27 14:37:29.000 Tapping close for screen 338.
+11-27 14:37:29.000 After release - cached-app isfrozen: false
+Screen 338 gone and space 335 kept. 11-27 14:37:29.988 26697 28206 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:37:29.472  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [26697] reason: bf_input
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null

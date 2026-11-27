@@ -206,6 +206,8 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 14:10，用户重接眼镜端后，用 `e8b1ef7` 预览回归。退出 Pocket XR 空间并恢复 **Monado CV10 Preview** Broker。内置 3D 启动器进入 `FOCUSED`，手机底部上滑并停留触发置中，点按后原版 `hello_xr` 进入 `FOCUSED` 并在返回时完成 `xrDestroyInstance`。CV10 开屏命令收到 `OK`，外显截图两眼都有蓝块，同期右镜相机仍未拍到蓝块。该轮只检验了固定相机对准的右镜。[外显与右镜对照](evidence/fold7-launcher-hello-after-eye-reconnect.jpg) · [筛选日志](evidence/fold7-pocket-panel-routing.log)
 
+14:38，保持相同接线和右镜取景，用临时 Android `Presentation` 直接向 CV10 外显绘制 3200×1600 的纯色全屏画面，未运行 OpenXR。每隔约 2.2 秒更换颜色，序列为黑、白、黑、红、绿、黑、白、黑。八次外显截图的左右采样点均与预期颜色一致。右镜连续拍摄 23 秒，两段白色窗口和红、绿窗口都没有可辨认的对应画面，相机中央 RGB 的变化未重复出现在两次白屏时。本轮确认现象也能在 Android 原生外显路径中观察到。固定相机的取景和镜片实际出光仍需分别验证。测试包已卸载，手机回到桌面，原 Broker 和 Shizuku 保持运行。[外显阶段与相机读数](evidence/fold7-right-optical-pulse.log) · [白屏外显与右镜画面对照](evidence/fold7-right-optical-pulse-white.jpg)
+
 ### 2D USB 授权后继续启动
 
 2026-11-27 13:28–13:30 香港时间，在同一台 Fold7 上保留 C9.53.6 原厂线、外接 5 V、三星镜像及右镜相机位置。源码提交 `463702b` 在 USB 权限对话框关闭、启动器重新获得焦点后，检查仍连接的 CV10 和它的授权状态。允许后继续启动刚才点选的应用。拒绝或眼镜已断开时留在列表。此流程依赖 Android 在关闭系统对话框前授予 USB 设备访问权。[AOSP USB 授权对话框](https://android.googlesource.com/platform/frameworks/base/%2B/c231302191e6/packages/SystemUI/src/com/android/systemui/usb/UsbPermissionActivity.java)

@@ -151,6 +151,20 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 
 系统的 **优化** 模式没有消除这次 Freecess 路径。退出时仍保留既有的直接释放逻辑，以维持 Pocket XR 空间与手机竖屏。结束后恢复样例的 **受限制** 模式及 **Monado CV10 Preview** Broker，最低刷新率仍为 `null`，所有测试虚拟屏均已释放。[同机筛选日志](evidence/fold7-pocket-client-close-comparison.log)
 
+#### 同进程重进与单次解冻对照
+
+14:29–14:37，保留同一接线、预览 APK 和电池设置。原版 Pocket XR 恢复上次的应用面板时，样例先在该面板尝试绑定原版运行时服务，得到 `XR_ERROR_RUNTIME_UNAVAILABLE`，随后从 Monado 点选时旧 Activity 被移到独立应用屏，本轮未进入 `FOCUSED`。另一次恢复的样例已进入 `FOCUSED`，在它仍运行时强制停止并立即从 Monado 重开，也出现样例与原版 Pocket XR 的冻结。关闭整段测试会话后的干净启动通过。这两轮不能推出强制停止可以修复卡住的应用。
+
+最终对照保持空间屏 335，不强制停止样例。同一 PID 26697 从 Monado 连续三次进入 `FOCUSED`。每轮先回到预览页，等系统把样例冻结，再执行表中操作。三轮都释放了应用屏，都保留空间屏，样例均在同一进程完成 `xrDestroyInstance`。
+
+| 操作 | 结果 |
+| --- | --- |
+| 直接关闭应用屏 336 | 释放过程中短暂解冻，约半秒后再次冻结。`ActivityDestroyTimeout` 解冻后完成销毁，从释放到销毁约 10 秒。 |
+| 关闭应用屏 337 后执行一次 `cmd activity unfreeze` | 同样在约半秒后再次冻结，约 10 秒后完成销毁。 |
+| 在应用屏 338 仍存在时执行一次 `cmd activity unfreeze`，再向该屏发送返回键 | 命令返回后查询进程仍冻结。等待约三秒没有出现销毁记录，随后关闭应用屏才在约半秒内完成销毁。 |
+
+单次 Android shell 解冻未消除三星的冻结重试，整合预览继续走原有的关闭路径。结束后恢复 **Monado CV10 Preview** Broker，最低刷新率为 `null`，只保留两个原有显示。[同进程、冻结和恢复窗口日志](evidence/fold7-pocket-client-restore-unfreeze.log) · [AOSP 的 `unfreeze` 命令实现](https://android.googlesource.com/platform/frameworks/base/%2B/6122f0ed1ec662067d83f0bf2b2ab6ac299ab63a/services/core/java/com/android/server/am/ActivityManagerShellCommand.java)
+
 ### 右镜输出对照
 
 11:55 至 12:00 用同一接线复测黑屏。预览版的 Pocket XR、内置 2D 直开和 3D 菜单，以及稳定版 Monado CV10 v0.1.2 均让样例进入 `FOCUSED`。Fold7 采集到的 CV10 外显帧有左右两个蓝方块。固定相机在这四次复测中均未从右镜捕捉到测试画面，与 11:40 至 11:43 的明亮实拍结果不同。重置外显电源状态及从 Android 禁用后重新启用外显，均未恢复右镜实拍。接线和相机位置未做物理调整，原因待确认。[Pocket XR 外显帧](evidence/fold7-pocket-client-close-display-stereo.png) · [3D 菜单启动后的外显帧](evidence/fold7-pocket-menu-optical-control-stereo.png) · [稳定版外显帧](evidence/fold7-pocket-stable-optical-control-stereo.png) · [稳定版右镜实拍](evidence/fold7-pocket-stable-optical-control-right.jpg)
