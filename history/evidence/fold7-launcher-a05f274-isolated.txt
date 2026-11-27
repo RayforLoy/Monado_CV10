@@ -1,0 +1,22 @@
+Integrated preview application-network isolation diagnostic a05f274
+Base 39250d1, source-only diagnostic change: suppress merged android.permission.INTERNET
+APK SHA-256 305cfe8ef6c47ea0feb1fcbbb1702b36f7eb6602ebfdac49e4d885e3ffb60b4e
+Verified APK v2 signature, ZIP 16 KiB alignment, five ARM64 ELF files and 15 PT_LOAD segments
+Fold7 SM-F9660, C9.53.6 cable, external 5 V, mirrored CV10 display
+Installed stock hello_xr OpenGLES SHA-256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+Merged diagnostic preview and the installed stock hello_xr both lack INTERNET
+Neither preview launch path uses Shizuku. Preview had no Shizuku grant.
+System Wi-Fi remained on for wireless ADB. The loopback mapping was removed before the launch trial.
+Preview IPv4 exit=1 nc: socket 1 6: Operation not permitted
+Preview IPv6 exit=1 nc: socket 1 6: Operation not permitted
+RUN_ANY_IN_BACKGROUND: default
+11-27 08:09:57.083 11235 11257 V hello_xr: [08:09:57.083][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520547387500
+11-27 08:10:14.045 11235 11257 V hello_xr: [08:10:14.045][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2537509521868
+11-27 08:10:16.298 11235 11257 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:10:20.597 11558 11598 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 08:10:21.625 11558 11598 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:10:22.117 11235 11681 V hello_xr: [08:10:22.117][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2522010315468
+11-27 08:10:49.078 11235 11681 V hello_xr: [08:10:49.078][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2548971510926
+11-27 08:10:50.282 11235 11681 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+spatial-24 CV10 layer: 127 distinct presentation timestamps, 60.32 per second
+RUN_ANY_IN_BACKGROUND: ignore

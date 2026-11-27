@@ -98,6 +98,22 @@
 
 复测使用的临时后台 AppOp 调整仅涉及预览包。复测完毕后恢复预览包原先的 `ignore` 设置、稳定版 Broker 和原预览 APK。系统最低刷新率为 `null`，无线 ADB 在线。
 
+## 启动器与 Pocket XR 整合预览
+
+2026-11-27 香港时间。源代码 `39250d1` 合并独立启动器 `a8fe12a` 与 Pocket XR 实验预览 `496be1c`。使用 `-Pcv10LauncherPreview=true -Pcv10Abi=arm64-v8a` 构建，包名为 `org.cv10.monado.out_of_process.launcher_preview`，APK SHA-256 为 `1c914a4c15fd91ec4e75cc489bd7355487acffe3dbc11161675eb219d29efdef`。APK v2 签名、16 KiB ZIP 对齐及五个 ARM64 原生库的 15 个 ELF `PT_LOAD` 段通过校验。
+
+Android 16 Google APIs 模拟器报告 `PAGE_SIZE=16384`，经 ARM64 转译安装预览。3D 入口的首次启动和重试都加载了原生运行时。模拟器缺少所需的 Vulkan 实例扩展，两次 `xrGetSystem` 均返回 `-2`，可取消提示并返回 2D 应用列表。Pocket XR 预览菜单可打开，VPN 头踪和空间固定复选框初始均未勾选。[安装与恢复日志](evidence/android16-16k-launcher-39250d1.txt)
+
+Fold7（SM-F9660，4 KiB）保持 C9.53.6 原厂线、5 V 外接供电和三星 **已镜像**，CV10 面板活动时序为 3200×1600、90 Hz。08:04，在 2D 列表关闭 **仅显示 XR 应用** 后，点选原版 Pocket XR 1.6.28 可打开其手机触控板。返回时，处于后台受限状态的预览被三星 Freecess 冻结并出现输入超时。08:06，将预览的 `RUN_ANY_IN_BACKGROUND` 临时设为 `default` 后，原版触控板可正常返回 2D 列表。两包均未获 Shizuku 授权，未启动 VPN。
+
+08:07–08:08，先从 2D 列表直启原版 `hello_xr`，再从 3D 菜单点选同一应用。样例两次以 PID 8655 达到 `FOCUSED`，退出均进入 `IDLE` 并完成 `xrDestroyInstance`。3D 点选后第 24 秒仍有约 60.32 次/秒的不同呈现时间戳。两路均拍到右镜蓝块。测试后恢复原预览 APK、稳定 Broker、后台 `ignore` 和最低刷新率 `null`。[Fold7 日志](evidence/fold7-launcher-39250d1.txt) · [2D 直启右镜](evidence/fold7-launcher-39250d1-direct-right.jpg) · [3D 点选第 24 秒右镜](evidence/fold7-launcher-39250d1-spatial-24s-right.jpg)
+
+### 整合预览的应用网络隔离
+
+08:09–08:11，使用 `39250d1` 派生的诊断提交 `a05f274`，仅从合并后的 Android 清单移除 `INTERNET`。APK SHA-256 为 `305cfe8ef6c47ea0feb1fcbbb1702b36f7eb6602ebfdac49e4d885e3ffb60b4e`。v2 签名、16 KiB ZIP 对齐及五个 ARM64 库的 15 个 ELF `PT_LOAD` 段通过校验。预览和未修改的 Khronos `hello_xr` 均无 `INTERNET` 权限。预览未获 Shizuku 授权。运行于预览 UID 的探针创建 IPv4、IPv6 套接字时均得到 `Operation not permitted`。
+
+移除临时回环映射后，从 2D 列表直启和 3D 菜单点选 `hello_xr`。同一 PID 11235 两次进入 `FOCUSED` 并正常退出。3D 点选第 24 秒仍有约 60.32 次/秒的不同呈现时间戳，右镜拍到蓝块。手机 Wi-Fi 保持打开以维持无线 ADB。结束后确认稳定 Broker、后台 `ignore`、最低刷新率 `null` 和原预览 APK 已恢复。[隔离测试日志](evidence/fold7-launcher-a05f274-isolated.txt) · [第 24 秒右镜](evidence/fold7-launcher-a05f274-isolated-24s-right.jpg)
+
 ## 华为 VR 桌面的源码与许可
 
 用 `aapt2 dump badging` 核对原版样本。包名为 `com.huawei.vrlauncherx`，版本为 `11.1.0.337`（versionCode `110100337`），APK SHA-256 为 `1e91f00d596c636c3f52dddc494ee6b745cdf90bb3a0838ff203f9ae54b92dd3`。包内 `assets/opensource/HwVrLauncherX.html` 的 SHA-256 为 `87543f776255dccc7fe1236ac6d4dfb9244f3b3b462ec246ef87b944901ebbed`。公告列出 AndroidX 的六个组件、Okio 2.8.0、OkHttp 4.9.3 和 Gson 2.9.0，许可证均为 Apache 2.0。`okhttp3/internal/publicsuffix/NOTICE` 另列出 OkHttp 内公众后缀数据的 MPL 2.0 许可。

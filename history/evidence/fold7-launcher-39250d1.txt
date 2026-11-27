@@ -1,0 +1,44 @@
+Fold7 SM-F9660, C9.53.6 cable, external 5 V, mirrored 3200x1600 at 90 Hz, 4 KiB
+Monado CV10 integrated preview 39250d1
+APK SHA-256 1c914a4c15fd91ec4e75cc489bd7355487acffe3dbc11161675eb219d29efdef
+Stock Pocket XR 1.6.28 SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337
+Stock hello_xr OpenGLES SHA-256 29ae01ef6a4fea41d67816f7051698f2694ab08ced4c16c02bdd978e62975962
+
+Restricted background control, return from stock Pocket XR:
+11-27 08:04:54.598  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32728] reason: Bg
+11-27 08:04:56.139  2961  5404 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32728] reason: CancelPolicy
+11-27 08:04:56.141  2961  5404 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=true, r=ActivityRecord{236129017 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t33726}
+11-27 08:04:57.462  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32728] reason: Bg-buff
+11-27 08:04:57.466  2961  6748 D ActivityTaskManager: scheduleTopResumedActivityChanged, onTop=true, r=ActivityRecord{236129017 u0 org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity t33726}
+11-27 08:04:57.488  2961  5763 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32728] reason: bf_input
+11-27 08:04:57.989  2961  5763 D FreecessController: FZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32728] reason: Bg-buff
+11-27 08:05:08.456  2961  5746 D FreecessController: UFZ : org.cv10.monado.out_of_process.launcher_preview(10848) [32728] reason: Signal
+11-27 08:05:09.948  2961  3914 I am_anr  : [0,32728,org.cv10.monado.out_of_process.launcher_preview,820624966,Input dispatching timed out (16de60f org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.openxr_runtime.Cv10LauncherActivity is not responding. Waited 10000ms for KeyEvent).]
+
+Default background AppOp trial:
+RUN_ANY_IN_BACKGROUND: ignore
+RUN_ANY_IN_BACKGROUND: default
+Official Pocket XR 1.6.28; no Pocket XR or preview Shizuku grant
+Preview ACTIVATE_VPN: ignore
+Preview control: 打开 POCKET XR 空间 enabled=true checked=false
+Preview control: 电脑屏幕 3D（左右并排） enabled=true checked=false
+Preview control: 使用 CV10 头部追踪固定 Pocket XR 画面 enabled=true checked=false
+Preview control: 通过 Android 本机 VPN 接入头部追踪（实验） enabled=true checked=false
+topResumedActivity=ActivityRecord{28835457 u0 com.hayeco.flipspaces/.TrackpadActivity t33768}
+Returned from stock Pocket XR to Monado 2D list
+11-27 08:07:37.514  8655  8681 V hello_xr: [08:07:37.514][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2520631373593
+11-27 08:07:37.730  6004  8732 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+11-27 08:07:54.374  8655  8681 V hello_xr: [08:07:54.374][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598498384 time=2537490564993
+11-27 08:07:56.104  8655  8681 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:08:00.469  9075  9120 I Cv10SpatialLauncher: OpenXR session state 5
+11-27 08:08:00.696  6004  9163 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+11-27 08:08:01.334  9075  9120 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 08:08:02.138  8655  9236 V hello_xr: [08:08:02.138][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598510048 time=2522162890780
+11-27 08:08:02.368  6004  9163 I MonadoView: CV10 target id=91 name=HUAWEIAV03 active={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} preferred={id=293, parentModeId=-1, flags=, FLAG_SIZE_OVERRIDE, width=3200, height=1600, fps=90.0, vsync=90.0, alternativeRefreshRates=[70.0], supportedHdrTypes=[2, 3]} owner=runtime path=presentation
+11-27 08:08:29.201  8655  9236 V hello_xr: [08:08:29.201][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_STOPPING->XR_SESSION_STATE_IDLE session=-5476376638598510048 time=2549225739520
+11-27 08:08:30.185  8655  9236 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+direct-14 CV10 layer: 127 distinct presentation timestamps, 60.31 per second
+spatial-24 CV10 layer: 127 distinct presentation timestamps, 60.32 per second
+
+After trial: stable Broker, original preview restored, system min_refresh_rate null
+RUN_ANY_IN_BACKGROUND: ignore

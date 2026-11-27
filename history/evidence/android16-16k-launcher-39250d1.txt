@@ -1,0 +1,26 @@
+Monado CV10 integrated preview 39250d1, Android 16 16 KiB verification
+APK SHA-256 1c914a4c15fd91ec4e75cc489bd7355487acffe3dbc11161675eb219d29efdef
+zipalign -c -P 16 4 exit: 0
+Verifies
+Verified using v2 scheme (APK Signature Scheme v2): true
+Number of signers: 1
+lib/arm64-v8a/libcv10-spatial-launcher.so: 0x4000, 0x4000, 0x4000 (compressed)
+lib/arm64-v8a/libmonado-service.so: 0x4000, 0x4000, 0x4000 (compressed)
+lib/arm64-v8a/libopenxr_loader.so: 0x4000, 0x4000, 0x4000 (compressed)
+lib/arm64-v8a/libopenxr_monado.so: 0x4000, 0x4000, 0x4000 (compressed)
+lib/arm64-v8a/libzxingcpp_android.so: 0x4000, 0x4000, 0x4000 (compressed)
+API 36, page size 16384, ABIs x86_64,arm64-v8a
+Performing Streamed Install
+Success
+    primaryCpuAbi=arm64-v8a
+Status: ok
+Activity: org.cv10.monado.out_of_process.launcher_preview/org.freedesktop.monado.android_common.AboutActivity
+11-27 08:02:26.236  3341  3359 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 08:02:26.740  3341  3341 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+11-27 08:02:41.141  3341  3419 I OpenXR-Loader: Info [GENERAL | xrCreateInstance | OpenXR-Loader] : RuntimeInterface::LoadRuntime succeeded loading runtime defined in manifest file /data/user/0/org.cv10.monado.out_of_process.launcher_preview/cache/cv10-spatial-runtime.json using interface version 1 and OpenXR API version 1.1
+11-27 08:02:41.613  3341  3341 E Cv10SpatialLauncher: xrGetSystem failed with OpenXR result -2
+FATAL EXCEPTION lines: 0
+After Retry, Cancel, and Back, 2D list control: OPEN 3D LAUNCHER
+Pocket menu: Experimental head tracking through a local Android VPN checked=false enabled=true
+Pocket menu: Keep the Pocket XR canvas in place using CV10 head tracking checked=false enabled=true
+Pocket menu: OPEN POCKET XR SPACE checked=false enabled=true
