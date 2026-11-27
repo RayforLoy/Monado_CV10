@@ -7,6 +7,7 @@ import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.hardware.usb.UsbManager
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -55,8 +56,10 @@ internal object Cv10RuntimeBroker {
 internal class Cv10DirectLaunch(private val activity: Activity) {
     private val main = Handler(Looper.getMainLooper())
     private var pending: Runnable? = null
+    private var pendingUsbLaunch: (() -> Unit)? = null
 
     fun select(app: Cv10AppEntry, launch: () -> Unit) {
+        pendingUsbLaunch = null
         if (!app.isXr) {
             cancel()
             launch()
@@ -79,8 +82,8 @@ internal class Cv10DirectLaunch(private val activity: Activity) {
                     selected == Cv10RuntimeBroker.POCKET_CLIENT_PACKAGE
                 ) {
                     showPocketWarning(launch)
-                } else if (selected == activity.packageName && !Cv10UsbAccess.readyForLaunch(activity, true)) {
-                    Toast.makeText(activity, R.string.cv10_direct_usb_retry, Toast.LENGTH_LONG).show()
+                } else if (selected == activity.packageName) {
+                    launchWithUsbAccess(app, launch)
                 } else {
                     launch()
                 }
@@ -89,8 +92,50 @@ internal class Cv10DirectLaunch(private val activity: Activity) {
     }
 
     fun cancel() {
+        onPause()
+        pendingUsbLaunch = null
+    }
+
+    fun onPause() {
         pending?.let(main::removeCallbacks)
         pending = null
+    }
+
+    fun onWindowFocused() {
+        val resume = pendingUsbLaunch ?: return
+        pendingUsbLaunch = null
+        resume()
+    }
+
+    private fun launchWithUsbAccess(app: Cv10AppEntry, launch: () -> Unit) {
+        val usb = activity.getSystemService(UsbManager::class.java)
+        val glass = Cv10UsbAccess.find(usb)
+        if (usb == null || glass == null || usb.hasPermission(glass)) {
+            launch()
+            return
+        }
+
+        // The permission dialog grants access before it returns focus to the launcher.
+        pendingUsbLaunch = {
+            val attached = usb.deviceList[glass.deviceName]
+            if (attached == glass && usb.hasPermission(attached)) {
+                select(app, launch)
+            } else {
+                showUsbRetry()
+            }
+        }
+        try {
+            Cv10UsbAccess.request(activity, usb, glass)
+            if (activity.hasWindowFocus() && usb.hasPermission(glass)) onWindowFocused()
+        } catch (error: RuntimeException) {
+            pendingUsbLaunch = null
+            Log.w(TAG, "Could not request CV10 USB access", error)
+            showUsbRetry()
+        }
+    }
+
+    private fun showUsbRetry() {
+        Toast.makeText(activity, R.string.cv10_direct_usb_retry, Toast.LENGTH_LONG).show()
     }
 
     private fun showPocketWarning(launch: () -> Unit) {
@@ -107,6 +152,7 @@ internal class Cv10DirectLaunch(private val activity: Activity) {
     }
 
     private companion object {
+        private const val TAG = "Cv10DirectLaunch"
         private const val BROKER_QUERY_TIMEOUT_MILLIS = 1000L
 
         // A frozen broker must neither block the UI nor queue obsolete selections.

@@ -85,8 +85,18 @@ class Cv10LauncherActivity : Activity() {
     }
 
     override fun onPause() {
-        directLaunch.cancel()
+        directLaunch.onPause()
         super.onPause()
+    }
+
+    override fun onStop() {
+        directLaunch.cancel()
+        super.onStop()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && !isFinishing) directLaunch.onWindowFocused()
     }
 
     private fun filterApps() {

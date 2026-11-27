@@ -10,7 +10,7 @@
     <string name="cv10_no_matching_apps">No matching apps. Turn off the XR filter or change the search.</string>
     <string name="cv10_app_launch_failed">Could not open %1$s</string>
     <string name="cv10_direct_pocket_warning">Pocket XR is selected. To open this app directly on the CV10, select Monado CV10 or Monado CV10 Preview in Runtime Broker.</string>
-    <string name="cv10_direct_usb_retry">Allow USB access to the CV10, then select the XR app again.</string>
+    <string name="cv10_direct_usb_retry">USB access to the CV10 is unavailable. Select the XR app again to retry.</string>
     <string name="cv10_launch_anyway">Launch anyway</string>
     <string name="cv10_pocket_preview_title">Pocket XR display preview</string>
     <string name="cv10_pocket_preview_intro">Allow access to the CV10 USB device. To see Pocket XR Space in stereo, open its launcher from Spatial windows and select Depth (3D side by side).</string>

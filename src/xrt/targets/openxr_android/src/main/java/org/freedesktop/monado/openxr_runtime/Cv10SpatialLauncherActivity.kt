@@ -121,12 +121,13 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 
     override fun onPause() {
-        directLaunch.cancel()
+        directLaunch.onPause()
         input.stop()
         super.onPause()
     }
 
     override fun onStop() {
+        directLaunch.cancel()
         visible = false
         renderState?.stop = true
         super.onStop()
@@ -135,6 +136,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus || !visible || isFinishing) return
+        directLaunch.onWindowFocused()
         if (waitingForUsbAccess) startRenderer(requestUsb = false)
         if (startupFailed && !startupPromptShown) showStartupOptions()
     }
