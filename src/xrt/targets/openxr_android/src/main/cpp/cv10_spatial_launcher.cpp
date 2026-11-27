@@ -37,6 +37,10 @@ constexpr uint32_t pocket_width = 3840;
 constexpr uint32_t pocket_height = 1080;
 constexpr float panel_distance = 1.45f;
 constexpr float pocket_distance = 1.0f;
+constexpr XrExtent2Df pocket_size = {0.812f, 0.458f};
+constexpr float pocket_wide_scale = 1.3f;
+constexpr XrExtent2Df pocket_wide_size = {pocket_size.width * pocket_wide_scale,
+                                          pocket_size.height * pocket_wide_scale};
 constexpr float panel_width_m = 1.62f;
 std::mutex session_mutex;
 
@@ -256,9 +260,16 @@ private:
 class Launcher
 {
 public:
-	Launcher(JavaState &state, DisplayCapture &capture, bool capture_world_anchored)
-	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored)
-	{}
+	Launcher(JavaState &state, DisplayCapture &capture, bool capture_world_anchored, bool capture_wide_canvas)
+	    : state(state), capture(capture), capture_world_anchored(capture_world_anchored),
+	      capture_size(capture_wide_canvas ? pocket_wide_size : pocket_size)
+	{
+		if (capture) {
+			__android_log_print(ANDROID_LOG_INFO, tag, "Stereo canvas %.3f x %.3f m at %.1f m (anchored: %s)",
+			                    capture_size.width, capture_size.height, pocket_distance,
+			                    capture_world_anchored ? "yes" : "no");
+		}
+	}
 
 	~Launcher()
 	{
@@ -708,8 +719,8 @@ private:
 					quad.subImage.swapchain = swapchain;
 					quad.subImage.imageRect = {{eye * eye_width, 0}, {eye_width, pocket_height}};
 					quad.pose = capture_world_anchored ? anchor : view_pose;
-					// Pocket XR's uncalibrated 44.2 by 25.8 degree view at one meter.
-					quad.size = {0.812f, 0.458f};
+					// Pocket XR applies the display size to the projection tangents, not the texture.
+					quad.size = capture_size;
 				}
 				end_info.layerCount = 2;
 				end_info.layers = layers;
@@ -737,6 +748,7 @@ private:
 	JavaState &state;
 	DisplayCapture &capture;
 	const bool capture_world_anchored;
+	const XrExtent2Df capture_size;
 	XrInstance instance = XR_NULL_HANDLE;
 	XrSystemId system_id = XR_NULL_SYSTEM_ID;
 	XrSession session = XR_NULL_HANDLE;
@@ -769,6 +781,7 @@ run_launcher(JNIEnv *env,
              jobject java_capture,
              jstring java_runtime_manifest,
              bool capture_world_anchored,
+             bool capture_wide_canvas,
              bool use_bundled_runtime)
 {
 	try {
@@ -776,7 +789,7 @@ run_launcher(JNIEnv *env,
 		std::lock_guard<std::mutex> lock(session_mutex);
 		JavaState state(env, java_state);
 		DisplayCapture capture(env, java_capture);
-		Launcher launcher(state, capture, capture_world_anchored);
+		Launcher launcher(state, capture, capture_world_anchored, capture_wide_canvas);
 		if (!state.should_stop()) {
 			std::string runtime_manifest;
 			if (java_runtime_manifest != nullptr) {
@@ -805,7 +818,7 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10SpatialLauncherActivity_nativeRu
                                                                                   jstring java_runtime_manifest,
                                                                                   jboolean use_bundled_runtime)
 {
-	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false,
+	return run_launcher(env, activity, application_context, java_state, nullptr, java_runtime_manifest, false, false,
 	                    use_bundled_runtime == JNI_TRUE);
 }
 
@@ -817,8 +830,9 @@ Java_org_freedesktop_monado_openxr_1runtime_Cv10PocketXrRenderer_nativeRun(JNIEn
                                                                            jobject java_state,
                                                                            jobject java_capture,
                                                                            jstring java_runtime_manifest,
-                                                                           jboolean world_anchored)
+                                                                           jboolean world_anchored,
+                                                                           jboolean wide_canvas)
 {
 	return run_launcher(env, activity, application_context, java_state, java_capture, java_runtime_manifest,
-	                    world_anchored == JNI_TRUE, true);
+	                    world_anchored == JNI_TRUE, wide_canvas == JNI_TRUE, true);
 }

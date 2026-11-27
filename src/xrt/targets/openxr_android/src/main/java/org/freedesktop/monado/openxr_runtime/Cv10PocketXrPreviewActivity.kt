@@ -43,6 +43,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
     private lateinit var stop: Button
     private lateinit var headLink: CheckBox
     private lateinit var worldAnchor: CheckBox
+    private lateinit var wideCanvas: CheckBox
     private lateinit var recenter: Button
     private var transport: Cv10PocketXrTransport? = null
     private var renderer: Cv10PocketXrRenderer? = null
@@ -144,6 +145,14 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             setText(R.string.cv10_pocket_world_anchor)
             setOnClickListener { if (isChecked) headLink.isChecked = false }
         }
+        val previewSettings = getPreferences(MODE_PRIVATE)
+        wideCanvas = CheckBox(this).apply {
+            setText(R.string.cv10_pocket_wide_canvas)
+            isChecked = previewSettings.getBoolean(PREF_WIDE_CANVAS, false)
+            setOnCheckedChangeListener { _, checked ->
+                previewSettings.edit().putBoolean(PREF_WIDE_CANVAS, checked).apply()
+            }
+        }
         recenter = Button(this).apply {
             setText(R.string.cv10_pocket_recenter)
             setOnClickListener { renderer?.recenter() }
@@ -151,6 +160,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         panel.addView(status)
         panel.addView(headLink)
         panel.addView(worldAnchor)
+        panel.addView(wideCanvas)
         panel.addView(open)
         panel.addView(recenter)
         panel.addView(controls)
@@ -397,6 +407,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
             activity = this,
             captureWidth = if (mode == MODE_PC_SCREEN_SBS) PC_SCREEN_WIDTH else null,
             worldAnchored = worldAnchor.isChecked && mode != MODE_PC_SCREEN_SBS,
+            wideCanvas = wideCanvas.isChecked && mode == MODE_SPACE,
             onSurface = { surface ->
                 if (transport === nextTransport) {
                     nextTransport.start(surface) { result ->
@@ -472,6 +483,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
         val available = renderer == null && !stopping && pendingPermission == null && !pendingVpn && !usbLaunch.isWaiting
         headLink.isEnabled = available
         worldAnchor.isEnabled = available
+        wideCanvas.isEnabled = available
         open.isEnabled = available
         pcSetup.isEnabled = available
         pcScreen.isEnabled = available
@@ -491,6 +503,7 @@ class Cv10PocketXrPreviewActivity : Activity(), Cv10ExternalPresentation {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
 
         private const val TAG = "Cv10PocketXrPreview"
+        private const val PREF_WIDE_CANVAS = "wide_canvas"
         private const val POCKET_RELEASE_SIGNER = "M+rUzfrJVxaWq8sq6kRliRww7R2CVxJ4pKVLhwuik60="
         private const val REQUEST_DISPLAY_PERMISSION = 18_011
         private const val REQUEST_HEAD_LINK = 18_012

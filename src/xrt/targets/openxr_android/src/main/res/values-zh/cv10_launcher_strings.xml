@@ -46,6 +46,7 @@
     <string name="cv10_pocket_head_link">Pocket XR 头部追踪</string>
     <string name="cv10_pocket_head_link_opt_in">通过 Android 本机 VPN 接入头部追踪（实验）</string>
     <string name="cv10_pocket_world_anchor">使用 CV10 头部追踪固定 Pocket XR 画面</string>
+    <string name="cv10_pocket_wide_canvas">宽视场（与 Pocket XR 的 3D 屏幕大小 130% 配合）</string>
     <string name="cv10_pocket_recenter">将画面移到当前朝向</string>
     <string name="cv10_pocket_head_link_running">预览期间向 Pocket XR 提供 CV10 头动数据。</string>
     <string name="cv10_pocket_head_link_vpn_conflict">系统已有 VPN 连接。保持头部追踪关闭可继续使用现有连接。</string>
