@@ -288,3 +288,23 @@ android_custom_surface_get_display_refresh_rate(struct _JavaVM *vm, void *contex
 		return 0;
 	}
 }
+
+float
+android_custom_surface_get_cv10_refresh_rate(struct _JavaVM *vm, void *context)
+{
+	if (!vm || !context) {
+		return 0.0f;
+	}
+	jni::init(vm);
+	try {
+		auto clazz = loadClassFromRuntimeApk((jobject)context, MonadoView::getFullyQualifiedTypeName());
+		if (!clazz.isNull()) {
+			jni::Class view_class((jclass)clazz.object().getHandle());
+			auto get_rate = view_class.getStaticMethod("getCv10RefreshRate", "(Landroid/content/Context;)F");
+			return view_class.call<float>(get_rate, Context((jobject)context).object());
+		}
+	} catch (std::exception const &e) {
+		U_LOG_W("Could not get the CV10 display refresh rate: %s", e.what());
+	}
+	return 0.0f;
+}

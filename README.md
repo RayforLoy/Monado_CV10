@@ -10,6 +10,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 从 [Releases](https://github.com/RayforLoy/Monado_CV10/releases) 下载与系统 ABI 匹配的 APK。用 `adb shell getprop ro.product.cpu.abilist` 查看支持的 ABI，用 `adb install -r <APK>` 安装。Android 11 为 API 30，项目最低为 API 26。覆盖更新需要相同签名。实际 VR 功能还取决于 USB 主机、外接显示器、Broker 和 Vulkan 驱动。历史 Fold7 镜片、3DoF 和刷新率复测见 [验收记录](history/README.md)。
 
+当前源码可根据 CV10 外屏的实际刷新率设定初始帧周期。Android 12 及以上可用系统报告的产品名识别外屏，其他设备也可按显示名或唯一的 3200×1600 候选识别。Android 10/11 的运行时服务可在授予「显示在其他应用上层」后使用外显窗口，这条路径仍待实机验证。[通用 Android 外显 PR](https://github.com/RayforLoy/Monado_CV10/pull/1)
+
 | 系统 ABI | v0.1.3 APK |
 | --- | --- |
 | 64 位 ARM Android，含骁龙、天玑、麒麟的 64 位系统 | [arm64-v8a](https://github.com/RayforLoy/Monado_CV10/releases/download/v0.1.3/Monado-CV10-0.1.3-arm64-v8a.apk) |

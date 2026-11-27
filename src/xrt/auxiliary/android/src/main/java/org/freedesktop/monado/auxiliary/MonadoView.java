@@ -12,11 +12,13 @@ package org.freedesktop.monado.auxiliary;
 import android.app.Activity;
 import android.app.Presentation;
 import android.content.Context;
+import android.hardware.display.DeviceProductInfo;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
@@ -113,18 +115,46 @@ public class MonadoView extends SurfaceView
     @Nullable
     public static Display findCv10(Context context) {
         DisplayManager manager = context.getSystemService(DisplayManager.class);
+        Display fallback = null;
+        boolean ambiguousFallback = false;
         for (Display display : manager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION)) {
-            if (display.isValid()
-                    && Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(display.getName().trim())) {
-                return display;
+            if (!display.isValid()) continue;
+            // Some phones (e.g. XREAL Beam Pro) report the sink name as "HDMI Screen" and only
+            // expose HUAWEIAV03 through the EDID product info.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                DeviceProductInfo info = display.getDeviceProductInfo();
+                String productName = info == null ? null : info.getName();
+                if (productName != null && Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(productName.trim())) {
+                    return display;
+                }
+            }
+            String name = display.getName().trim();
+            if (Cv10DisplayPortLink.DISPLAY_NAME.equalsIgnoreCase(name)) return display;
+            if (name.equals(Cv10PocketXrDisplayService.COMPATIBILITY_DISPLAY_NAME)
+                    || name.equals(Cv10PocketXrDisplayService.CV10_DISPLAY_NAME)) {
+                continue;
+            }
+            if (hasCv10Mode(display)) {
+                ambiguousFallback |= fallback != null;
+                fallback = display;
             }
         }
-        return null;
+        return ambiguousFallback ? null : fallback;
+    }
+
+    private static boolean hasCv10Mode(Display display) {
+        for (Display.Mode mode : display.getSupportedModes()) {
+            if (mode.getPhysicalWidth() == 3200 && mode.getPhysicalHeight() == 1600) return true;
+        }
+        return false;
     }
 
     @Keep
     public static boolean canPresentOnCv10(Context context) {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && findCv10(context) != null;
+        // Android 12+ opens a Presentation from the runtime service. Older releases use an
+        // overlay window on the CV10 display instead, which requires the special app access.
+        return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || Settings.canDrawOverlays(context))
+                && findCv10(context) != null;
     }
 
     // Accessed only on the UI thread. Overlapping sessions share the original window values.
@@ -258,6 +288,9 @@ public class MonadoView extends SurfaceView
             } catch (WindowManager.InvalidDisplayException | WindowManager.BadTokenException
                     | SecurityException error) {
                 Log.e(TAG, "CV10 window unavailable on display " + display.getDisplayId(), error);
+                if (!usePresentation) {
+                    Log.e(TAG, "On Android 10/11 allow 'Display over other apps' for this runtime");
+                }
             }
         });
         return view;
@@ -331,6 +364,12 @@ public class MonadoView extends SurfaceView
         WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         Display external = findCv10(context);
         return (external == null ? wm.getDefaultDisplay() : external).getRefreshRate();
+    }
+
+    @Keep
+    public static float getCv10RefreshRate(@NonNull Context context) {
+        Display display = findCv10(context);
+        return display == null ? 0.0f : display.getRefreshRate();
     }
 
     /**

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <stdbool.h>
 #include "cv10_device.h"
+#include "android/android_custom_surface.h"
 #include "android/android_globals.h"
 #include "math/m_api.h"
 #include "math/m_imu_3dof.h"
@@ -330,6 +331,13 @@ cv10_device_create(void)
 	xdev->hmd->views[0].rot = u_device_rotation_left;
 	xdev->hmd->views[1].rot = u_device_rotation_right;
 	xdev->hmd->screens[0].nominal_frame_interval_ns = 11111111;
+	// The panel mode is negotiated by the phone (90 Hz on Fold7, 70 Hz on Beam Pro), so follow
+	// the actual CV10 display instead of a fixed 90 Hz.
+	const float refresh_rate =
+	    android_custom_surface_get_cv10_refresh_rate(android_globals_get_vm(), android_globals_get_context());
+	if (isfinite(refresh_rate) && refresh_rate > 0.0f) {
+		xdev->hmd->screens[0].nominal_frame_interval_ns = time_s_to_ns(1.0f / refresh_rate);
+	}
 	xdev->compute_distortion = cv10_compute_distortion;
 	xdev->hmd->distortion.models = XRT_DISTORTION_MODEL_COMPUTE;
 	xdev->hmd->distortion.preferred = XRT_DISTORTION_MODEL_COMPUTE;

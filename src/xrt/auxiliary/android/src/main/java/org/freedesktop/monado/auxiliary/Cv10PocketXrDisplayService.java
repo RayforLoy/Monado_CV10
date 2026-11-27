@@ -43,7 +43,8 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
     public static final String POCKET_CV10_PACKAGE = "org.cv10.pocketxr";
     private static final ComponentName POCKET_CV10_SPACE = new ComponentName(
             POCKET_CV10_PACKAGE, "com.hayeco.flipspaces.spatial.SpaceActivity");
-    private static final String CV10_DISPLAY_NAME = "Monado CV10 Pocket XR Optics";
+    static final String CV10_DISPLAY_NAME = "Monado CV10 Pocket XR Optics";
+    static final String COMPATIBILITY_DISPLAY_NAME = "Monado CV10 Pocket XR";
     public static final ComponentName POCKET_PC_SCREEN = ComponentName.createRelative(
             "com.hayeco.flipspaces", ".pcscreen.PcScreenActivity");
     private static final int SPACE_WIDTH = 3840;
@@ -115,7 +116,7 @@ public final class Cv10PocketXrDisplayService extends ICv10PocketXrDisplay.Stub 
             }
             int width = cv10Optics ? 2 * opticalEyeSize : (mode == MODE_PC_SCREEN_SBS ? PC_SCREEN_WIDTH : SPACE_WIDTH);
             int height = cv10Optics ? opticalEyeSize : HEIGHT;
-            String name = cv10Optics ? CV10_DISPLAY_NAME : "Monado CV10 Pocket XR";
+            String name = cv10Optics ? CV10_DISPLAY_NAME : COMPATIBILITY_DISPLAY_NAME;
             if (currentLease != null) throw new IllegalStateException("Pocket XR display is already running");
             lease = new Lease(clientLife, surface, mode);
             clientLife.linkToDeath(lease, 0);

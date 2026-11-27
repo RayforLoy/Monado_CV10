@@ -112,6 +112,10 @@ android_custom_surface_can_create_window(struct _JavaVM *vm, void *context);
 float
 android_custom_surface_get_display_refresh_rate(struct _JavaVM *vm, void *context);
 
+//! Return the CV10 display refresh rate, or zero when the display has no usable rate.
+float
+android_custom_surface_get_cv10_refresh_rate(struct _JavaVM *vm, void *context);
+
 #ifdef __cplusplus
 }
 #endif
