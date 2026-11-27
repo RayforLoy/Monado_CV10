@@ -1,0 +1,28 @@
+# 2026-11-27 Hong Kong time. Galaxy Z Fold7 SM-F9660, USB-C direct to CV10, mirrored 3200x1600 @ 90 Hz.
+# Monado CV10 Preview 6d2fb4c APK SHA-256 37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293.
+# Stock Pocket XR 1.6.28 APK SHA-256 81cf6b61d9f80a20e1809275a72f0dc0008180aa8d8946aa7b830e78e1de4337.
+# Shizuku was already authorized. The built-in Half SBS entry started streaming from the existing LAN pairing.
+11-27 16:18:17.676 27124 16850 I MonadoCV10: CV10 PCUI AT^SWITCHSCREEN=1 OK
+11-27 16:18:18.162 16861 16874 I Cv10PocketXrDisplay: Pocket XR mode 2 start accepted on 394 (1920x1080, 240 dpi)
+11-27 16:18:18.389 16932 16932 I PcScreen: decoding into this window
+11-27 16:18:18.453 27124 27124 I Cv10PocketXrPreview: First virtual display frame available on display 394
+11-27 16:18:30.291 16932 16988 I PcScreen: connecting to [LAN host], app Desktop, 1920x1080@120 (auto), 60 Mbps (auto), 0 other PC screens streaming, window 1920x1080, virtual display false, codec auto, formats 0x1101
+11-27 16:18:33.471 16932 17082 I PcScreen: decoder c2.qti.hevc.decoder video/hevc 1920x1080@120, try 0: {max-height=1080, vdec-lowlatency=1, vendor.qti-ext-dec-low-latency.enable=1, mime=video/hevc, priority=0, vendor.qti-ext-dec-picture-order.enable=1, color-standard=1, operating-rate=120, color-transfer=3, max-width=1920, low-latency=1, width=1920, color-range=2, frame-rate=120, height=1080}
+11-27 16:18:33.603 16932 17082 I PcScreen: streaming
+11-27 16:18:38.995 16932 17105 I PcScreen: latency over 5 s: 46 fps in; host 1.5 ms (max 52.2); network round trip 7 ms (variance 1); receive 0.2 ms; decode 3.6 ms (max 6.4); to screen 0.0 ms (max 0.0)
+11-27 16:18:44.023 16932 17105 I PcScreen: latency over 5 s: 45 fps in; host 1.3 ms (max 2.9); network round trip 8 ms (variance 0); receive 0.1 ms; decode 3.7 ms (max 5.5); to screen 0.0 ms (max 0.0)
+11-27 16:18:49.033 16932 17105 I PcScreen: latency over 5 s: 46 fps in; host 1.3 ms (max 2.7); network round trip 12 ms (variance 7); receive 0.2 ms; decode 3.7 ms (max 8.7); to screen 0.0 ms (max 0.0)
+11-27 16:18:54.054 16932 17105 I PcScreen: latency over 5 s: 46 fps in; host 1.3 ms (max 3.1); network round trip 6 ms (variance 0); receive 0.2 ms; decode 3.7 ms (max 6.4); to screen 0.0 ms (max 0.0)
+11-27 16:18:59.053 16932 17105 I PcScreen: latency over 5 s: 46 fps in; host 1.3 ms (max 2.9); network round trip 8 ms (variance 0); receive 0.2 ms; decode 3.7 ms (max 5.6); to screen 0.0 ms (max 0.0)
+11-27 16:19:04.054 16932 17105 I PcScreen: latency over 5 s: 46 fps in; host 1.3 ms (max 2.8); network round trip 7 ms (variance 1); receive 0.2 ms; decode 3.8 ms (max 6.9); to screen 0.0 ms (max 0.0)
+11-27 16:19:09.084 16932 17105 I PcScreen: latency over 5 s: 45 fps in; host 1.2 ms (max 2.9); network round trip 8 ms (variance 1); receive 0.2 ms; decode 3.8 ms (max 5.2); to screen 0.0 ms (max 0.0)
+11-27 16:19:14.085 16932 17105 I PcScreen: latency over 5 s: 47 fps in; host 1.3 ms (max 2.9); network round trip 7 ms (variance 1); receive 0.2 ms; decode 3.7 ms (max 5.6); to screen 0.0 ms (max 0.0)
+11-27 16:19:19.117 16932 17105 I PcScreen: latency over 5 s: 46 fps in; host 1.2 ms (max 2.7); network round trip 7 ms (variance 1); receive 0.1 ms; decode 3.7 ms (max 4.7); to screen 0.0 ms (max 0.0)
+11-27 16:19:34.885 16932 16932 I PcScreen: decoding into this window
+11-27 16:19:59.212 27124 16841 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader terminator
+11-27 16:19:59.212 27124 16841 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+# Sunshine host
+[2026-11-27 16:18:33.608]: Info: CLIENT CONNECTED
+[2026-11-27 16:18:34.070]: Info: Creating encoder [hevc_nvenc]
+# After Stop Preview
+Display 4621527156978103573 (HWC display 1): port=21 pnpId=HWV screenPartStatus=UNSUPPORTED displayName="HUAWEIAV03"

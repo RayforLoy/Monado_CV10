@@ -24,3 +24,9 @@ ARM64 构建 `00d383b` 的 SHA-256 为 `a5576bd1e230a1a9a00a557ca6022e72d81a809a
 CV10 双目外显分别读到蓝色 **LEFT** 和红色 **RIGHT**，计时先后为 00:07.77 和 00:10.22。右镜拍到正立的 **RIGHT**，两次拍摄期间计时和黄点位置发生变化。点按 **停止预览** 后虚拟显示已释放，Windows 上的临时测试主机和测试卡也已停止。[双眼外显对照](evidence/fold7-pocket-pc-menu-stereo.png) · [右镜实拍](evidence/fold7-pocket-pc-menu-right.jpg) · [筛选日志](evidence/fold7-pocket-pc-menu.log)
 
 Fold7 的 Shizuku 管理应用原有后台限制。在服务版本升级后的第一次启动中，两个应用的 Shizuku 服务均出现 `provider is null`。自动开流复测临时允许 Shizuku 后台运行，完成后恢复原设置，已有 Shizuku 授权一直保留。该轮未实拍左镜。
+
+## Fold7 USB-C 直连复测
+
+2026-11-27 16:18–16:19 香港时间，Fold7（SM-F9660）通过视频 USB-C 线直连 CV10，以三星 **已镜像** 的 3200×1600、90 Hz 输出。使用源码 `6d2fb4c` 的 ARM64 预览包，SHA-256 为 `37da3025899c52362150fa851a25e069fdd2adefca37d1b5d1024ab3f2a47293`。继续使用原版 Pocket XR 1.6.28、已有 Shizuku 授权和本地网络配对。
+
+从 **电脑屏幕 3D（左右并排）** 启动原版电脑屏幕，Pocket XR 在虚拟显示屏 394 上与 Sunshine 自动连接，记录硬件解码器 `c2.qti.hevc.decoder`，协商为 1920×1080 HEVC、请求 120 fps。测试卡实际入流读数约 45–46 fps。将 CV10 外显帧的左右眼区域按镜片安装方向旋转和裁剪后，左眼区可读蓝色 **LEFT**，右眼区可读红色 **RIGHT**。两帧的计时从 00:20.99 走到 00:44.71，黄点位置也发生变化。停止预览后释放虚拟显示，Windows 测试卡和 Sunshine 均已退出。[双眼外显测试卡](evidence/fold7-pocket-pc-sbs-direct-stereo.png) · [串流和显示筛选日志](evidence/fold7-pocket-pc-sbs-direct.log)
