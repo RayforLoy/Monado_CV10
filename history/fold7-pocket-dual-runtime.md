@@ -138,6 +138,19 @@ adb -s $serial shell 'CLASSPATH=/data/local/tmp/cv10-pocket-focus-probe.jar app_
 
 通过 **关闭 OpenXR 应用屏** 三次退出样例，Android DisplayManager 依次移除显示 238、239、240，每一轮都保留空间显示 235。原版运行时为样例提供 3840×1080 游戏图层，同一 PID 22779 三次进入 `FOCUSED`、三次完成 `xrDestroyInstance`。最后点按 **停止预览**，空间显示也已释放。另有对照在 DisplayManager 移除应用屏后触发三星 Freecess，样例的销毁回调在解除冻结后才完成，最迟一次约 32 秒。关闭按钮释放应用屏，无需等 Android 回收应用进程。[独立关闭筛选日志](evidence/fold7-pocket-client-close-display.log)
 
+#### Fold7 关闭应用屏时的 Freecess 对照
+
+2026-11-27 14:13–14:19 香港时间。同一 Fold7、C9.53.6 原厂线、5 V 供电和三星镜像，使用 `e8b1ef7` 预览 APK，SHA-256 为 `2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281`。原版 Pocket XR 1.6.28 和 Khronos OpenGLES `hello_xr` 均未修改。Broker 选 **Pocket XR (Monado CV10)**。本机 VPN 关闭，沿用已有 Shizuku 授权。每轮从正式菜单打开应用屏，确认样例进入 `FOCUSED` 后回到 Monado 预览页。
+
+| 样例电池设置及退出操作 | Fold7 结果 |
+| --- | --- |
+| **受限制**，直接点按 **关闭 OpenXR 应用屏** | 两轮均释放应用屏并保留空间。进程随后被冻结，直到约十秒后的 `ActivityDestroyTimeout` 才解冻。观察窗口内均未记录样例完成 `xrDestroyInstance`。 |
+| **受限制**，先向独立应用屏发送 Back，再点按 **关闭 OpenXR 应用屏** | 两轮都等到系统以 `Signal` 解冻。第一次输入约十秒后才送达末次按键事件。保留应用屏等待三秒也未记录实例销毁，释放应用屏后两轮才完成 `xrDestroyInstance`。 |
+| 从三星电池设置把样例临时改为 **优化**，直接关闭应用屏 | 样例的 `RUN_ANY_IN_BACKGROUND` 实际从 `ignore` 变为 `allow`。同一进程连续三轮进入 `FOCUSED`，三块应用屏均释放并保留原空间。三次关闭仍触发 `Bg-buff` 冻结和 `ActivityDestroyTimeout`，观察窗口内均未记录样例完成 `xrDestroyInstance`。 |
+| 恢复 **受限制** 后，把样例任务移到手机主屏再发送 Back | 单轮中，同一进程在主屏重新进入 `FOCUSED`，按返回后完成 `xrDestroyInstance`。任务移到主屏时，手机旋转为横屏，系统同时释放了原空间屏和应用屏。 |
+
+系统的 **优化** 模式没有消除这次 Freecess 路径。退出时仍保留既有的直接释放逻辑，以维持 Pocket XR 空间与手机竖屏。结束后恢复样例的 **受限制** 模式及 **Monado CV10 Preview** Broker，最低刷新率仍为 `null`，所有测试虚拟屏均已释放。[同机筛选日志](evidence/fold7-pocket-client-close-comparison.log)
+
 ### 右镜输出对照
 
 11:55 至 12:00 用同一接线复测黑屏。预览版的 Pocket XR、内置 2D 直开和 3D 菜单，以及稳定版 Monado CV10 v0.1.2 均让样例进入 `FOCUSED`。Fold7 采集到的 CV10 外显帧有左右两个蓝方块。固定相机在这四次复测中均未从右镜捕捉到测试画面，与 11:40 至 11:43 的明亮实拍结果不同。重置外显电源状态及从 Android 禁用后重新启用外显，均未恢复右镜实拍。接线和相机位置未做物理调整，原因待确认。[Pocket XR 外显帧](evidence/fold7-pocket-client-close-display-stereo.png) · [3D 菜单启动后的外显帧](evidence/fold7-pocket-menu-optical-control-stereo.png) · [稳定版外显帧](evidence/fold7-pocket-stable-optical-control-stereo.png) · [稳定版右镜实拍](evidence/fold7-pocket-stable-optical-control-right.jpg)

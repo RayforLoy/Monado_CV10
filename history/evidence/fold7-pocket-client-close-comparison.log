@@ -1,0 +1,94 @@
+Fold7 SM-F9660 / original C9.53.6 cable + 5 V / 2026-11-27 HKT
+Monado Preview e8b1ef7 APK SHA-256 2bc74f3f0e887e26d1f359d7ec12de33a978f4aa9aadb8db8ce5fb0e9612a281
+
+Restricted battery mode. Compare release directly with target-display Back before release.
+11-27 14:13:32.000
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:13:47.215 25817 25817 I Cv10PocketXrPreview: First virtual display frame available on display 298
+11-27 14:13:56.207 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 302
+11-27 14:13:56.201 31067 31087 V hello_xr: [14:13:56.201][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2825839707883
+11-27 14:14:02.000 Tapping close for screen 302 (Back first False)
+Screen 302 gone and space 298 kept. App: no completed xrDestroyInstance
+11-27 14:14:02.808  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [31067] reason: bf_input
+11-27 14:14:03.299  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [31067] reason: Bg-buff
+11-27 14:14:12.790  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [31067] reason: ActivityDestroyTimeout
+11-27 14:14:21.839 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 303
+11-27 14:14:22.389 32004 32030 V hello_xr: [14:14:22.389][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819430625435
+11-27 14:14:28.000 Sending Back only to client screen 303 for PID 32004
+11-27 14:14:41.000 Prior to display release: no completed xrDestroyInstance
+11-27 14:14:41.000 Tapping close for screen 303 (Back first True)
+Screen 303 gone and space 298 kept. App: 11-27 14:14:42.563 32004 32030 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:14:38.515  2961  5746 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [32004] reason: Signal
+11-27 14:14:48.393 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 304
+11-27 14:14:48.947 32705 32732 V hello_xr: [14:14:48.947][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819054655628
+11-27 14:14:54.000 Tapping close for screen 304 (Back first False)
+Screen 304 gone and space 298 kept. App: no completed xrDestroyInstance
+11-27 14:14:55.047  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [32705] reason: bf_input
+11-27 14:14:55.542  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [32705] reason: Bg-buff
+11-27 14:15:05.027  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [32705] reason: ActivityDestroyTimeout
+11-27 14:15:14.417 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 305
+11-27 14:15:15.080  1107  1213 V hello_xr: [14:15:15.080][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2818369934547
+11-27 14:15:21.000 Sending Back only to client screen 305 for PID 1107
+11-27 14:15:36.000 Prior to display release: no completed xrDestroyInstance
+11-27 14:15:36.000 Tapping close for screen 305 (Back first True)
+Screen 305 gone and space 298 kept. App: 11-27 14:15:37.053  1107  1213 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:15:32.986  2961  5746 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [1107] reason: Signal
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+
+InputDispatcher key delivery for the two Back rounds.
+11-27 14:14:28.405  2961  4594 I InputDispatcher: Delivering key to (32004): B action: 0x0 (0), f=0x0, m=0x0, d=303, '9b0a94f'
+11-27 14:14:38.421  2961  4594 I InputDispatcher: Delivering key to (32004): B action: 0x1 (0), f=0x20, m=0x0, d=303, '9b0a94f'
+11-27 14:14:38.589  2961  4594 I InputDispatcher: Delivering key to (32004): B action: 0x1 (0), f=0x0, m=0x0, d=303, '9b0a94f'
+11-27 14:15:21.297  2961  4594 I InputDispatcher: Delivering key to (1107): B action: 0x0 (0), f=0x0, m=0x0, d=305, '90c3df7'
+11-27 14:15:31.310  2961  4594 I InputDispatcher: Delivering key to (1107): B action: 0x1 (0), f=0x20, m=0x0, d=305, '90c3df7'
+11-27 14:15:33.013  2961  4594 I InputDispatcher: Delivering key to (1107): B action: 0x1 (0), f=0x0, m=0x0, d=305, '90c3df7'
+
+Temporarily optimized battery mode. Repeat direct release, same sample PID.
+11-27 14:16:09.000
+Battery mode 受限制. RUN_ANY_IN_BACKGROUND: ignore
+Battery mode 优化. RUN_ANY_IN_BACKGROUND: allow
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:16:41.505 25817 25817 I Cv10PocketXrPreview: First virtual display frame available on display 306
+11-27 14:16:50.470 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 310
+11-27 14:16:50.476  4669  4715 V hello_xr: [14:16:50.476][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2827563692608
+11-27 14:16:56.000 Tapping close for screen 310 (Back first False)
+Screen 310 gone and space 306 kept. App: no completed xrDestroyInstance
+11-27 14:16:56.826  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: bf_input
+11-27 14:16:57.325  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: Bg-buff
+11-27 14:17:06.805  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: ActivityDestroyTimeout
+11-27 14:17:18.018 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 311
+11-27 14:17:18.468  4669  6911 V hello_xr: [14:17:18.468][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598498384 time=2819343233862
+11-27 14:17:24.000 Tapping close for screen 311 (Back first False)
+Screen 311 gone and space 306 kept. App: no completed xrDestroyInstance
+11-27 14:17:24.630  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: bf_input
+11-27 14:17:25.127  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: Bg-buff
+11-27 14:17:34.610  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: ActivityDestroyTimeout
+11-27 14:17:43.879 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 312
+11-27 14:17:44.316  4669  8103 V hello_xr: [14:17:44.316][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598393408 time=2818422912015
+11-27 14:17:50.000 Tapping close for screen 312 (Back first False)
+Screen 312 gone and space 306 kept. App: no completed xrDestroyInstance
+11-27 14:17:50.712  2961  5763 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: bf_input
+11-27 14:17:51.207  2961  5763 D FreecessController: FZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: Bg-buff
+11-27 14:18:00.694  2961  3284 D FreecessController: UFZ : org.khronos.openxr.hello_xr.opengles(10835) [4669] reason: ActivityDestroyTimeout
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Battery mode 受限制. RUN_ANY_IN_BACKGROUND: ignore
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+
+Move to the phone display before targeted Back. The sample exits, but the outer preview stops and the close button is gone.
+11-27 14:18:31.000
+Row: 0 package_name=org.cv10.monado.pocket_client
+11-27 14:18:51.610 25817 25817 I Cv10PocketXrPreview: First virtual display frame available on display 313
+11-27 14:18:59.733 25817 25817 I Cv10PocketXrPreview: Requested Pocket XR client org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity on display 317
+11-27 14:18:59.829  9807  9837 V hello_xr: [14:18:59.829][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598486720 time=2826101328613
+11-27 14:19:06.000 moving sample task 34952, screen 317 to phone display 0
+11-27 14:19:08.000 sending Back to sample on phone display 0
+Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview
+Final Broker Row: 0 package_name=org.cv10.monado.out_of_process.launcher_preview, displays 0, 247, minimum refresh null
+11-27 14:19:06.133 25817  9593 I Cv10SpatialLauncher: OpenXR session state 6
+11-27 14:19:06.247  2961  8460 D ActivityTaskManager: scheduleConfigurationChanged: ActivityRecord{226475183 u0 org.khronos.openxr.hello_xr.opengles/android.app.NativeActivity t34952} state=RESUMED config={1.3 460mcc2mnc [zh_CN_#Hans,zh_CN,en_US] ldltr sw411dp w921dp h366dp 420dpi nrml long compactNeeded hdr widecg land finger -keyb/v/h -nav/h winConfig={ mBounds=Rect(0, 0 - 2520, 1080) mAppBounds=Rect(102, 0 - 2520, 1041) mMaxBounds=Rect(0, 0 - 2520, 1080) mDisplayRotation=ROTATION_90 mWindowingMode=fullscreen mActivityType=standard mAlwaysOnTop=undefined mRotation=ROTATION_90 mStageConfig=undefined mEmbedActivityMode=undefined mPopOver=off mOverlappingWithCutout=false mFlexPanelMode=off} s.8 fontWeightAdjustment=0 ff=0 bf=-1 bts=0 cst=1.0 nightDim=0 dt/s themeSeq=0} caller=com.android.server.wm.ActivityRecord.ensureActivityConfiguration:1946 com.android.server.wm.ActivityTaskManagerService.ensureConfigAndVisibilityAfterUpdate:29 com.android.server.wm.DisplayContent.updateDisplayOverrideConfigurationLocked:66
+11-27 14:19:06.781  9807  9837 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:19:07.188  9807 10477 V hello_xr: [14:19:07.188][Info   ] XrEventDataSessionStateChanged: state XR_SESSION_STATE_VISIBLE->XR_SESSION_STATE_FOCUSED session=-5476376638598428400 time=2818734432267
+11-27 14:19:09.804  9807 10477 V OpenXR-Loader: Verbose [GENERAL | xrDestroyInstance | OpenXR-Loader] : Completed loader trampoline
+11-27 14:19:06.135  2961  5828 I DisplayManagerService: Logical display removed: 317
+11-27 14:19:06.139  2961  5867 I DisplayManagerService: Logical display removed: 313
