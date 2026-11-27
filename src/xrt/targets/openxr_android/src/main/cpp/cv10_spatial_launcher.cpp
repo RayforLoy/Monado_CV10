@@ -30,6 +30,9 @@ namespace {
 constexpr char tag[] = "Cv10SpatialLauncher";
 constexpr uint32_t panel_width = 1280;
 constexpr uint32_t panel_height = 720;
+// Preserve the menu's scale while giving the laser a transparent border.
+constexpr uint32_t canvas_width = 2048;
+constexpr uint32_t canvas_height = 1280;
 constexpr uint32_t pocket_width = 3840;
 constexpr uint32_t pocket_height = 1080;
 constexpr float panel_distance = 1.45f;
@@ -51,21 +54,28 @@ precision highp float;
 in vec2 uv;
 uniform sampler2D panel;
 uniform vec2 aim;
-uniform vec2 size;
+uniform vec2 panelSize;
+uniform vec2 canvasSize;
 out vec4 color;
 void main() {
-    vec2 position = uv * size;
-    vec2 cursor = aim * size;
-    vec2 origin = vec2(0.76, 1.02) * size;
+    vec2 position = (uv - 0.5) * canvasSize + 0.5 * panelSize;
+    vec2 cursor = aim * panelSize;
+    vec2 origin = vec2(0.76, 1.32) * panelSize;
     vec2 ray = cursor - origin;
-    float along = clamp(dot(position - origin, ray) / dot(ray, ray), 0.0, 1.0);
+    float along = clamp(dot(position - origin, ray) / max(dot(ray, ray), 0.0001), 0.0, 1.0);
     float rayDistance = length(position - origin - along * ray);
     float rayOpacity = (1.0 - smoothstep(0.7, 2.5, rayDistance)) * along * 0.32;
     float cursorDistance = length(position - cursor);
     float ring = 1.0 - smoothstep(1.7, 3.2, abs(cursorDistance - 9.0));
     float centerDot = 1.0 - smoothstep(2.2, 3.5, cursorDistance);
-    vec3 panelColor = texture(panel, uv).rgb;
-    color = vec4(mix(panelColor, vec3(0.34, 1.0, 0.75), max(rayOpacity, max(ring, centerDot))), 1.0);
+    float opacity = max(rayOpacity, max(ring, centerDot));
+
+    vec2 panelUv = position / panelSize;
+    vec4 background = vec4(0.0);
+    if (all(greaterThanEqual(panelUv, vec2(0.0))) && all(lessThan(panelUv, vec2(1.0)))) {
+        background = vec4(texture(panel, panelUv).rgb, 1.0);
+    }
+    color = vec4(vec3(0.34, 1.0, 0.75) * opacity, opacity) + background * (1.0 - opacity);
 }
 )";
 
@@ -470,8 +480,8 @@ private:
 		chain_info.usageFlags = XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT | XR_SWAPCHAIN_USAGE_SAMPLED_BIT;
 		chain_info.format = panel_format;
 		chain_info.sampleCount = 1;
-		chain_info.width = capture ? pocket_width : panel_width;
-		chain_info.height = capture ? pocket_height : panel_height;
+		chain_info.width = capture ? pocket_width : canvas_width;
+		chain_info.height = capture ? pocket_height : canvas_height;
 		chain_info.faceCount = 1;
 		chain_info.arraySize = 1;
 		chain_info.mipCount = 1;
@@ -517,10 +527,11 @@ private:
 			glViewport(0, 0, pocket_width, pocket_height);
 			capture.start(panel_texture);
 		} else {
-			glUniform2f(glGetUniformLocation(program, "size"), panel_width, panel_height);
+			glUniform2f(glGetUniformLocation(program, "panelSize"), panel_width, panel_height);
+			glUniform2f(glGetUniformLocation(program, "canvasSize"), canvas_width, canvas_height);
 			aim_uniform = glGetUniformLocation(program, "aim");
 			glTexStorage2D(target, 1, panel_format, panel_width, panel_height);
-			glViewport(0, 0, panel_width, panel_height);
+			glViewport(0, 0, canvas_width, canvas_height);
 		}
 	}
 
@@ -711,9 +722,11 @@ private:
 				quad.space = local_space;
 				quad.eyeVisibility = XR_EYE_VISIBILITY_BOTH;
 				quad.subImage.swapchain = swapchain;
-				quad.subImage.imageRect.extent = {panel_width, panel_height};
+				quad.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+				quad.subImage.imageRect.extent = {canvas_width, canvas_height};
 				quad.pose = anchor;
-				quad.size = {panel_width_m, panel_width_m * panel_height / panel_width};
+				quad.size = {panel_width_m * canvas_width / panel_width,
+				             panel_width_m * canvas_height / panel_width};
 				end_info.layerCount = 1;
 				end_info.layers = layers;
 			}

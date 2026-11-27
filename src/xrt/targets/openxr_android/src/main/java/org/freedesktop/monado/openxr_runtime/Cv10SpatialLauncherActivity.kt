@@ -236,7 +236,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     }
 
     private fun confirm(x: Float, y: Float) {
-        if (renderState?.ready != true || closing) return
+        if (renderState?.ready != true || closing || x !in -1f..1f || y !in -1f..1f) return
         val canvasX = (x + 1f) * PANEL_WIDTH / 2f
         val canvasY = (y + 1f) * PANEL_HEIGHT / 2f
         hitTargets.firstOrNull { it.bounds.contains(canvasX, canvasY) }?.action?.invoke()
@@ -384,8 +384,8 @@ internal class SpatialLauncherState(private val onReady: () -> Unit) {
     fun takePanel(): Bitmap? = panel.getAndSet(null)
 
     fun setAim(x: Float, y: Float) {
-        val xBits = x.coerceIn(-1f, 1f).toRawBits().toLong()
-        val yBits = y.coerceIn(-1f, 1f).toRawBits().toLong()
+        val xBits = x.toRawBits().toLong()
+        val yBits = y.toRawBits().toLong()
         packedAim.set((xBits shl 32) or (yBits and 0xffffffffL))
     }
 

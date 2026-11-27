@@ -112,9 +112,9 @@ internal class Cv10LaserInput(
         val horizontal = right[0] * x + right[1] * y
         val vertical = up[0] * x + up[1] * y + up[2] * z
         val depth = forward[0] * x + forward[1] * y + forward[2] * z
-        val targetX = (atan2(horizontal, depth) / 0.52f).coerceIn(-1f, 1f)
+        val targetX = atan2(horizontal, depth) / 0.52f
         // Elevation increases upward while menu Y increases downward.
-        val targetY = (-atan2(vertical, hypot(horizontal, depth)) / 0.40f).coerceIn(-1f, 1f)
+        val targetY = -atan2(vertical, hypot(horizontal, depth)) / 0.40f
         updateAim(aimX + (targetX - aimX) * 0.35f, aimY + (targetY - aimY) * 0.35f)
     }
 
