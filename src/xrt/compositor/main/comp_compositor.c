@@ -783,7 +783,8 @@ compositor_init_vulkan(struct comp_compositor *c)
 	    .required_device_extensions = required_device_ext_list,
 	    .optional_device_extensions = optional_device_ext_list,
 	    .log_level = c->settings.log_level,
-	    .only_compute_queue = c->settings.use_compute,
+	    // The Fold7 driver can reject the compute-only family. The graphics family also supports compute.
+	    .only_compute_queue = c->settings.use_compute && !c->is_cv10,
 	    .selected_gpu_index = c->settings.selected_gpu_index,
 	    .client_gpu_index = c->settings.client_gpu_index,
 	    .timeline_semaphore = true, // Flag is optional, not a hard requirement.
