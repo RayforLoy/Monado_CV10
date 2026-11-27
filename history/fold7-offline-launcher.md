@@ -188,6 +188,10 @@ ARM64 预览 APK 的 SHA-256 为 `18220c62c54343a7f7212979e03717aeea2c63d0e3ed27
 
 头显读取的来源为手机 `0`，`AT^TYPECSTATE?` 返回 `2`，佩戴状态为 `1`，开屏收到 `OK`。延长读取窗口后，逐眼命令实际都收到头显字符串 `READ LCD timeout!`。此前 Fold7 普通 C-C 直连且镜片可见图案时也收到相同回显，因此 LCD 查询不能区分这次故障。现有对照将复现范围缩小到 Android 已提交外显画面之后，仍需同机、同版本的原厂线与直连对照才能判断链路和头显各自的影响。[诊断补丁](fold7-panel-status-probe.patch) · [读数日志](evidence/fold7-panel-status-probe.log) · [该轮外显和右镜](evidence/fold7-panel-status-probe.jpg) · [主项目直连对照](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/d41cad9/docs/cv10-original-cable-overnight-20261126.md)
 
+13:35 从 Fold7 系统诊断中提取了三星 DisplayPort 驱动和 USB 端口记录。12:48 眼镜端重接使 HPD 先低后高，四通道链路两阶段训练均成功，随后驱动开启 3200×1600、90 Hz 视频流。12:48:31 的 DPCD `0x202–0x204` 为 `77 77 81`，四条通道均报告时钟恢复、均衡及符号锁定，通道间对齐位也已置位。[筛选后的驱动与 USB 日志](evidence/fold7-original-cable-dp-optical-timeline.txt) · [Linux DRM 对 DP 状态位的定义](https://kernel.googlesource.com/pub/scm/linux/kernel/git/harry/linux/%2B/c38b8f5f791ecce13ab77e2257f8fd2444ba80f6/include/drm/display/drm_dp.h)
+
+重接后，12:49–13:01 的出图实拍与 13:11–13:14 的黑屏实拍之间，保存下来的驱动记录没有新的 HPD、训练或分辨率切换。USB 历史也没有新增的断开或枚举。HDCP 2.2 认证失败在出图和黑屏时段均已存在。这组证据只能确认重接时链路训练成功，尚未取得黑屏当时的实时 DPCD 或面板读数。[13:01 原版 Pocket XR 右镜](evidence/fold7-pocket-original-xr-compat-right.jpg) · [随后黑屏同机对照](evidence/fold7-integrated-preview-optical-recurrence.jpg)
+
 ### 2D USB 授权后继续启动
 
 2026-11-27 13:28–13:30 香港时间，在同一台 Fold7 上保留 C9.53.6 原厂线、外接 5 V、三星镜像及右镜相机位置。源码提交 `463702b` 在 USB 权限对话框关闭、启动器重新获得焦点后，检查仍连接的 CV10 和它的授权状态。允许后继续启动刚才点选的应用。拒绝或眼镜已断开时留在列表。此流程依赖 Android 在关闭系统对话框前授予 USB 设备访问权。[AOSP USB 授权对话框](https://android.googlesource.com/platform/frameworks/base/%2B/c231302191e6/packages/SystemUI/src/com/android/systemui/usb/UsbPermissionActivity.java)
