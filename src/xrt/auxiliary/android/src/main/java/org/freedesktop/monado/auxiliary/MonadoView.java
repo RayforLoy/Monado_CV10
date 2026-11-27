@@ -17,6 +17,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
@@ -140,7 +141,10 @@ public class MonadoView extends SurfaceView
 
     @Keep
     public static boolean canPresentOnCv10(Context context) {
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && findCv10(context) != null;
+        if (findCv10(context) == null) return false;
+        // Android 12+ opens a Presentation from the runtime service. Older releases use an
+        // overlay window on the CV10 display instead, which requires the special app access.
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S || Settings.canDrawOverlays(context);
     }
 
     // Accessed only on the UI thread. Overlapping sessions share the original window values.
@@ -274,6 +278,9 @@ public class MonadoView extends SurfaceView
             } catch (WindowManager.InvalidDisplayException | WindowManager.BadTokenException
                     | SecurityException error) {
                 Log.e(TAG, "CV10 window unavailable on display " + display.getDisplayId(), error);
+                if (!usePresentation) {
+                    Log.e(TAG, "On Android 10/11 allow 'Display over other apps' for this runtime");
+                }
             }
         });
         return view;
