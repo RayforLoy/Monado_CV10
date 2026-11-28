@@ -202,6 +202,23 @@ The same direct Bilibili workspace used a 1600² context and 1280² center per e
 
 Monado submitted 90.00 frames/s and CV10 presented 60.31 times/s throughout. All 3620 sampled SurfaceFlinger timestamps matched Vulkan feedback. The warmer pair lost fresh source images and gained 10.82 ms at p95 with the shorter margin, so the release default remains 2.0 ms. The shorter margin remains an experimental diagnostic option. The capture timestamp is taken after acquisition and pose metadata handling. The fixtures use `pocket-margin-recovered-ab*` and `pocket-margin-recovered-ba{3,4}*`. A back-to-back startup timed out waiting for the display transport before the alternate group's first frame. Successful shorter-margin sessions were measured after separate cold starts.
 
+#### Four-view draw-rate foveation
+
+Pocket XR commit `9b8b3f2` adds `debug.pocketxr.cv10_quad_ffr=1` as an opt-in to the direct atlas path. The driver accepted a 2×2 fragment shading rate on the atlas EGL surface. Pocket XR applies it to the 1600×1600 full-FOV pass for each eye, then restores 1×1 for the separate 1280×1280 inset pass. Monado consumes the same hardware buffer and fuses four-view blending and distortion in one Compute pass. The atlas layout and projection dimensions are identical in both variants. [GLES fragment shading rate](https://registry.khronos.org/OpenGL/extensions/EXT/EXT_fragment_shading_rate.txt)
+
+The comparison used two pairs in reverse order, the same saved Bilibili workspace, and 15 seconds of the same simulated yaw in each run. The Fold7 panel stayed on at 60 Hz and CV10 stayed in its 90 Hz physical mode. Thermal status started at 1 in the first pair (main skin sensor 39.9–40.0°C) and at 2 in the second pair (42.0°C). All four cold starts froze the Pocket XR process with Freecess reason `Bg-buff`. Bringing its phone controls to the front unfroze the same process before data collection. The layout and motion inputs were held fixed; the live Bilibili content could change.
+
+| Run | Shading of the full-FOV pass | CV10 actual / fresh source frames per second | Monado GPU p50 / p95 | Pocket EGL submission to CV10 present p50 / p95 |
+| --- | --- | ---: | ---: | ---: |
+| A1 | 2×2 | 60.33 / 58.71 | 2.21 / 6.26 ms | 55.03 / 67.41 ms |
+| B1 | 1×1 | 60.36 / 60.22 | 2.07 / 6.10 ms | 56.04 / 68.06 ms |
+| B2 | 1×1 | 60.36 / 59.09 | 2.76 / 4.47 ms | 44.25 / 55.64 ms |
+| A2 | 2×2 | 60.33 / 60.20 | 2.70 / 4.35 ms | 55.20 / 66.25 ms |
+
+Across the steady 300-frame Pocket XR timer windows, query sums had p50 values of 0.03–0.07 ms with 2×2 and 0.05–0.12 ms with 1×1. These readings cover the bracketed GLES commands. Pose-to-fence and end-to-end times varied between pairs, so the experiment remains off by default. Monado submitted 89.93–90.00 times/s, and all 3618 SurfaceFlinger presentation timestamps matched Vulkan feedback. All sampled frames used late projection. The simulated yaw fit was within 0.8 ms of the requested phase (0.15–0.23° RMS); the fitted phase is derived from tracing. External screenshots captured workspace content. The fixed right lens camera did not capture a visible window, so optical clarity and smear are unverified.
+
+The local fixtures use `pocket-quad-ffr-{a1-1,b1-0,b2-0,a2-1}-default-calibrated-true-0-2.0`. Pocket XR APK SHA-256 is `6ecd33f1dcab5393d71872b448db06080d961b439b9fe3d68bc660198ccb5ebb` and the paired Monado replay APK SHA-256 is `99d4fa267e8c0c1a113bbab17101d17be44eafa67d5cb0d0cbeccd3f750ccfc2c`. The previous Monado preview and Pocket XR APKs were restored after the experiment and both installed hashes were verified. The phone returned to its launcher at 60 Hz with 33% battery.
+
 The traces are under `pocket-margin-*`, `pocket-pick-*`, `pocket-freecess-*`, `pocket-bg-unrestricted-*`, `pocket-direct-service-*`, and `pocket-controls-front-*` in the local evidence directory. `analyze-pocket-pipeline.py` joins source, draw, GPU and presentation timestamps. `analyze-pocket-pick-perfetto.py` finds the producer thread in the onset trace. The Monado diagnostic replay APK SHA-256 is `99d4fa267e8c0c1a113bbab17101d17be44eafa67d5cb0d0cbecd3f750ccfc2c`. The right-lens camera captured a dark image in this run, so the result describes the software rendering and presentation chain.
 
 ## 直出帧的姿态记录
