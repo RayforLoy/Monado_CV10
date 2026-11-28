@@ -1,0 +1,115 @@
+diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
+index f0d3d10..8a18da0 100644
+--- a/services/surfaceflinger/SurfaceFlinger.cpp
++++ b/services/surfaceflinger/SurfaceFlinger.cpp
+@@ -2941,7 +2941,8 @@ bool SurfaceFlinger::commit(PhysicalDisplayId pacesetterId,
+     }
+
+     // Composite if transactions were committed, or if requested by HWC.
+-    bool mustComposite = mMustComposite.exchange(false);
++    mExplicitCompositeThisFrame = mMustComposite.exchange(false);
++    bool mustComposite = mExplicitCompositeThisFrame;
+     {
+         mFrameTimeline->setSfWakeUp(ftl::to_underlying(vsyncId),
+                                     pacesetterFrameTarget.frameBeginTime().ns(),
+@@ -3115,18 +3116,28 @@ bool SurfaceFlinger::deferFollowerBeforeComposition(PhysicalDisplayId pacesetter
+     // A deferred output must not consume global geometry, color or buffer cleanup work.
+     // The upstream forced-client path retains the previous GPU read fence when it skips
+     // a slower follower. Keep ordinary composition if that path is unavailable.
+-    if (!FlagManager::getInstance().force_slower_follower_gpu_composition() ||
++    static const bool reuseUnchanged =
++            base::GetBoolProperty("debug.sf.cv10_gate_reuse_unchanged", false);
++    if ((!reuseUnchanged && !FlagManager::getInstance().force_slower_follower_gpu_composition()) ||
+         mGeometryDirty.load() || mVisibleRegionsDirty || mFrontEndDisplayInfosChanged ||
+         mDrawingState.colorMatrixChanged || !mBufferIdsToUncache.empty() ||
+         !mLayersWithBuffersRemoved.empty() || mNumTrustedPresentationListeners > 0) {
+         return false;
+     }
++    if (reuseUnchanged && (mExplicitCompositeThisFrame || mMustComposite.load() ||
++                           !mReadbackRequests.empty() || mForceFullDamage || mDebugFlashDelay ||
++                           mRefreshRateOverlaySpinner || mHdrSdrRatioOverlay)) {
++        return false;
++    }
+
+     {
+         Mutex::Autolock lock(mStateLock);
+         const auto cv10 = getDisplayDeviceLocked(pacesetterId);
+         const auto phone = getDisplayDeviceLocked(followerId);
+-        if (!cv10 || !phone || phone->getPowerMode() != hal::PowerMode::ON) return false;
++        if (!cv10 || !phone || cv10->getPowerMode() != hal::PowerMode::ON ||
++            phone->getPowerMode() != hal::PowerMode::ON) {
++            return false;
++        }
+         const auto& cv10Selector = cv10->refreshRateSelector();
+         const auto& phoneSelector = phone->refreshRateSelector();
+         if (!cv10Selector.hasActiveMode() || !phoneSelector.hasActiveMode()) return false;
+@@ -3137,17 +3148,53 @@ bool SurfaceFlinger::deferFollowerBeforeComposition(PhysicalDisplayId pacesetter
+             return false;
+         }
+
+-        const auto& phoneState = phone->getCompositionDisplay()->getState();
+-        if (!phoneState.isEnabled || !phoneState.usesClientComposition ||
+-            phoneState.usesDeviceComposition) {
++        const auto output = phone->getCompositionDisplay();
++        const auto& phoneState = output->getState();
++        if (!phoneState.isEnabled || phone->getLayerStack() == ui::UNASSIGNED_LAYER_STACK ||
++            (!reuseUnchanged && (!phoneState.usesClientComposition ||
++                                 phoneState.usesDeviceComposition))) {
+             return false;
+         }
+         for (const auto& [_, display] : mDisplays) {
+             if (display->getId() != phone->getId() &&
+-                display->getLayerStack() == phone->getLayerStack()) {
++                display->getLayerStack() == phone->getLayerStack() &&
++                (!reuseUnchanged || display->getCompositionDisplay()->getState().isEnabled)) {
+                 return false;
+             }
+         }
++
++        if (reuseUnchanged) {
++            const bool hasRetired = Fence::isValidTimestamp(
++                    targeter.target().presentFenceForPreviousFrame()->getSignalTime());
++            const bool hasDamage = !phoneState.dirtyRegion.isEmpty();
++            bool changed = false;
++            if (hasRetired && !hasDamage) {
++                mLayerSnapshotBuilder.forEachSnapshot(
++                        [&](const frontend::LayerSnapshot& snapshot) FTL_FAKE_GUARD(
++                                kMainThreadContext) {
++                            if (changed || !output->includesLayer(snapshot.outputFilter)) return;
++                            changed = snapshot.contentDirty || snapshot.changes.get() != 0;
++                            if (changed || mLayersWithQueuedFrames.empty()) return;
++
++                            // A new buffer can have empty damage and still need a release fence.
++                            // Compare sequence ownership for all snapshots, including clones.
++                            const auto legacy = mLegacyLayers.find(snapshot.sequence);
++                            changed = legacy == mLegacyLayers.end() ||
++                                    std::any_of(mLayersWithQueuedFrames.begin(),
++                                                mLayersWithQueuedFrames.end(),
++                                                [&](const auto& entry) {
++                                                    return entry.first == legacy->second;
++                                                });
++                        });
++            }
++            const bool reuse = hasRetired && !hasDamage && !changed;
++            SFTRACE_FORMAT_INSTANT("CV10 reuse follower display=%" PRIu64
++                                   " reuse=%d retired=%d damage=%d changed=%d",
++                                   followerId.value, reuse, hasRetired, hasDamage, changed);
++            // Keep the old output and its fences. The next real update will schedule its own
++            // composition. Arming a retry here would turn idle reuse into a busy loop.
++            return reuse;
++        }
+     }
+
+     const nsecs_t now = systemTime();
+diff --git a/services/surfaceflinger/SurfaceFlinger.h b/services/surfaceflinger/SurfaceFlinger.h
+index d1f7580..9bd8eab 100644
+--- a/services/surfaceflinger/SurfaceFlinger.h
++++ b/services/surfaceflinger/SurfaceFlinger.h
+@@ -1403,6 +1403,7 @@ private:
+     bool mLayersAdded = false;
+
+     std::atomic_bool mMustComposite = false;
++    bool mExplicitCompositeThisFrame GUARDED_BY(kMainThreadContext) = false;
+     std::atomic_bool mGeometryDirty = false;
+
+     // constant members (no synchronization needed for access)

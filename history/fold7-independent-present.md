@@ -556,6 +556,16 @@ Evidence is in `ffr-quad/fold7-slot-ffr-{comparison,pose}.txt`, `fold7-slot-ffr-
 
 八项系统补丁按「每屏周期、呈现追踪、慢屏栅栏门、validate-only、跟随屏追踪、延后准入、独立时隙探针、主动唤醒」顺序在基线上正反向应用通过。尾部两项都应用后，Windows x64 和 Fold7 上的 Android arm64 C++ 检查通过。检查覆盖命中下一拍、超出相位容差、误认后一拍和无效周期。两端七条边界决策输出一致，结果见 `ffr-quad/fold7-follower-wake-check-{host,device}.txt`。补丁同时在上游 `MessageQueueTest` 加入保持已有唤醒和拒绝陈旧批次的用例。完整 SurfaceFlinger 与其测试套件尚未构建或部署。量产 Fold7 此时仍为内屏 1080×2520 @ 60 Hz，CV10 使用原厂线。
 
+### 手机画面未变时复用上一帧
+
+量产机的一段 Pocket XR 静置手机画面追踪录到 CV10 420 次、手机 419 次 HWC 验证或提交，频率均约 60.32 次/秒，手机调用平均耗时 12.51 ms。另一组 Hello XR 的两次手机截图 SHA-256 一致，仍记录到持续的手机 HWC 调用。截图不能证明两次采样之间每一帧的图层状态，固件也不会因为两个画面看起来一样就自动跳过手机提交。原始证据为 `pocket-policy-static-phone.perfetto-trace` 和 `hello-policy-static-phone-hashes.txt`。
+
+[复用未变化输出的补丁](aosp-android16-reuse-unchanged-follower.patch) 接在前八项补丁之后。启用已有的两块物理屏 `debug.sf.cv10_gate_*` ID 及 `debug.sf.cv10_gate_reuse_unchanged=true`，切换为按内容变化判断的试验模式。CV10 领跑且两块屏都亮着时，独享图层栈、已有完成呈现、无输出损坏区域、无手机层状态变化或新锁存缓冲的手机可沿用 HWC 上一帧。空损坏区域的新缓冲仍应提交并产生正常释放栅栏。HWC 请求刷新、新屏幕截图、屏幕拓扑或合成状态发生变化时照常提交。
+
+复用发生在生成合成目标时，抢在 `prepareFrame` 及 `presentOrValidate` 之前。它保留手机的上一次呈现和已持有的缓冲，不给手机记一条新的呈现栅栏。接下来收到手机内容更新时，由正常流程触发新提交。实验使用 `CV10 reuse follower` 标记与同轮 HWC 调用交叉核对，并统计手机亮屏期间 CV10 的实际呈现。静态复用之后还需单独验证手机持续有内容更新的场景。
+
+在独立 Git 工作树上应用九项补丁，逐个反向应用后与固定基线逐字节核对，再重新应用并核对最终内容。完整系统合成器尚未构建或部署，对量产 Fold7 的呈现频率没有实测提升。
+
 ## 可选熄屏 90 Hz
 
 实验版在 Pocket 预览首帧到达后提供「熄灭手机屏幕以启用 CV10 90 Hz」。需要已有的 Shizuku 桥接授权和 CV10 时钟，以及用户在该次会话里确认。熄屏期间工作区继续运行，最多维持十分钟。关闭预览或它的进程退出时恢复 Android 对手机面板和合成时钟的控制。
