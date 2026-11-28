@@ -10,7 +10,7 @@ WITH batches AS MATERIALIZED (
     WHERE s.name GLOB 'composite [0-9]*' AND s.depth = 0 AND s.dur > 0
       AND t.name = 'surfaceflinger' AND t.tid = p.pid
 ), calls AS MATERIALIZED (
-    SELECT track_id, ts, name
+    SELECT track_id, ts, ts + dur AS finish, name
     FROM slice
     WHERE name IN ('HwcPresentOrValidateDisplay 1', 'HwcPresentOrValidateDisplay 3') AND dur > 0
 ), paired AS MATERIALIZED (
@@ -18,11 +18,20 @@ WITH batches AS MATERIALIZED (
            COUNT(*) FILTER (WHERE calls.name = 'HwcPresentOrValidateDisplay 1') AS cv10_calls,
            COUNT(*) FILTER (WHERE calls.name = 'HwcPresentOrValidateDisplay 3') AS phone_calls,
            MIN(calls.ts) FILTER (WHERE calls.name = 'HwcPresentOrValidateDisplay 1') AS cv10_hwc,
-           MIN(calls.ts) FILTER (WHERE calls.name = 'HwcPresentOrValidateDisplay 3') AS phone_hwc
+           MIN(calls.ts) FILTER (WHERE calls.name = 'HwcPresentOrValidateDisplay 3') AS phone_hwc,
+           MAX(calls.finish) FILTER (WHERE calls.name = 'HwcPresentOrValidateDisplay 3')
+               AS phone_hwc_finish
     FROM batches
     LEFT JOIN calls ON calls.track_id = batches.track_id
         AND calls.ts >= batches.ts AND calls.ts < batches.finish
     GROUP BY batches.id
+), with_previous_hwc AS MATERIALIZED (
+    SELECT paired.*,
+           LAG(CASE WHEN phone_calls = 1 THEN phone_hwc END)
+               OVER (PARTITION BY track_id ORDER BY ts) AS previous_phone_hwc,
+           LAG(CASE WHEN phone_calls = 1 THEN phone_hwc_finish END)
+               OVER (PARTITION BY track_id ORDER BY ts) AS previous_phone_hwc_finish
+    FROM paired
 ), atomic_requests AS MATERIALIZED (
     SELECT request.id, request.ts AS request_ts, thread.name AS worker,
            atomic.ts AS entry, atomic.ts + atomic.dur AS finish
@@ -43,6 +52,7 @@ WITH batches AS MATERIALIZED (
     GROUP BY paired.id
 ), matching_blocker AS (
     SELECT external.batch_id, MIN(phone.request_ts) AS phone_request_ts,
+           MIN(phone.entry) AS phone_entry, MIN(phone.finish) AS phone_finish,
            COUNT(phone.id) AS matches
     FROM external_in_batch AS external
     JOIN atomic_requests AS phone ON phone.worker GLOB 'binder:*_1'
@@ -50,6 +60,18 @@ WITH batches AS MATERIALIZED (
         AND external.entry - phone.finish BETWEEN 0 AND 500000
     WHERE external.cv10_requests = 1
     GROUP BY external.batch_id
+), timing AS (
+    SELECT paired.*, external.cv10_requests, blocker.matches, blocker.phone_request_ts,
+           CASE WHEN blocker.matches = 1 AND blocker.phone_entry < paired.ts
+                THEN blocker.phone_finish - paired.ts END AS phone_atomic_remaining_ns,
+           CASE WHEN blocker.matches = 1
+                     AND blocker.phone_request_ts >= paired.previous_phone_hwc
+                     AND blocker.phone_request_ts <= paired.previous_phone_hwc_finish
+                THEN blocker.phone_finish - paired.previous_phone_hwc_finish END
+               AS phone_atomic_after_previous_hwc_ns
+    FROM with_previous_hwc AS paired
+    JOIN external_in_batch AS external ON external.batch_id = paired.id
+    LEFT JOIN matching_blocker AS blocker ON blocker.batch_id = paired.id
 )
 SELECT
     COUNT(*) AS batches,
@@ -58,19 +80,27 @@ SELECT
         AS cv10_hwc_first,
     COUNT(*) FILTER (WHERE cv10_calls = 1 AND phone_calls = 1 AND phone_hwc < cv10_hwc)
         AS phone_hwc_first,
-    COUNT(*) FILTER (WHERE external.cv10_requests = 1) AS single_cv10_atomic_in_batch,
-    COUNT(*) FILTER (WHERE blocker.matches = 1) AS single_phone_blocker,
-    COUNT(*) FILTER (WHERE blocker.matches = 1 AND blocker.phone_request_ts < paired.ts)
+    COUNT(*) FILTER (WHERE cv10_requests = 1) AS single_cv10_atomic_in_batch,
+    COUNT(*) FILTER (WHERE matches = 1) AS single_phone_blocker,
+    COUNT(*) FILTER (WHERE matches = 1 AND phone_request_ts < ts)
         AS phone_already_in_flight_at_batch_start,
-    COUNT(*) FILTER (WHERE blocker.matches = 1 AND blocker.phone_request_ts < cv10_hwc)
+    COUNT(*) FILTER (WHERE matches = 1 AND phone_request_ts < cv10_hwc)
         AS phone_already_in_flight_at_cv10_hwc,
-    COUNT(*) FILTER (WHERE blocker.matches = 1 AND blocker.phone_request_ts < previous_finish)
+    COUNT(*) FILTER (WHERE matches = 1 AND phone_request_ts < previous_finish)
         AS phone_started_before_previous_batch_finished,
-    COUNT(*) FILTER (WHERE blocker.matches = 1 AND blocker.phone_request_ts >= previous_finish
-                         AND blocker.phone_request_ts < paired.ts)
+    COUNT(*) FILTER (WHERE matches = 1 AND phone_request_ts >= previous_finish
+                         AND phone_request_ts < ts)
         AS phone_started_between_batches,
-    COUNT(*) FILTER (WHERE blocker.matches = 1 AND blocker.phone_request_ts >= paired.ts)
-        AS phone_started_during_batch
-FROM paired
-JOIN external_in_batch AS external ON external.batch_id = paired.id
-LEFT JOIN matching_blocker AS blocker ON blocker.batch_id = paired.id;
+    COUNT(*) FILTER (WHERE matches = 1 AND phone_request_ts >= ts)
+        AS phone_started_during_batch,
+    COUNT(*) FILTER (WHERE phone_atomic_remaining_ns > 0) AS atomic_crosses_batch_start,
+    ROUND(PERCENTILE(phone_atomic_remaining_ns, 50) / 1e6, 3)
+        AS phone_atomic_remaining_p50_ms,
+    ROUND(PERCENTILE(phone_atomic_remaining_ns, 95) / 1e6, 3)
+        AS phone_atomic_remaining_p95_ms,
+    COUNT(phone_atomic_after_previous_hwc_ns) AS phone_request_during_previous_hwc,
+    COUNT(*) FILTER (WHERE phone_atomic_after_previous_hwc_ns > 0)
+        AS phone_atomic_outlived_previous_hwc,
+    ROUND(PERCENTILE(phone_atomic_after_previous_hwc_ns, 95) / 1e6, 3)
+        AS phone_atomic_after_previous_hwc_p95_ms
+FROM timing;

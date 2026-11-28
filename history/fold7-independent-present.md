@@ -569,6 +569,10 @@ Evidence is in `ffr-quad/fold7-slot-ffr-{comparison,pose}.txt`, `fold7-slot-ffr-
 
 Pocket XR 的 7070 次较早启动中，7066 次在上一次 SurfaceFlinger 合成结束前就已启动。其余 4 次处于采样边界，缺少可对照的上一批结束时间。单独把 CV10 排到手机前面无法消除已经在途的 phone atomic 等待。手机动态更新的实验应从产生等待的那次提交着手，核对上一帧 retire、在途 phone atomic、CV10 唤醒和同一物理屏的新呈现栅栏。若把等待移到 HAL，则还要验证 HAL 等待期间未持有跨屏锁，且 CV10 的提交线程可继续运行。查询输出保存在 `ffr-quad/fold7-hwc-batch-order.txt`。
 
+四轮 Pocket XR 中有 7,059 次手机 atomic 跨过下一批合成的开始时刻。这些调用在下一批开始时剩余耗时的 p95 为 14.21–14.93 ms。有 6,686 次能把手机请求的开始放进上一批手机 HWC 调用内，它们的内核 atomic 全部在该 HWC 返回之后才结束，返回后剩余时间的 p95 为 16.24–16.34 ms。HWC 调用返回不足以证明内核已释放跨屏锁。
+
+用[旧帧 retire 和工作线程退出查询](fold7-drm-pending-commit.sql)处理同四段追踪。7,212 次能把等待配到手机上一帧 retire，retire 到 `complete_commit` 退出的 p95 为 0.198–0.235 ms，最大 0.671 ms。原 0.5 ms 保护时间在其中四次短于这个间隔。为 HAL 实验选择保护时间时，可从 0.75 ms 起测，并保留时限检查。这只是追踪观测到的范围，不能保证更高系统负载下仍能覆盖。若把等待移到 HAL 的实际 DRM 请求前，应验证该线程等待期间 CV10 的 DRM 请求已经能进入内核，并继续按真实呈现栅栏验收。附加输出为 `fold7-hwc-batch-order-timing.json` 和 `fold7-phone-retire-worker-pocket.json`。
+
 ### 手机画面未变时复用上一帧
 
 量产机的一段 Pocket XR 静置手机画面追踪录到 CV10 420 次、手机 419 次 HWC 验证或提交，频率均约 60.32 次/秒，手机调用平均耗时 12.51 ms。另一组 Hello XR 的两次手机截图 SHA-256 一致，仍记录到持续的手机 HWC 调用。截图不能证明两次采样之间每一帧的图层状态，固件也不会因为两个画面看起来一样就自动跳过手机提交。原始证据为 `pocket-policy-static-phone.perfetto-trace` 和 `hello-policy-static-phone-hashes.txt`。
@@ -586,6 +590,27 @@ Pocket XR 的 7070 次较早启动中，7066 次在上一次 SurfaceFlinger 合�
 实机用真实 CV10 IMU 和直接输出进入该模式。确认后，手机两个面板均报告 committed OFF，外显维持 ON，CV10 图层在六秒采样中的滚动呈现为 90.0/s，右镜拍到工作区。强行结束预览客户端后，手机面板恢复 ON/60，SurfaceFlinger 的强制外屏时钟随即清除。此轮复测的是客户端退出，十分钟上限和物理拔线恢复另待独立验收。
 
 最终构建重复验证了出画和退出回收。熄屏切换后的前两个滚动样本为 87.9/s，随后三个样本均为 90.0/s，p99 间隔 11.1 ms。
+
+### 使用无线 ADB 熄屏
+
+普通 Android 应用调用逐屏电源接口需要 `MANAGE_DISPLAYS`。SM‑F9660 报告该权限的保护级别为 `signature`。Monado 预览的内置按钮通过 Shizuku 以 shell 身份执行显示命令。已获授权的电脑也可以经无线 ADB 直接执行。 [Android 16 显示服务](https://android.googlesource.com/platform/frameworks/base/+/refs/heads/android16-release/services/core/java/com/android/server/display/DisplayManagerService.java) · [逐屏熄屏和复位命令](https://android.googlesource.com/platform/frameworks/base/+/a8458cd441e838c29087077dd6510543f394ee63%5E%21/)
+
+先启动 XR 应用并确认 CV10 已出画。用第一条命令读取当前显示 ID，将 `$cv10` 设为该列表中 `HUAWEIAV03` 的物理 ID。若现有会话已管理外屏时钟和手机电源，退出该模式后再进行手动对照。这里只将默认内建显示 `0` 熄灭。
+
+```powershell
+adb -s $serial shell dumpsys SurfaceFlinger --display-id
+adb -s $serial shell sfdo force-pacesetter $cv10
+adb -s $serial shell cmd display power-off 0
+```
+
+结束时恢复面板状态和自动时钟。
+
+```powershell
+adb -s $serial shell cmd display power-reset 0
+adb -s $serial shell sfdo reset-forced-pacesetter
+```
+
+这条路径已在实机对照中使用。原版 Hello XR 约 90.0 次实呈/秒，关闭手机面板并指定 CV10 时钟的独立 RGBX 探针测得 88.42 次实呈/秒，p95 仍为 11.111 ms。另一次熄屏对照保留手机作为调度时钟，CV10 只有 59.08 次 HWC 调用/秒。手动操作结束应执行复位。证据见 `trace-fold7-composer.ps1`、`mivr470-hello-phone-off*-scheduler.txt`、对应 Perfetto 文件，以及 `fold7-dpu-probe/run.ps1` 和 `summary.txt`。
 
 ## 本机证据
 

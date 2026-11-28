@@ -57,5 +57,9 @@ SELECT COUNT(*) AS calls,
        COUNT(*) FILTER (WHERE previous_retire_ts < previous_end_ts) AS previous_retire_before_end,
        ROUND(AVG(previous_retire_ts - enter_ts) / 1e6, 3) AS mean_entry_to_previous_retire_ms,
        ROUND(AVG(previous_end_ts - previous_retire_ts) / 1e6, 3) AS mean_previous_retire_to_end_ms,
-       ROUND(MAX(previous_end_ts - previous_retire_ts) / 1e6, 3) AS max_previous_retire_to_end_ms
+       ROUND(MAX(previous_end_ts - previous_retire_ts) / 1e6, 3) AS max_previous_retire_to_end_ms,
+       ROUND(PERCENTILE(previous_end_ts - previous_retire_ts, 95) / 1e6, 3)
+           AS p95_previous_retire_to_end_ms,
+       COUNT(*) FILTER (WHERE previous_end_ts - previous_retire_ts > 500000)
+           AS exceeded_500us
 FROM matched_retires
