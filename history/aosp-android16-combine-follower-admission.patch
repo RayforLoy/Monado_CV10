@@ -1,0 +1,201 @@
+diff --git a/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h b/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h
+index 1f35537..22b3b7f 100644
+--- a/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h
++++ b/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h
+@@ -9,13 +9,15 @@ namespace android::scheduler {
+
+ enum class FollowerFenceAdmission { kReady, kWaitingForFence, kRetireSettling };
+
+-constexpr FollowerFenceAdmission followerFenceAdmission(int64_t nowNs, bool pending,
+-                                                         std::optional<int64_t> signalNs) {
++constexpr int64_t kFollowerRetireGuardNs = 500'000;
++// Fold7 captures include a CRTC worker exiting 0.671 ms after retire.
++constexpr int64_t kFold7CombinedRetireGuardNs = 750'000;
++
++constexpr FollowerFenceAdmission followerFenceAdmission(
++        int64_t nowNs, bool pending, std::optional<int64_t> signalNs,
++        int64_t retireGuardNs = kFollowerRetireGuardNs) {
+     if (pending) return FollowerFenceAdmission::kWaitingForFence;
+-    // SM-F9660 research captures showed that the CRTC worker can remain busy for
+-    // 0.448 ms after it signals the previous retire fence.
+-    constexpr int64_t kRetireGuardNs = 500'000;
+-    if (signalNs && (nowNs < *signalNs || nowNs - *signalNs < kRetireGuardNs)) {
++    if (signalNs && (nowNs < *signalNs || nowNs - *signalNs < retireGuardNs)) {
+         return FollowerFenceAdmission::kRetireSettling;
+     }
+     return FollowerFenceAdmission::kReady;
+diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
+index 8a18da0..e4a6afc 100644
+--- a/services/surfaceflinger/SurfaceFlinger.cpp
++++ b/services/surfaceflinger/SurfaceFlinger.cpp
+@@ -2943,6 +2943,25 @@ bool SurfaceFlinger::commit(PhysicalDisplayId pacesetterId,
+     // Composite if transactions were committed, or if requested by HWC.
+     mExplicitCompositeThisFrame = mMustComposite.exchange(false);
+     bool mustComposite = mExplicitCompositeThisFrame;
++    if (mCv10FollowerAwaitingComposition) {
++        const PhysicalDisplayId id = *mCv10FollowerAwaitingComposition;
++        if (frameTargets.contains(id)) {
++            mustComposite = true;
++        } else {
++            bool retry;
++            {
++                Mutex::Autolock lock(mStateLock);
++                const auto display = getDisplayDeviceLocked(id);
++                retry = display && display->getPowerMode() == hal::PowerMode::ON;
++            }
++            if (retry) {
++                // Scheduler backpressure can omit the phone before the late gate runs.
++                scheduleCommit(FrameHint::kNone);
++            } else {
++                mCv10FollowerAwaitingComposition.reset();
++            }
++        }
++    }
+     {
+         mFrameTimeline->setSfWakeUp(ftl::to_underlying(vsyncId),
+                                     pacesetterFrameTarget.frameBeginTime().ns(),
+@@ -3118,10 +3137,14 @@ bool SurfaceFlinger::deferFollowerBeforeComposition(PhysicalDisplayId pacesetter
+     // a slower follower. Keep ordinary composition if that path is unavailable.
+     static const bool reuseUnchanged =
+             base::GetBoolProperty("debug.sf.cv10_gate_reuse_unchanged", false);
+-    if ((!reuseUnchanged && !FlagManager::getInstance().force_slower_follower_gpu_composition()) ||
+-        mGeometryDirty.load() || mVisibleRegionsDirty || mFrontEndDisplayInfosChanged ||
+-        mDrawingState.colorMatrixChanged || !mBufferIdsToUncache.empty() ||
+-        !mLayersWithBuffersRemoved.empty() || mNumTrustedPresentationListeners > 0) {
++    static const bool deferChanged = reuseUnchanged &&
++            base::GetBoolProperty("debug.sf.cv10_gate_defer_changed", false);
++    bool canDeferBusy = (!reuseUnchanged || deferChanged) &&
++            FlagManager::getInstance().force_slower_follower_gpu_composition();
++    if ((!reuseUnchanged && !canDeferBusy) || mGeometryDirty.load() || mVisibleRegionsDirty ||
++        mFrontEndDisplayInfosChanged || mDrawingState.colorMatrixChanged ||
++        !mBufferIdsToUncache.empty() || !mLayersWithBuffersRemoved.empty() ||
++        mNumTrustedPresentationListeners > 0) {
+         return false;
+     }
+     if (reuseUnchanged && (mExplicitCompositeThisFrame || mMustComposite.load() ||
+@@ -3150,25 +3173,31 @@ bool SurfaceFlinger::deferFollowerBeforeComposition(PhysicalDisplayId pacesetter
+
+         const auto output = phone->getCompositionDisplay();
+         const auto& phoneState = output->getState();
++        canDeferBusy = canDeferBusy && phoneState.usesClientComposition &&
++                !phoneState.usesDeviceComposition;
+         if (!phoneState.isEnabled || phone->getLayerStack() == ui::UNASSIGNED_LAYER_STACK ||
+-            (!reuseUnchanged && (!phoneState.usesClientComposition ||
+-                                 phoneState.usesDeviceComposition))) {
++            (!reuseUnchanged && !canDeferBusy)) {
+             return false;
+         }
+         for (const auto& [_, display] : mDisplays) {
+-            if (display->getId() != phone->getId() &&
+-                display->getLayerStack() == phone->getLayerStack() &&
+-                (!reuseUnchanged || display->getCompositionDisplay()->getState().isEnabled)) {
++            if (display->getId() == phone->getId() ||
++                display->getLayerStack() != phone->getLayerStack()) {
++                continue;
++            }
++            if (!reuseUnchanged || display->getCompositionDisplay()->getState().isEnabled) {
+                 return false;
+             }
++            canDeferBusy = false;
+         }
+
+         if (reuseUnchanged) {
+             const bool hasRetired = Fence::isValidTimestamp(
+                     targeter.target().presentFenceForPreviousFrame()->getSignalTime());
+             const bool hasDamage = !phoneState.dirtyRegion.isEmpty();
++            // Global layer bookkeeping may have been cleared by the CV10 composition.
++            const bool wasDeferred = mCv10FollowerAwaitingComposition == followerId;
+             bool changed = false;
+-            if (hasRetired && !hasDamage) {
++            if (hasRetired && !hasDamage && !wasDeferred) {
+                 mLayerSnapshotBuilder.forEachSnapshot(
+                         [&](const frontend::LayerSnapshot& snapshot) FTL_FAKE_GUARD(
+                                 kMainThreadContext) {
+@@ -3187,29 +3216,41 @@ bool SurfaceFlinger::deferFollowerBeforeComposition(PhysicalDisplayId pacesetter
+                                                 });
+                         });
+             }
+-            const bool reuse = hasRetired && !hasDamage && !changed;
++            const bool reuse = hasRetired && !hasDamage && !changed && !wasDeferred;
+             SFTRACE_FORMAT_INSTANT("CV10 reuse follower display=%" PRIu64
+-                                   " reuse=%d retired=%d damage=%d changed=%d",
+-                                   followerId.value, reuse, hasRetired, hasDamage, changed);
++                                   " reuse=%d retired=%d damage=%d changed=%d deferred=%d",
++                                   followerId.value, reuse, hasRetired, hasDamage, changed,
++                                   wasDeferred);
+             // Keep the old output and its fences. The next real update will schedule its own
+             // composition. Arming a retry here would turn idle reuse into a busy loop.
+-            return reuse;
++            if (reuse) return true;
+         }
+     }
+
++    if (!canDeferBusy) return false;
++
++    const int64_t retireGuardNs =
++            deferChanged ? scheduler::kFold7CombinedRetireGuardNs : scheduler::kFollowerRetireGuardNs;
+     const nsecs_t now = systemTime();
+     const nsecs_t signal = targeter.target().presentFenceForPreviousFrame()->getSignalTime();
+     const size_t pending = targeter.countPresentFencesPendingAt(TimePoint::fromNs(now));
+     const auto retire = Fence::isValidTimestamp(signal) ? std::optional<int64_t>{signal}
+                                                         : std::nullopt;
+-    const auto decision = scheduler::followerFenceAdmission(now, pending != 0, retire);
++    const auto decision = scheduler::followerFenceAdmission(now, pending != 0, retire, retireGuardNs);
+     SFTRACE_FORMAT_INSTANT("CV10 late gate display=%" PRIu64 " decision=%d pending=%zu "
+-                           "now=%" PRId64 " fence=%" PRId64,
+-                           followerId.value, static_cast<int>(decision), pending, now, signal);
++                           "now=%" PRId64 " fence=%" PRId64 " guard_ns=%" PRId64,
++                           followerId.value, static_cast<int>(decision), pending, now, signal,
++                           retireGuardNs);
+     if (decision == scheduler::FollowerFenceAdmission::kReady) return false;
+
+-    // Retain the follower's last actual presentation and reconsider it on the next tick.
+-    scheduleComposite(FrameHint::kNone);
++    // Reconsider the skipped output on the next tick. In combined mode the retry
++    // must not mark an explicit repaint, which would bypass the next admission check.
++    if (deferChanged) {
++        mCv10FollowerAwaitingComposition = followerId;
++        scheduleCommit(FrameHint::kNone);
++    } else {
++        scheduleComposite(FrameHint::kNone);
++    }
+     return true;
+ }
+
+@@ -3305,6 +3346,23 @@ CompositeResultsPerDisplay SurfaceFlinger::composite(
+     auto [mainThreadRefreshArgs, optionalOffloadedRefreshArgs] =
+             addOutputsToRefreshArgs(pacesetterId, refreshArgs, frameTargeters);
+
++    if (mCv10FollowerAwaitingComposition &&
++        frameTargeters.contains(*mCv10FollowerAwaitingComposition)) {
++        const PhysicalDisplayId id = *mCv10FollowerAwaitingComposition;
++        mCv10FollowerAwaitingComposition.reset();
++        for (const auto& output : mainThreadRefreshArgs.outputs) {
++            if (output->getDisplayIdVariant().and_then(asPhysicalDisplayId) != id ||
++                !output->getState().isEnabled) {
++                continue;
++            }
++            // Repaint the admitted phone output even if the deferred update had empty damage.
++            auto& state = output->editState();
++            state.dirtyRegion.set(state.displaySpace.getBoundsAsRect());
++            SFTRACE_FORMAT_INSTANT("CV10 resume follower display=%" PRIu64, id.value);
++            break;
++        }
++    }
++
+     constexpr bool kCursorOnly = false;
+     const auto layers = addLayerSnapshotsToCompositionArgs(mainThreadRefreshArgs, kCursorOnly);
+
+diff --git a/services/surfaceflinger/SurfaceFlinger.h b/services/surfaceflinger/SurfaceFlinger.h
+index 9bd8eab..3904320 100644
+--- a/services/surfaceflinger/SurfaceFlinger.h
++++ b/services/surfaceflinger/SurfaceFlinger.h
+@@ -1404,6 +1404,8 @@ private:
+
+     std::atomic_bool mMustComposite = false;
+     bool mExplicitCompositeThisFrame GUARDED_BY(kMainThreadContext) = false;
++    std::optional<PhysicalDisplayId> mCv10FollowerAwaitingComposition
++            GUARDED_BY(kMainThreadContext);
+     std::atomic_bool mGeometryDirty = false;
+
+     // constant members (no synchronization needed for access)

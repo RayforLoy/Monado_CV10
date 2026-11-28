@@ -643,6 +643,33 @@ python -m pip install perfetto==0.59.1
 python history/fold7-layer-stack-audit.py --phone-display 4630946872173396372 --cv10-display 4621527156978103573 --phone-hwc 3 cv10-layer-stack.perfetto-trace
 ```
 
+#### 手机画面静置与更新之间的切换
+
+在九项补丁之后应用 [组合准入补丁](aosp-android16-combine-follower-admission.patch)。实验系统启动 SurfaceFlinger 前，设置两块屏的 `debug.sf.cv10_gate_*_display` 物理 ID，同时开启 `debug.sf.cv10_gate_reuse_unchanged=true` 和 `debug.sf.cv10_gate_defer_changed=true`。后者默认关闭。静置手机沿用上一帧。有更新时，仅在两块屏都亮着、手机是独享图层栈且由原有较慢跟随屏机制强制使用客户端合成时，才可因上一帧未退役或仍在保护期内而延后本轮手机提交。几何或合成状态变化、HWC 的显式刷新、屏幕读回请求等仍走正常路径。
+
+延后时单独记录手机还有待合成内容。CV10 提交后会清理本轮图层变化和新缓冲记录，手机重试仍不能被判为静置复用。重试按下一次合成时钟唤醒，重新检查栅栏；它保留真正的 HWC 刷新请求语义。若更早的调度背压暂未选中手机，待合成状态会保留到手机再进入合成目标，或手机关闭、移除。重进合成时只给手机补全损坏区域，避免空损坏的新缓冲继续复用旧画面。
+
+组合模式在 phone retire 后留 0.75 ms，覆盖既有 7,212 条样本中观测到的最大 0.671 ms。原来仅按栅栏延后的模式仍用 0.5 ms。0.75 ms 只用于实验，负载或系统版本变化时需重新测量。可用 C++17 以上编译器和实验树的 `services/surfaceflinger/Scheduler/include` 编译 [栅栏边界检查](fold7-follower-admission-check.cpp)。
+
+同温控下保持 Fold7 亮屏 60 Hz，先对照静置，再滚动手机窗口，最后停止输入。首轮用相同 Pocket XR 场景和相同 CV10 时钟设置分别对照原流程、仅复用和组合模式。保留早期额外跟随屏延后开关为默认关闭，以便把变化归因到组合准入。追踪按 `CV10 reuse follower`、`CV10 late gate` 的 `guard_ns=750000`、`CV10 resume follower` 与两路 HWC/CRTC 时间戳关联。已延后的手机更新须真的出画，回到静置后须恢复复用。持续滚动时分别记录手机和 CV10 的实际呈现率、长帧和触控响应，确认 CV10 是否稳定接近 90 次/秒。持续等到下个 CV10 周期也可能拖慢手机更新，实际收益需在系统构建上测量。
+
+补丁在固定 AOSP 基线的补丁链上通过应用和还原检查。Git 检出时需保留补丁的 LF 换行。Windows 上已有 CRLF 副本时，从此分支重新检出补丁文件。栅栏判定可独立编译，完整 SurfaceFlinger 和量产 Fold7 上的效果待验证。
+
+在干净的 `platform/frameworks/native@fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103` 工作树按以下顺序应用。将 `$history` 设为当前 Monado 检出的 `history` 绝对路径。
+
+```powershell
+$steps = @(
+    'per-display-present-interval', 'defer-pending-slower-follower',
+    'trace-present-pipeline', 'validate-only-display', 'trace-follower-present-window',
+    'late-follower-admission', 'probe-independent-follower-slot', 'request-next-cv10-wake',
+    'reuse-unchanged-follower', 'combine-follower-admission'
+)
+foreach ($step in $steps) {
+    git apply (Join-Path $history "aosp-android16-$step.patch")
+    if ($LASTEXITCODE -ne 0) { throw "Failed to apply $step" }
+}
+```
+
 ## 可选熄屏 90 Hz
 
 实验版在 Pocket 预览首帧到达后提供「熄灭手机屏幕以启用 CV10 90 Hz」。需要已有的 Shizuku 桥接授权和 CV10 时钟，以及用户在该次会话里确认。熄屏期间工作区继续运行，最多维持十分钟。关闭预览或它的进程退出时恢复 Android 对手机面板和合成时钟的控制。

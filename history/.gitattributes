@@ -1,3 +1,4 @@
 cv10-hello-refresh.sh text eol=lf
 pocket-world-anchor-diagnostic.patch whitespace=-space-before-tab
 fold7-cv10-screen-off.sh text eol=lf
+aosp-android16-*.patch text eol=lf
