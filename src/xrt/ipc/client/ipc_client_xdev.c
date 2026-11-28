@@ -34,6 +34,13 @@
  */
 
 static xrt_result_t
+ipc_client_xdev_get_battery_status(struct xrt_device *xdev, bool *present, bool *charging, float *charge)
+{
+	struct ipc_client_xdev *icx = ipc_client_xdev(xdev);
+	return ipc_call_device_get_battery_status(icx->ipc_c, icx->device_id, present, charging, charge);
+}
+
+static xrt_result_t
 ipc_client_xdev_update_inputs(struct xrt_device *xdev)
 {
 	struct ipc_client_xdev *icx = ipc_client_xdev(xdev);
@@ -473,6 +480,7 @@ ipc_client_xdev_init(struct ipc_client_xdev *icx,
 
 	// Shared implemented functions.
 	icx->base.update_inputs = ipc_client_xdev_update_inputs;
+	icx->base.get_battery_status = ipc_client_xdev_get_battery_status;
 	icx->base.get_hand_tracking = ipc_client_xdev_get_hand_tracking;
 	icx->base.get_face_tracking = ipc_client_xdev_get_face_tracking;
 	icx->base.get_face_calibration_state_android = ipc_client_xdev_get_face_calibration_state_android;

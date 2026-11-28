@@ -21,6 +21,7 @@ public final class Cv10UsbReader {
     private UsbRequest request;
     private ByteBuffer packet;
     private boolean queued, enabled, proximityEnabled;
+    private WearPoller wear;
     private int askedId = -1;
     private long nextOpen, deadline, frames;
 
@@ -34,10 +35,40 @@ public final class Cv10UsbReader {
         return port.controlTransfer(0x21, 9, 0x300|id, iface.getId(), b, b.length, 500);
     }
 
-    private int proximityState() {
-        byte[] value = new byte[1];
-        int n = port.controlTransfer(0xa1, 1, 0x304, iface.getId(), value, 1, 300);
-        return n == 1 ? value[0] & 0xff : -1;
+    /** EP0 wear queries are independent of the 1 kHz interrupt endpoint. */
+    private static final class WearPoller extends Thread {
+        private final UsbDeviceConnection connection;
+        private final int interfaceId;
+        private final byte[] value = new byte[1];
+        volatile int state = -1;
+
+        WearPoller(UsbDeviceConnection connection, int interfaceId) {
+            super("CV10 wear sensor");
+            this.connection = connection;
+            this.interfaceId = interfaceId;
+            sample();
+        }
+
+        private void sample() {
+            int bytes = connection.controlTransfer(0xa1, 1, 0x304, interfaceId, value, 1, 150);
+            if (bytes == 1 && (value[0] == 0 || value[0] == 1) && state != value[0]) {
+                state = value[0];
+                Log.i(TAG, "CV10 wear state=" + state);
+            }
+        }
+
+        @Override public void run() {
+            try {
+                while (!isInterrupted()) {
+                    Thread.sleep(200);
+                    sample();
+                }
+            } catch (InterruptedException stopped) {
+                // The USB worker is closing this connection.
+            } catch (RuntimeException failure) {
+                Log.w(TAG, "CV10 wear polling stopped", failure);
+            }
+        }
     }
 
     private boolean open() {
@@ -80,7 +111,11 @@ public final class Cv10UsbReader {
                 if (!enabled) { close(); return false; }
                 // CV10's wear sensor gates the backlight independently of the DP signal and IMU.
                 proximityEnabled = setSensor(5, 4) == 5;
-                Log.i(TAG, "CV10 proximity enabled=" + proximityEnabled + ", state=" + proximityState());
+                if (proximityEnabled) {
+                    wear = new WearPoller(port, iface.getId());
+                    wear.start();
+                }
+                Log.i(TAG, "CV10 proximity enabled=" + proximityEnabled + ", state=" + (wear == null ? -1 : wear.state));
                 frames=0;
                 deadline=SystemClock.elapsedRealtime()+5000;
                 Log.i(TAG,"CV10 IMU enabled, interrupt IN 0x84");
@@ -123,6 +158,7 @@ public final class Cv10UsbReader {
                 imu[i+3]=(float)Math.toRadians(packet.getFloat(32+4*i));
                 if (!Float.isFinite(imu[i]) || !Float.isFinite(imu[i+3])) return 0;
             }
+            imu[6] = wear == null ? -1 : wear.state;
             if (!BuildConfig.inProcess) Cv10PocketImu.publish(ns, imu);
             deadline=SystemClock.elapsedRealtime()+2500;
             if (frames++==0 || frames%5000==0) Log.i(TAG,"CV10 valid IMU samples="+frames+" deviceNs="+ns);
@@ -133,6 +169,11 @@ public final class Cv10UsbReader {
     }
 
     public void close() {
+        if (wear != null) {
+            wear.interrupt();
+            try { wear.join(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            wear = null;
+        }
         try {
             if (request!=null && queued) {
                 request.cancel();

@@ -6,10 +6,23 @@ import android.view.Surface
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.math.sin
+import kotlin.math.cos
+
+internal data class Cv10PhoneRotation(val x: Float, val y: Float, val z: Float, val w: Float) {
+    operator fun times(b: Cv10PhoneRotation) = Cv10PhoneRotation(
+        w*b.x + x*b.w + y*b.z - z*b.y,
+        w*b.y - x*b.z + y*b.w + z*b.x,
+        w*b.z + x*b.y - y*b.x + z*b.w,
+        w*b.w - x*b.x - y*b.y - z*b.z,
+    )
+}
 
 /** Resolves phone motion to rightward yaw and upward pitch relative to the last center. */
 internal class Cv10PhoneOrientation {
     private val matrix = FloatArray(9)
+    private val sensorQuaternion = FloatArray(4)
+    private var centerAzimuth = 0f
     private val forward = FloatArray(3)
     private val right = FloatArray(2)
     private val up = FloatArray(3)
@@ -33,6 +46,7 @@ internal class Cv10PhoneOrientation {
     /** Returns true when the sample starts a new calibration. */
     fun update(values: FloatArray, displayRotation: Int): Boolean {
         SensorManager.getRotationMatrixFromVector(matrix, values)
+        SensorManager.getQuaternionFromVector(sensorQuaternion, values) // Android orders this as WXYZ.
         if (!hasSample || rotation != displayRotation) {
             hasSample = true
             rotation = displayRotation
@@ -62,6 +76,7 @@ internal class Cv10PhoneOrientation {
             sign = -1f
         }
         for (i in forward.indices) forward[i] = sign * matrix[3 * i + axis]
+        centerAzimuth = atan2(-forward[0], forward[1])
         val horizontalLength = hypot(forward[0], forward[1])
         right[0] = forward[1] / horizontalLength
         right[1] = -forward[0] / horizontalLength
@@ -70,5 +85,21 @@ internal class Cv10PhoneOrientation {
         up[2] = horizontalLength
         yaw = 0f
         pitch = 0f
+    }
+
+    /** World ENU -> XR (east/up/south); keep the physical screen normal +Z and portrait top +Y. */
+    fun grip(heading: Float): Cv10PhoneRotation {
+        val halfYaw = (heading - centerAzimuth) * 0.5f
+        val worldYaw = Cv10PhoneRotation(0f, sin(halfYaw), 0f, cos(halfYaw))
+        val sensor = Cv10PhoneRotation(sensorQuaternion[1], sensorQuaternion[2], sensorQuaternion[3], sensorQuaternion[0])
+        return worldYaw * enuToXr * sensor * displayAxes[rotation]
+    }
+
+    private companion object {
+        const val S = 0.70710678f
+        val enuToXr = Cv10PhoneRotation(-S, 0f, 0f, S)
+        // Surface.ROTATION_0, 90, 180 and 270: portrait axes expressed in the device's natural axes.
+        val displayAxes = arrayOf(Cv10PhoneRotation(0f, 0f, 0f, 1f), Cv10PhoneRotation(0f, 0f, S, S),
+            Cv10PhoneRotation(0f, 0f, 1f, 0f), Cv10PhoneRotation(0f, 0f, -S, S))
     }
 }

@@ -76,7 +76,10 @@ class Cv10SpatialLauncherActivity : Activity() {
                 ) {
                     when (kind) {
                         Cv10ControllerLauncherInput.HOME -> goHome()
-                        Cv10ControllerLauncherInput.RECENTER -> renderState?.recenter()
+                        Cv10ControllerLauncherInput.RECENTER -> renderState?.let {
+                            it.recenter()
+                            if (isOrderedBroadcast) resultCode = Activity.RESULT_OK
+                        }
                         Cv10ControllerLauncherInput.SWIPE_LEFT -> movePage(1)
                         Cv10ControllerLauncherInput.SWIPE_RIGHT -> movePage(-1)
                         else -> Unit
@@ -165,7 +168,6 @@ class Cv10SpatialLauncherActivity : Activity() {
     override fun onResume() {
         super.onResume()
         resumed = true
-        Cv10PhoneControllerService.showSpatialLauncher(this, true)
         if (hasWindowFocus()) controllerInputSince = SystemClock.uptimeMillis()
         updateControls()
         Cv10ControllerLauncherInput.requestState(this)
@@ -174,7 +176,6 @@ class Cv10SpatialLauncherActivity : Activity() {
     override fun onPause() {
         directLaunch.onPause()
         resumed = false
-        Cv10PhoneControllerService.showSpatialLauncher(this, false)
         controllerInputSince = Long.MAX_VALUE
         input.stop()
         super.onPause()

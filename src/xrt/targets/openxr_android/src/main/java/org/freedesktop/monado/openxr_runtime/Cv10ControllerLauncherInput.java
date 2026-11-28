@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package org.freedesktop.monado.openxr_runtime;
 
+import org.freedesktop.monado.auxiliary.Cv10ControllerRoles;
+
+import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,6 +17,7 @@ import java.util.function.Consumer;
 
 /** CF20 connection and launcher gestures outside the Khronos Simple Controller profile. */
 final class Cv10ControllerLauncherInput {
+    private static native void nativeRequestViewRecenter(long timeNs);
     static final String EVENT = "org.freedesktop.monado.cv10.LAUNCHER_CONTROLLER_EVENT";
     private static final String REQUEST = "org.freedesktop.monado.cv10.LAUNCHER_CONTROLLER_REQUEST";
     static final String KIND = "kind";
@@ -39,6 +43,8 @@ final class Cv10ControllerLauncherInput {
         }
     };
     private boolean ready;
+    volatile int connectionGeneration;
+    volatile int recenterGeneration;
     private boolean receivedReport;
     private boolean homeDown;
     private long homeStart;
@@ -74,6 +80,10 @@ final class Cv10ControllerLauncherInput {
 
     void onReady(boolean ready) {
         this.ready = ready;
+        if (ready) {
+            recenterGeneration = 0;
+            connectionGeneration++;
+        }
         receivedReport = false;
         homeDown = false;
         homeStart = 0;
@@ -154,7 +164,23 @@ final class Cv10ControllerLauncherInput {
     }
 
     private void send(int kind, long started) {
-        context.sendBroadcast(new Intent(EVENT).setPackage(context.getPackageName())
-                .putExtra(KIND, kind).putExtra(START_TIME, started));
+        Intent event = new Intent(EVENT).setPackage(context.getPackageName())
+                .putExtra(KIND, kind).putExtra(START_TIME, started);
+        if (kind != RECENTER) {
+            context.sendBroadcast(event);
+            return;
+        }
+        int link = connectionGeneration;
+        // A focused spatial launcher owns its panel and pointer recenter. Other clients use runtime yaw.
+        context.sendOrderedBroadcast(event, null, new BroadcastReceiver() {
+            @Override public void onReceive(Context ignored, Intent received) {
+                if (getResultCode() != Activity.RESULT_OK && ready && connectionGeneration == link &&
+                        Cv10ControllerRoles.mode(context) != Cv10ControllerRoles.PHONE_ONLY) {
+                    recenterGeneration++;
+                    Cv10PhoneControllerService.recenterToHead();
+                    nativeRequestViewRecenter(System.nanoTime());
+                }
+            }
+        }, handler, Activity.RESULT_CANCELED, null, null);
     }
 }

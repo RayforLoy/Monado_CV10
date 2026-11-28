@@ -613,6 +613,11 @@ endif()
 # Descend into the source
 ###
 
+set(XRT_CV10_CONTROLLER_MODEL_FILE "" CACHE FILEPATH "Optional grip-space CF20 GLB embedded in the Android OpenXR runtime")
+if(ANDROID)
+	set(XRT_FEATURE_CV10_RENDER_MODEL ON)
+endif()
+
 add_subdirectory(src)
 add_subdirectory(doc)
 

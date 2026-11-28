@@ -18,6 +18,10 @@
 #include "target_builder_helpers.h"
 #include "target_builder_interface.h"
 
+#ifdef XRT_BUILD_DRIVER_ANDROID
+#include "android/cv10_controller.h"
+#endif
+
 #include <assert.h>
 
 static const char *driver_list[] = {
@@ -203,6 +207,9 @@ legacy_open_system_impl(struct xrt_builder *xb,
 	tbo->hand_tracking.unobstructed.right = unobstructed_right_ht;
 	tbo->hand_tracking.conforming.left = conforming_left_ht;
 	tbo->hand_tracking.conforming.right = conforming_right_ht;
+#ifdef XRT_BUILD_DRIVER_ANDROID
+	cv10_install_controller_roles(xsysd);
+#endif
 
 	return XRT_SUCCESS;
 }

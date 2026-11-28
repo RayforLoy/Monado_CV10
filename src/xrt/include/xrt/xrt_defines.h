@@ -906,6 +906,8 @@ enum xrt_device_name
 
 	// Hand based controller emulation.
 	XRT_DEVICE_HAND_CTRL_EMU,
+
+	XRT_DEVICE_HUAWEI_CONTROLLER,
 };
 
 /*!
@@ -1487,6 +1489,21 @@ enum xrt_input_name
 	XRT_INPUT_FLIPVR_SQUEEZE_VALUE                              = XRT_INPUT_NAME(0X1310, VEC1_ZERO_TO_ONE),
 	XRT_INPUT_FLIPVR_GRIP_POSE                                  = XRT_INPUT_NAME(0X1311, POSE),
 	XRT_INPUT_FLIPVR_AIM_POSE                                   = XRT_INPUT_NAME(0X1312, POSE),
+
+	//! Internal grip pose available only from the physical Huawei CF20.
+	XRT_INPUT_CV10_CF20_MODEL_POSE                              = XRT_INPUT_NAME(0x1500, POSE),
+	//! Internal grip pose from the active Monado phone touchpad and rotation sensor.
+	XRT_INPUT_CV10_PHONE_MODEL_POSE                             = XRT_INPUT_NAME(0x1F0A, POSE),
+	XRT_INPUT_HUAWEI_HOME_CLICK                                 = XRT_INPUT_NAME(0x1F01, BOOLEAN),
+	XRT_INPUT_HUAWEI_BACK_CLICK                                 = XRT_INPUT_NAME(0x1F02, BOOLEAN),
+	XRT_INPUT_HUAWEI_VOLUME_UP_CLICK                            = XRT_INPUT_NAME(0x1F03, BOOLEAN),
+	XRT_INPUT_HUAWEI_VOLUME_DOWN_CLICK                          = XRT_INPUT_NAME(0x1F04, BOOLEAN),
+	XRT_INPUT_HUAWEI_TRIGGER_VALUE                              = XRT_INPUT_NAME(0x1F05, VEC1_ZERO_TO_ONE),
+	XRT_INPUT_HUAWEI_TRIGGER_CLICK                              = XRT_INPUT_NAME(0x1F06, BOOLEAN),
+	XRT_INPUT_HUAWEI_TRACKPAD                                   = XRT_INPUT_NAME(0x1F07, VEC2_MINUS_ONE_TO_ONE),
+	XRT_INPUT_HUAWEI_TRACKPAD_CLICK                             = XRT_INPUT_NAME(0x1F08, BOOLEAN),
+	XRT_INPUT_HUAWEI_TRACKPAD_TOUCH                             = XRT_INPUT_NAME(0x1F09, BOOLEAN),
+
 
 	XRT_INPUT_MX_INK_GRIP_POSE                                  = XRT_INPUT_NAME(0x1400, POSE),
 	XRT_INPUT_MX_INK_AIM_POSE                                   = XRT_INPUT_NAME(0x1401, POSE),

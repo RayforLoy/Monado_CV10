@@ -208,5 +208,16 @@ oxr_resolver_populate_profile(struct oxr_logger *log,
 		return;
 	}
 
+	// The CF20 also implements the pre-existing simple-controller inputs. In particular,
+	// select combines trigger and trackpad click, which cannot be expressed by one rebind.
+	if (dev->name == XRT_DEVICE_HUAWEI_CONTROLLER) {
+		struct oxr_suggested_profile *simple = NULL;
+		if (oxr_suggested_profile_array_find_by_device_name(suggested_profiles, registry, XRT_DEVICE_SIMPLE_CONTROLLER,
+		                                                     subaction_path, &simple)) {
+			fill_binding_profiles(slog, registry, simple, NULL, info);
+			return;
+		}
+	}
+
 	oxr_slog(slog, "\n\t\tNo rebinding or fallback for suggested profile.");
 }

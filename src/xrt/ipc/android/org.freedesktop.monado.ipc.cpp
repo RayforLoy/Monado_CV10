@@ -18,7 +18,9 @@ namespace org::freedesktop::monado::ipc {
 	      init(classRef().getMethod("<init>", "(J)V")),
 	      markAsDiscardedByNative(classRef().getMethod("markAsDiscardedByNative", "()V")),
 	      blockingConnect(classRef().getMethod("blockingConnect", "(Landroid/content/Context;Ljava/lang/String;)I")),
-	      requestRuntimeWake(classRef().getMethod("requestRuntimeWake", "()Z"))
+	      requestRuntimeWake(classRef().getMethod("requestRuntimeWake", "()Z")),
+	      phoneSession(classRef().getMethod("phoneSession", "(Z)V")),
+	      getControllerModelFd(classRef().getMethod("getControllerModelFd", "()I"))
 	{}
 	IMonado::Meta::Meta(jni::jclass clazz)
 	    : MetaBase(IMonado::getTypeName(), clazz),

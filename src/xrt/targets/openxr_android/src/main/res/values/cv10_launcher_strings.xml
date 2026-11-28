@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: BSL-1.0 -->
 <resources>
+    <string name="cv10_phone_show">Show phone controller in OpenXR apps</string>
+    <string name="cv10_role_auto">Two hands · CF20 right, phone left</string>
+    <string name="cv10_role_phone">Phone only · right hand</string>
+    <string name="cv10_role_swap">Swap hands · CF20 left, phone right</string>
     <string name="cv10_phone_start">Phone control for OpenXR apps</string>
     <string name="cv10_phone_active">OpenXR phone controller is on</string>
     <string name="cv10_phone_stop">Stop phone controller</string>

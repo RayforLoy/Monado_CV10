@@ -29,6 +29,9 @@ public final class Cv10RefreshLease implements DisplayManager.DisplayListener {
     public static final String PREFS = "cv10_refresh";
     public static final String ENABLED = "shizuku_enabled";
     public static final String PENDING = "restore_pending";
+    public static final String MANUAL = "manual_mode";
+    public static final String REQUESTED = "requested", APPLYING = "applying", HELD = "held", RESTORING = "restoring";
+    private static final String MANUAL_ORIGINAL = "manual_original";
     private static final String ORIGINAL = "original_value";
     private static final String RATE = "min_refresh_rate";
     private static final String TARGET = "120.0";
@@ -66,23 +69,28 @@ public final class Cv10RefreshLease implements DisplayManager.DisplayListener {
                 && context.getSystemService(UserManager.class).isSystemUser();
     }
 
-    public static synchronized Cv10RefreshLease get(Service service) {
-        if (instance == null) instance = new Cv10RefreshLease(service);
+    public static synchronized Cv10RefreshLease get(Context context) {
+        if (instance == null) instance = new Cv10RefreshLease(context);
         return instance;
+    }
+
+    /** Retain the entry point used by compiled MonadoService clients. */
+    public static Cv10RefreshLease get(Service service) {
+        return get((Context) service);
     }
 
     private final SharedPreferences.OnSharedPreferenceChangeListener options =
             (p, key) -> { if (ENABLED.equals(key)) schedule(); };
 
-    private Cv10RefreshLease(Service service) {
-        context = service.getApplicationContext();
+    private Cv10RefreshLease(Context caller) {
+        context = caller.getApplicationContext();
         prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         displays = context.getSystemService(DisplayManager.class);
         HandlerThread thread = new HandlerThread(TAG);
         thread.start();
         work = new Handler(thread.getLooper());
         args = new Shizuku.UserServiceArgs(new ComponentName(context, Cv10RefreshUserService.class))
-                .daemon(false).processNameSuffix("cv10_refresh").tag("cv10_refresh").version(2);
+                .daemon(false).processNameSuffix("cv10_refresh").tag("cv10_refresh").version(3);
         if (!supportedPhone(context)) return;
         prefs.registerOnSharedPreferenceChangeListener(options);
         displays.registerDisplayListener(this, work);
@@ -110,6 +118,66 @@ public final class Cv10RefreshLease implements DisplayManager.DisplayListener {
     }
 
     public static void recoverFromLauncher(Service service) { get(service).schedule(); }
+
+    /** The worker serializes menu actions with system-setting notifications and service callbacks. */
+    public void setManual(boolean enable) {
+        work.post(() -> {
+            String phase = prefs.getString(MANUAL, "");
+            if (enable && phase.isEmpty()) {
+                prefs.edit().putBoolean(ENABLED, false).putString(MANUAL, REQUESTED).commit();
+            } else if (!enable && !phase.isEmpty()) {
+                if (REQUESTED.equals(phase)) clearManual();
+                else prefs.edit().putString(MANUAL, RESTORING).commit();
+            }
+            refresh();
+        });
+    }
+
+    private void clearManual() {
+        prefs.edit().remove(MANUAL).remove(MANUAL_ORIGINAL).commit();
+    }
+
+    private void refreshManual(String phase) throws Exception {
+        String actual = read();
+        // Finish any existing session lease before taking a separate snapshot for the manual hold.
+        if (pending()) {
+            if (TARGET.equals(actual)) {
+                if (remote == null) { attach(); return; }
+                if (!restore()) { failed("Session restore pending before manual mode"); return; }
+            } else clearJournal();
+            actual = read();
+        }
+        if (REQUESTED.equals(phase)) {
+            if (remote == null) { attach(); return; }
+            if (!prefs.edit().putString(MANUAL_ORIGINAL, actual).putString(MANUAL, APPLYING).commit()) {
+                failed("Could not save the original manual refresh floor"); return;
+            }
+            phase = APPLYING;
+        }
+        String before = prefs.getString(MANUAL_ORIGINAL, null);
+        if (APPLYING.equals(phase)) {
+            if (!TARGET.equals(actual)) {
+                if (!Objects.equals(actual, before)) { clearManual(); detach(true); return; }
+                if (remote == null) { attach(); return; }
+                if (!remote.setPersistent(before) || !TARGET.equals(read())) {
+                    failed("Manual refresh write deferred"); return;
+                }
+            }
+            if (!prefs.edit().putString(MANUAL, HELD).commit()) { failed("Manual refresh journal unavailable"); return; }
+            status("Manual 120 Hz active");
+        } else if (RESTORING.equals(phase)) {
+            if (TARGET.equals(actual) && !Objects.equals(actual, before)) {
+                if (remote == null) { attach(); return; }
+                if (!remote.restore(before)) { failed("Manual refresh restore deferred"); return; }
+            }
+            clearManual();
+            status("Manual refresh ended; previous floor restored or external change retained");
+        } else if (HELD.equals(phase) && !TARGET.equals(actual)) {
+            clearManual();
+            status("External refresh change retained");
+        }
+        detach(true);
+    }
 
     private void schedule() { work.post(this::refresh); }
 
@@ -162,6 +230,7 @@ public final class Cv10RefreshLease implements DisplayManager.DisplayListener {
 
     private void observe() {
         try {
+            if (prefs.contains(MANUAL)) { refresh(); return; }
             if (owned && !TARGET.equals(read())) {
                 suppressed = true;
                 try { if (remote != null) remote.relinquish(); }
@@ -265,6 +334,8 @@ public final class Cv10RefreshLease implements DisplayManager.DisplayListener {
             IBinder now = Shizuku.getBinder();
             if (now != null && !now.pingBinder()) now = null;
             if (!Objects.equals(now, server)) { serverChanged(); return; }
+            String manual = prefs.getString(MANUAL, "");
+            if (!manual.isEmpty()) { refreshManual(manual); return; }
             boolean optedIn = prefs.getBoolean(ENABLED, false);
             boolean displaysReady = connected && optedIn && eligibleDisplays();
             if (!displaysReady) suppressed = false;

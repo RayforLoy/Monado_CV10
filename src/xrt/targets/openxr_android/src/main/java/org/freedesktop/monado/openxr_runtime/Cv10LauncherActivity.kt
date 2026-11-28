@@ -3,6 +3,7 @@
 package org.freedesktop.monado.openxr_runtime
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.ActivityManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -14,6 +15,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
+import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
+import org.freedesktop.monado.auxiliary.Cv10ControllerRoles
 import android.widget.ListView
 import android.widget.SearchView
 import android.widget.TextView
@@ -33,15 +38,7 @@ class Cv10LauncherActivity : Activity() {
             startActivity(Intent(this, Cv10SpatialLauncherActivity::class.java))
         }
         findViewById<View>(R.id.cv10_phone_controller).setOnClickListener {
-            if (!Settings.canDrawOverlays(this)) {
-                try {
-                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.fromParts("package", packageName, null)))
-                } catch (_: ActivityNotFoundException) {
-                    Toast.makeText(this, R.string.cv10_phone_unavailable, Toast.LENGTH_SHORT).show()
-                }
-            } else {
-                startForegroundService(Intent(this, Cv10PhoneControllerService::class.java))
-            }
+            showPhoneRoles()
         }
         findViewById<View>(R.id.cv10_background_restricted).setOnClickListener {
             openAppInfo(packageName)
@@ -84,6 +81,30 @@ class Cv10LauncherActivity : Activity() {
             }
         })
         xrOnly.setOnCheckedChangeListener { _, _ -> filterApps() }
+    }
+
+    private fun showPhoneRoles() {
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val enabled = CheckBox(this).apply {
+            setText(R.string.cv10_phone_show)
+            isChecked = Cv10ControllerRoles.enabled(this@Cv10LauncherActivity)
+        }
+        panel.addView(enabled)
+        val roles = RadioGroup(this)
+        val choices = listOf(R.string.cv10_role_auto,R.string.cv10_role_phone,R.string.cv10_role_swap)
+        val selected = Cv10ControllerRoles.storedMode(this)
+        choices.forEachIndexed { index, label ->
+            val button = RadioButton(this).apply { id = View.generateViewId(); setText(label) }
+            roles.addView(button)
+            if (index == selected) roles.check(button.id)
+        }
+        panel.addView(roles)
+        AlertDialog.Builder(this).setTitle(R.string.cv10_phone_start).setView(panel)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val index = roles.indexOfChild(roles.findViewById(roles.checkedRadioButtonId))
+                Cv10ControllerRoles.save(this, enabled.isChecked, index)
+            }.show()
     }
 
     override fun onResume() {

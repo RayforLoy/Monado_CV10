@@ -36,6 +36,13 @@ struct xrt_session_event_sink;
 struct b_space_overseer *
 b_space_overseer_create(struct xrt_session_event_sink *broadcast);
 
+/** Recenter the local spaces owned by one session and deliver the change to its event sink. */
+xrt_result_t
+b_space_overseer_recenter_local_pair(struct xrt_space_overseer *xso,
+                                     struct xrt_space *local,
+                                     struct xrt_space *floor,
+                                     struct xrt_session_event_sink *events);
+
 /*!
  * Sets up the space overseer and all semantic spaces in a way that works with
  * the old @ref xrt_tracking_origin information. Will automatically create local

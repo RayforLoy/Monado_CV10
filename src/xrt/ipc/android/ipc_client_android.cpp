@@ -16,6 +16,7 @@
 
 #include "android/android_load_class.hpp"
 #include "android/android_looper.h"
+#include "android/android_globals.h"
 
 #include "wrap/android.app.h"
 
@@ -83,6 +84,9 @@ ipc_client_android_blocking_connect(struct ipc_client_android *ica)
 		JavaVM *vm = ica->vm;
 		android_looper_poll_until_activity_resumed(vm, ica->activity.object().getHandle());
 		int fd = ica->client.blockingConnect(ica->activity, XRT_ANDROID_PACKAGE);
+		if (fd >= 0 && android_globals_get_cv10_model() == nullptr) {
+			android_globals_load_cv10_model(ica->client.getControllerModelFd());
+		}
 		return fd;
 	} catch (std::exception const &e) {
 		U_LOG_E("Failure while connecting to IPC server: %s", e.what());
@@ -99,6 +103,17 @@ ipc_client_android_can_wake_runtime(struct ipc_client_android *ica)
 	} catch (const std::exception &e) {
 		U_LOG_W("Can't check Android runtime wake support: %s", e.what());
 		return false;
+	}
+}
+
+void
+ipc_client_android_phone_session(struct ipc_client_android *ica, bool active)
+{
+	if (!ica) return;
+	try {
+		ica->client.phoneSession(active);
+	} catch (const std::exception &e) {
+		U_LOG_W("Phone controller UI: %s", e.what());
 	}
 }
 

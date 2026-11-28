@@ -1462,7 +1462,14 @@ oxr_action_sync_data(struct oxr_logger *log,
 	if (interaction_profile_changed) {
 		oxr_event_push_XrEventDataInteractionProfileChanged(log, sess);
 	}
-
+#ifdef OXR_HAVE_EXT_interaction_render_model
+	if (sess->sys->inst->extensions.EXT_interaction_render_model) {
+		ret = oxr_render_model_sync(log, sess);
+		if (XR_FAILED(ret)) {
+			return ret;
+		}
+	}
+#endif
 	return oxr_session_success_focused_result(sess);
 }
 

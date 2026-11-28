@@ -13,6 +13,8 @@
 
 #ifdef XRT_OS_ANDROID
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,6 +22,14 @@ extern "C" {
 struct _JNIEnv;
 struct _JavaVM;
 struct _ANativeWindow;
+
+// SHA-256 verified by Cv10ModelStore before publication. Data remains valid for this process.
+#define CV10_IMPORTED_MODEL_LENGTH 182180
+const uint8_t *
+android_globals_get_cv10_model(void);
+
+void
+android_globals_load_cv10_model(int fd);
 
 /*!
  * Store the Java VM pointer and the android.app.Activity jobject.
@@ -71,6 +81,12 @@ android_globals_get_context(void);
 //! CV10 application eye separation in millimetres, or zero to use the default.
 int
 android_globals_get_cv10_ipd_mm(void);
+
+int64_t
+android_globals_get_cv10_home_time_ns(void);
+
+void
+android_globals_set_cv10_home_time_ns(int64_t time_ns);
 
 void
 android_globals_set_cv10_ipd_mm(int ipd_mm);

@@ -66,7 +66,7 @@ final class Cv10SimulationSettings {
         if (positionMode(prefs) == ONE_SHOT && hasShot(prefs, address)) {
             return prefs.getFloat(SHOT_YAW, 0f);
         }
-        return calibrated(prefs, address) ? prefs.getFloat(YAW, 0f) : 0f;
+        return calibrated(prefs, address) ? prefs.getFloat(YAW, 0f) : Float.NaN;
     }
 
     static synchronized boolean complete(SharedPreferences prefs, String address, long token,

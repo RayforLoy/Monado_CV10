@@ -526,7 +526,8 @@ oxr_session_begin(struct oxr_logger *log, struct oxr_session *sess, const XrSess
 			xrt_result_t xret = xrt_device_update_inputs(xdev);
 			OXR_CHECK_XRET(log, sess, xret, xrt_device_update_inputs);
 
-			oxr_event_push_XrEventDataUserPresenceChangedEXT(log, sess, input->value.boolean);
+			sess->presence = input->value.boolean;
+			oxr_event_push_XrEventDataUserPresenceChangedEXT(log, sess, sess->presence);
 			break;
 		}
 	}
@@ -787,7 +788,8 @@ oxr_session_poll(struct oxr_logger *log, struct oxr_session *sess)
 
 #ifdef OXR_HAVE_EXT_user_presence
 	struct xrt_device *xdev = GET_STATIC_XDEV_BY_ROLE(sess->sys, head);
-	if (sess->sys->inst->extensions.EXT_user_presence && xdev->supported.presence && xdev->inputs) {
+	if (sess->sys->inst->extensions.EXT_user_presence && oxr_frame_sync_is_session_running(&sess->frame_sync) &&
+	    xdev->supported.presence && xdev->inputs) {
 		for (size_t i = 0; i < xdev->input_count; ++i) {
 			struct xrt_input *input = &xdev->inputs[i];
 			if (input->name != XRT_INPUT_GENERIC_HEAD_DETECT) {

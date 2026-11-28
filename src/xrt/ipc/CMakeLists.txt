@@ -175,6 +175,7 @@ if(ANDROID)
 	target_sources(
 		ipc_server PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/server/ipc_server_mainloop_android.c
 		)
+	target_link_libraries(ipc_server PRIVATE base aux_android)
 	target_link_libraries(
 		ipc_shared
 		PUBLIC ${ANDROID_LIBRARY}

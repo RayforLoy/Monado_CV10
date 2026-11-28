@@ -82,8 +82,12 @@ android_prober_autoprobe(struct xrt_auto_prober *xap,
 		if (right) out_xdevs[count++] = right;
 		return count;
 	}
-	out_xdevs[1] = cv10_controller_create(out_xdevs[0]);
-	return out_xdevs[1] != NULL ? 2 : 1;
+	int count = 1;
+	struct xrt_device *cf20 = cv10_controller_create(out_xdevs[0], false);
+	struct xrt_device *phone = cv10_controller_create(out_xdevs[0], true);
+	if (cf20) out_xdevs[count++] = cf20;
+	if (phone) out_xdevs[count++] = phone;
+	return count;
 }
 
 

@@ -103,7 +103,20 @@ get_xrt_space(struct oxr_logger *log, struct oxr_space *spc, struct xrt_space **
 	struct xrt_space *xspace = NULL;
 	switch (spc->space_type) {
 	case OXR_SPACE_TYPE_ACTION: return get_xrt_space_action(log, spc, out_xspace);
-	case OXR_SPACE_TYPE_XDEV_POSE: xspace = spc->xdev_pose.xs; break;
+	case OXR_SPACE_TYPE_XDEV_POSE:
+#ifdef OXR_HAVE_EXT_render_model
+		if (spc->render_model != NULL) {
+			os_mutex_lock(&spc->sess->action_context.sync_actions_mutex);
+			const struct oxr_render_model_lifetime *model = spc->render_model;
+			bool current = model->live && model->id == spc->sess->render_models[model->kind].id;
+			os_mutex_unlock(&spc->sess->action_context.sync_actions_mutex);
+			if (!current || spc->sess->state != XR_SESSION_STATE_FOCUSED) {
+				return XR_SUCCESS;
+			}
+		}
+#endif
+		xspace = spc->xdev_pose.xs;
+		break;
 	case OXR_SPACE_TYPE_REFERENCE_VIEW: xspace = spc->sess->sys->xso->semantic.view; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL: xspace = spc->sess->sys->xso->semantic.local; break;
 	case OXR_SPACE_TYPE_REFERENCE_LOCAL_FLOOR: xspace = spc->sess->sys->xso->semantic.local_floor; break;
@@ -152,6 +165,9 @@ oxr_space_destroy(struct oxr_logger *log, struct oxr_handle_base *hb)
 		xrt_system_devices_feature_dec(xsysd, XRT_DEVICE_FEATURE_EYE_TRACKING);
 	}
 
+#ifdef OXR_HAVE_EXT_render_model
+	oxr_render_model_lifetime_unref(spc->render_model);
+#endif
 	xrt_space_reference(&spc->xdev_pose.xs, NULL);
 	xrt_space_reference(&spc->action.xs, NULL);
 	spc->action.device_id = XRT_DEVICE_ID_INVALID;
@@ -249,6 +265,38 @@ oxr_space_reference_create(struct oxr_logger *log,
 	return XR_SUCCESS;
 }
 
+#ifdef OXR_HAVE_EXT_render_model
+XrResult
+oxr_space_render_model_create(struct oxr_logger *log, struct oxr_session *sess,
+                              struct oxr_render_model_lifetime *lifetime, struct oxr_space **out_space)
+{
+	struct oxr_space *spc = NULL;
+	OXR_ALLOCATE_HANDLE_OR_RETURN(log, spc, OXR_XR_DEBUG_SPACE, oxr_space_destroy, &sess->handle);
+	spc->sess = sess;
+	spc->space_type = OXR_SPACE_TYPE_XDEV_POSE;
+	spc->pose.orientation.w = 1;
+	spc->render_model = lifetime;
+	xrt_reference_inc(&lifetime->reference);
+
+	os_mutex_lock(&sess->action_context.sync_actions_mutex);
+	xrt_result_t xret = XRT_SUCCESS;
+	const struct oxr_cv10_model_source *source = &sess->render_models[lifetime->kind];
+	if (lifetime->id == source->id) {
+		enum xrt_input_name input = lifetime->kind == OXR_MODEL_PHONE ? XRT_INPUT_CV10_PHONE_MODEL_POSE
+		                                                              : XRT_INPUT_CV10_CF20_MODEL_POSE;
+		xret = xrt_io_cache_create_space(sess->action_context.io_cache.xic, source->device, input,
+		                                 &spc->xdev_pose.xs);
+	}
+	os_mutex_unlock(&sess->action_context.sync_actions_mutex);
+	if (xret != XRT_SUCCESS) {
+		oxr_handle_destroy(log, &spc->handle);
+		OXR_CHECK_XRET(log, sess, xret, xrt_io_cache_create_space);
+	}
+	*out_space = spc;
+	return oxr_session_success_result(sess);
+}
+#endif
+
 XrResult
 oxr_space_xdev_pose_create(struct oxr_logger *log,
                            struct oxr_session *sess,
@@ -310,6 +358,24 @@ free_spaces(struct xrt_space ***xtargets, struct xrt_pose **offsets, struct xrt_
 	*results = NULL;
 }
 
+static XrSpaceLocationFlags
+location_flags_for_space(struct oxr_space *spc, enum xrt_space_relation_flags relation)
+{
+	XrSpaceLocationFlags flags = xrt_to_xr_space_location_flags(relation);
+#ifdef OXR_HAVE_EXT_render_model
+	// The EXT model-space tracked bits signal whether the application should draw the asset.
+	// The CF20 wrist and phone grip positions are estimated, including when viewed from a 3DoF reference.
+	// Preserve physical tracking flags for all public action/reference spaces.
+	const XrSpaceLocationFlags visible = XR_SPACE_LOCATION_POSITION_VALID_BIT |
+	                                     XR_SPACE_LOCATION_ORIENTATION_VALID_BIT |
+	                                     XR_SPACE_LOCATION_ORIENTATION_TRACKED_BIT;
+	if (spc->render_model != NULL && (flags & visible) == visible) {
+		flags |= XR_SPACE_LOCATION_POSITION_TRACKED_BIT;
+	}
+#endif
+	return flags;
+}
+
 XrResult
 oxr_spaces_locate(struct oxr_logger *log,
                   struct oxr_space **spcs,
@@ -365,7 +431,7 @@ oxr_spaces_locate(struct oxr_logger *log,
 	// Only fill this out if the above succeeded. Zero initialized means relation flags == 0.
 	struct xrt_space_relation *results = U_TYPED_ARRAY_CALLOC(struct xrt_space_relation, spc_count);
 
-	if (ret == XR_SUCCESS) {
+	if (ret == XR_SUCCESS && xbase != NULL) {
 		// Convert at_time to monotonic and give to device.
 		uint64_t at_timestamp_ns = time_state_ts_to_monotonic_ns(sys->inst->timekeeping, time);
 
@@ -419,7 +485,7 @@ oxr_spaces_locate(struct oxr_logger *log,
 
 			OXR_XRT_POSE_TO_XRPOSEF(results[i].pose, locations->locations[i].pose);
 			locations->locations[i].locationFlags =
-			    xrt_to_xr_space_location_flags(results[i].relation_flags);
+			    location_flags_for_space(spcs[i], results[i].relation_flags);
 
 			if (vels) {
 				vels->velocities[i].velocityFlags = 0;
@@ -551,7 +617,7 @@ oxr_space_locate(
 	 */
 
 	OXR_XRT_POSE_TO_XRPOSEF(result.pose, location->pose);
-	location->locationFlags = xrt_to_xr_space_location_flags(result.relation_flags);
+	location->locationFlags = location_flags_for_space(spc, result.relation_flags);
 
 	if (gaze_sample_time) {
 		(void)gaze_sample_time; //! @todo Implement.

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: BSL-1.0 -->
 <resources>
+    <string name="cv10_phone_show">在 OpenXR 应用中显示手机手柄</string>
+    <string name="cv10_role_auto">双手柄 · CF20 右手，手机左手</string>
+    <string name="cv10_role_phone">仅手机 · 右手</string>
+    <string name="cv10_role_swap">左右互换 · CF20 左手，手机右手</string>
     <string name="cv10_phone_start">手机操控 OpenXR 应用</string>
     <string name="cv10_phone_active">已开启 OpenXR 手机手柄</string>
     <string name="cv10_phone_stop">停止手机手柄</string>

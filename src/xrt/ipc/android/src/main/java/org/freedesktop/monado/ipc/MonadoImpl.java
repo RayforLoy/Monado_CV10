@@ -12,6 +12,8 @@ package org.freedesktop.monado.ipc;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.ParcelFileDescriptor;
+import android.os.Binder;
+import android.os.IBinder;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.util.Log;
@@ -21,6 +23,7 @@ import androidx.annotation.NonNull;
 import java.io.IOException;
 import org.freedesktop.monado.auxiliary.Cv10IpdSettings;
 import org.freedesktop.monado.auxiliary.Cv10RenderSettings;
+import org.freedesktop.monado.auxiliary.Cv10PhonePadHost;
 import org.freedesktop.monado.auxiliary.MonadoView;
 
 /**
@@ -45,7 +48,13 @@ public class MonadoImpl extends IMonado.Stub {
 
     private final Context context;
 
+    @Override
+    public ParcelFileDescriptor getCv10ControllerModel() {
+        return org.freedesktop.monado.auxiliary.Cv10ModelStore.openReadOnly(context);
+    }
+
     private final Runnable onAccepted;
+    private final Cv10PhonePadHost phonePadHost;
     private final SharedPreferences cv10Optics;
     private final SharedPreferences.OnSharedPreferenceChangeListener cv10OpticsListener =
             (preferences, key) -> {
@@ -58,8 +67,9 @@ public class MonadoImpl extends IMonado.Stub {
                 }
             };
 
-    public MonadoImpl(@NonNull Context context, Runnable onAccepted) {
+    public MonadoImpl(@NonNull Context context, Runnable onAccepted, Cv10PhonePadHost phonePadHost) {
         this.onAccepted = onAccepted;
+        this.phonePadHost = phonePadHost;
         this.context = context.getApplicationContext();
         cv10Optics = Cv10IpdSettings.preferences(this.context);
         cv10Optics.registerOnSharedPreferenceChangeListener(cv10OpticsListener);
@@ -97,6 +107,16 @@ public class MonadoImpl extends IMonado.Stub {
             }
         }
     }
+
+    @Override
+    public ICv10PhonePad connectWithPhonePad(ParcelFileDescriptor fd, IBinder clientLife) throws RemoteException {
+        connect(fd);
+        if (!org.freedesktop.monado.auxiliary.Cv10ControllerRoles.enabled(context)) return null;
+        int pid = Binder.getCallingPid();
+        return new Cv10PhonePadConnection(clientLife, phonePadHost, () -> nativePrimarySession(pid));
+    }
+
+    private static native boolean nativePrimarySession(int pid);
 
     @Override
     public void passAppSurface(Surface surface) {

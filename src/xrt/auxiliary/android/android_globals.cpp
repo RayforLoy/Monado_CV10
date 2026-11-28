@@ -13,6 +13,9 @@
 #include <atomic>
 #include <mutex>
 #include <stddef.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <utility>
 #include <wrap/android.app.h>
 
@@ -27,8 +30,49 @@ static struct
 } android_globals;
 
 static std::mutex window_mutex;
+static std::atomic<const uint8_t *> imported_model{nullptr};
+
+const uint8_t *
+android_globals_get_cv10_model(void)
+{
+	return imported_model.load(std::memory_order_acquire);
+}
+
+void
+android_globals_load_cv10_model(int fd)
+{
+	if (fd < 0) {
+		return;
+	}
+	struct stat info;
+	void *bytes = MAP_FAILED;
+	if (fstat(fd, &info) == 0 && S_ISREG(info.st_mode) && info.st_size == CV10_IMPORTED_MODEL_LENGTH) {
+		bytes = mmap(nullptr, CV10_IMPORTED_MODEL_LENGTH, PROT_READ, MAP_PRIVATE, fd, 0);
+	}
+	close(fd);
+	if (bytes == MAP_FAILED) {
+		return;
+	}
+	const uint8_t *expected = nullptr;
+	if (!imported_model.compare_exchange_strong(expected, static_cast<const uint8_t *>(bytes))) {
+		munmap(bytes, CV10_IMPORTED_MODEL_LENGTH);
+	}
+}
 static ANativeWindow *cached_window = nullptr;
 static std::atomic<int> cv10_ipd_mm{0};
+static std::atomic<int64_t> cv10_home_time_ns{0};
+
+int64_t
+android_globals_get_cv10_home_time_ns(void)
+{
+	return cv10_home_time_ns.load(std::memory_order_relaxed);
+}
+
+void
+android_globals_set_cv10_home_time_ns(int64_t time_ns)
+{
+	cv10_home_time_ns.store(time_ns, std::memory_order_relaxed);
+}
 static std::atomic<int> cv10_render_eye_size{0};
 static std::atomic<bool> cv10_enhanced_render_mode{false};
 

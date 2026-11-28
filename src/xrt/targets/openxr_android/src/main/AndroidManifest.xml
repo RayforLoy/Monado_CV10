@@ -100,10 +100,6 @@
             android:exported="false"
             android:foregroundServiceType="camera" />
 
-        <service
-            android:name=".Cv10PhoneControllerService"
-            android:exported="false" />
-
         <activity
             android:name=".Cv10SpatialLauncherActivity"
             android:configChanges="keyboardHidden|orientation|screenSize|screenLayout"

@@ -1052,8 +1052,11 @@ ref_space_dec(struct xrt_space_overseer *xso, enum xrt_reference_space_type type
 	return XRT_SUCCESS;
 }
 
-static xrt_result_t
-recenter_local_spaces(struct xrt_space_overseer *xso)
+xrt_result_t
+b_space_overseer_recenter_local_pair(struct xrt_space_overseer *xso,
+                                     struct xrt_space *local,
+                                     struct xrt_space *floor,
+                                     struct xrt_session_event_sink *events)
 {
 	struct b_space_overseer *uso = b_space_overseer(xso);
 	xrt_result_t xret;
@@ -1074,11 +1077,11 @@ recenter_local_spaces(struct xrt_space_overseer *xso)
 
 	uint64_t new_ns = os_monotonic_get_ns();
 	struct u_space *uview = u_space(xso->semantic.view);
-	struct u_space *ulocal = u_space(xso->semantic.local);
-	struct u_space *ulocal_floor = u_space(xso->semantic.local_floor);
-	assert(uview != NULL);
-	assert(ulocal != NULL);
-	assert(ulocal_floor != NULL);
+	struct u_space *ulocal = u_space(local);
+	struct u_space *ulocal_floor = u_space(floor);
+	if (uview == NULL || !space_is_offset_compatible(ulocal) || !space_is_offset_compatible(ulocal_floor)) {
+		goto err_unlock;
+	}
 
 	struct u_space *uparent = ulocal->next;
 	assert(uparent != NULL);
@@ -1107,14 +1110,19 @@ recenter_local_spaces(struct xrt_space_overseer *xso)
 	 * Calculate new offsets for the spaces.
 	 */
 
-	// Only save the rotation around y axis.
-	rel.pose.orientation.x = 0;
-	rel.pose.orientation.z = 0;
-	math_quat_normalize(&rel.pose.orientation);
+	// Project the actual forward ray onto the floor, also when the headset is rolled.
+	const struct xrt_vec3 forward = {0, 0, -1}, up = {0, 1, 0};
+	struct xrt_vec3 gaze;
+	math_quat_rotate_vec3(&rel.pose.orientation, &forward, &gaze);
+	if (gaze.x * gaze.x + gaze.z * gaze.z < 0.0001f) goto err_unlock;
+	math_quat_from_angle_vector(atan2f(-gaze.x, -gaze.z), &up, &rel.pose.orientation);
 
 	struct xrt_pose local_offset, local_floor_offset;
 	get_offset_or_ident_read_locked(ulocal, &local_offset);
 	get_offset_or_ident_read_locked(ulocal_floor, &local_floor_offset);
+	struct xrt_pose previous_local_inverse, previous_floor_inverse;
+	math_pose_invert(&local_offset, &previous_local_inverse);
+	math_pose_invert(&local_floor_offset, &previous_floor_inverse);
 
 	// Take the "flat" rotations and apply to both.
 	local_offset.orientation = rel.pose.orientation;
@@ -1135,20 +1143,21 @@ recenter_local_spaces(struct xrt_space_overseer *xso)
 
 	// Basics
 	xse.ref_change.event_type = XRT_SESSION_EVENT_REFERENCE_SPACE_CHANGE_PENDING;
-	xse.ref_change.pose_valid = false;
-	xse.ref_change.pose_in_previous_space = (struct xrt_pose)XRT_POSE_IDENTITY;
-	xse.ref_change.timestamp_ns = os_monotonic_get_ns();
+	xse.ref_change.pose_valid = true;
+	xse.ref_change.timestamp_ns = new_ns;
 
 	// Event for local space.
 	xse.ref_change.ref_type = XRT_SPACE_REFERENCE_TYPE_LOCAL;
-	xret = xrt_session_event_sink_push(uso->broadcast, &xse);
+	math_pose_transform(&previous_local_inverse, &local_offset, &xse.ref_change.pose_in_previous_space);
+	xret = xrt_session_event_sink_push(events, &xse);
 	if (xret != XRT_SUCCESS) {
 		U_LOG_E("Failed to push event for LOCAL!");
 	}
 
 	// Event for local floor space.
 	xse.ref_change.ref_type = XRT_SPACE_REFERENCE_TYPE_LOCAL_FLOOR;
-	xret = xrt_session_event_sink_push(uso->broadcast, &xse);
+	math_pose_transform(&previous_floor_inverse, &local_floor_offset, &xse.ref_change.pose_in_previous_space);
+	xret = xrt_session_event_sink_push(events, &xse);
 	if (xret != XRT_SUCCESS) {
 		U_LOG_E("Failed to push event LOCAL_FLOOR!");
 	}
@@ -1161,6 +1170,13 @@ err_unlock:
 	pthread_rwlock_unlock(&uso->lock);
 
 	return XRT_ERROR_RECENTERING_NOT_SUPPORTED;
+}
+
+static xrt_result_t
+recenter_local_spaces(struct xrt_space_overseer *xso)
+{
+	return b_space_overseer_recenter_local_pair(xso, xso->semantic.local, xso->semantic.local_floor,
+	                                           b_space_overseer(xso)->broadcast);
 }
 
 static xrt_result_t

@@ -113,6 +113,34 @@ target_include_directories(st_oxr PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/common)
 # To generate the oxr_generated_bindings.c and oxr_generated_bindings.h files.
 add_dependencies(st_oxr generate_oxr_bindings)
 # To enable finding oxr_objects.h in the oxr_generated_bindings.c file.
+if(XRT_FEATURE_CV10_RENDER_MODEL)
+	if(XRT_CV10_CONTROLLER_MODEL_FILE)
+		set(asset_header "${CMAKE_CURRENT_BINARY_DIR}/cv10_embedded_model.h")
+		add_custom_command(
+			OUTPUT "${asset_header}"
+			COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/embed_cv10_model.py"
+				"${XRT_CV10_CONTROLLER_MODEL_FILE}" "${asset_header}"
+			DEPENDS "${XRT_CV10_CONTROLLER_MODEL_FILE}" "${CMAKE_CURRENT_SOURCE_DIR}/embed_cv10_model.py"
+			VERBATIM
+		)
+		target_compile_definitions(st_oxr PRIVATE CV10_MODEL_EMBEDDED)
+		target_sources(st_oxr PRIVATE "${asset_header}")
+	endif()
+	set(phone_glb "${CMAKE_CURRENT_BINARY_DIR}/cv10_phone.glb")
+	set(phone_header "${CMAKE_CURRENT_BINARY_DIR}/cv10_phone_model.h")
+	add_custom_command(
+		OUTPUT "${phone_header}"
+		BYPRODUCTS "${phone_glb}"
+		COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/generate_phone_model.py" "${phone_glb}"
+		COMMAND ${PYTHON_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/embed_cv10_model.py"
+			"${phone_glb}" "${phone_header}" phone
+		DEPENDS generate_phone_model.py embed_cv10_model.py
+		VERBATIM
+	)
+	target_sources(st_oxr PRIVATE oxr_api_render_model.c "${phone_header}")
+	target_include_directories(st_oxr PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
 target_include_directories(st_oxr PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
 # For OpenXR unit tests to find the oxr_generated_bindings.h file.
 target_include_directories(st_oxr PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/bindings)

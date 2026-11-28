@@ -10,14 +10,20 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import org.freedesktop.monado.auxiliary.Cv10ControllerRoles;
+
 /** JNI entry point used by the out-of-process runtime. */
 public final class Cv10ControllerReader {
     private static final long REPORT_TIMEOUT_NS = 250_000_000L;
     private final Cv10ControllerLauncherInput launcherInput;
     private final Cv10ControllerLink link;
+    private final Context context;
     private final String address;
     private final SharedPreferences simulation;
     private final Cv10SimulationCalibration calibration = new Cv10SimulationCalibration();
+    private final Cv10SimulationCalibration.Heading heading = new Cv10SimulationCalibration.Heading();
+    private long lastHeadingLog;
+    private long lastGyroLog;
     private final Cv10OneShotCalibration positionCalibration = new Cv10OneShotCalibration();
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable positionTimeout = this::abortPositionCalibration;
@@ -27,6 +33,7 @@ public final class Cv10ControllerReader {
     private boolean suppressTrigger;
 
     private Cv10ControllerReader(Context context, String address) {
+        this.context = context;
         this.address = address;
         simulation = Cv10SimulationSettings.preferences(context);
         launcherInput = address != null ? new Cv10ControllerLauncherInput(context,
@@ -45,7 +52,7 @@ public final class Cv10ControllerReader {
                         !positionCalibration.sample(sample.arrivalNs, sample.report))) {
                     abortPositionCalibration();
                 }
-                launcherInput.onInput(sample);
+                if (Cv10ControllerRoles.mode(context) != Cv10ControllerRoles.PHONE_ONLY) launcherInput.onInput(sample);
             }
         }) : null;
     }
@@ -105,10 +112,6 @@ public final class Cv10ControllerReader {
         }
     }
 
-    public static boolean isConfigured(Context context) {
-        return hasCf20(context) || Cv10PhoneControllerService.isRunning();
-    }
-
     private static boolean hasCf20(Context context) {
         return BluetoothAdapter.checkBluetoothAddress(Cv10ControllerActivity.savedAddress(context))
                 && Cv10ControllerLink.canConnect(context);
@@ -119,14 +122,22 @@ public final class Cv10ControllerReader {
         return new Cv10ControllerReader(context, address);
     }
 
+    /** Reopen only when the configured peripheral or Bluetooth permission has changed. */
+    public boolean isCurrent() {
+        String saved = hasCf20(context) ? Cv10ControllerActivity.savedAddress(context) : null;
+        return java.util.Objects.equals(saved, address);
+    }
+
     /** Returns zero without an input report; otherwise returns the local monotonic receipt time. */
     public long read(float[] values) {
         Cv10ControllerLink.Sample sample = link == null ? null : link.latestInput;
         if (sample == null || sample.report == null || System.nanoTime() - sample.arrivalNs > REPORT_TIMEOUT_NS) {
             calibration.reset();
             suppressTrigger = false;
-            return Cv10PhoneControllerService.read(values);
+            return 0;
         }
+        final int mode = Cv10ControllerRoles.mode(context);
+        if (mode == Cv10ControllerRoles.PHONE_ONLY) return 0;
         Cv10ControllerReport report = sample.report;
         boolean trigger = report.isPressed(Cv10ControllerReport.TRIGGER);
         if (!trigger) {
@@ -159,6 +170,36 @@ public final class Cv10ControllerReader {
         values[6] = report.isPressed(Cv10ControllerReport.BACK) ? 1f : 0f;
         values[7] = 0f;
         Cv10SimulationSettings.writeHandPoseSettings(simulation, address, values);
+        Cv10SimulationCalibration.Orientation head = Cv10SimulationSettings.head;
+        int linkGeneration = launcherInput.connectionGeneration;
+        int homeGeneration = launcherInput.recenterGeneration;
+        // Low 16 bits round-trip exactly in the JNI float report, including on long-running devices.
+        values[13] = linkGeneration & 0xffff;
+        values[14] = homeGeneration & 0xffff;
+        values[15] = report.battery;
+        values[16] = suppressTrigger ? (report.buttons & ~Cv10ControllerReport.TRIGGER) : report.buttons;
+        values[17] = report.touchX;
+        values[18] = report.touchY;
+        values[19] = mode;
+        if (Log.isLoggable("Cv10Cf20Gyro", Log.DEBUG) && lastGyroLog != sample.arrivalNs) {
+            lastGyroLog = sample.arrivalNs;
+            Log.d("Cv10Cf20Gyro", "ns=" + sample.arrivalNs + " q=" + report.x + "," + report.y + "," +
+                    report.z + "," + report.w + " sdkGyro=" + report.gyroX + "," + report.gyroY + "," +
+                    report.gyroZ + " calibration=" + report.stillnessDone + "," + report.figureEightDone);
+        }
+        float yaw = heading.resolve(linkGeneration, homeGeneration,
+                values[8], head, sample.arrivalNs, report);
+        // Don't export an unrelated absolute bearing while waiting for the first usable pair of poses.
+        if (Float.isNaN(yaw)) values[4] = 0f;
+        values[8] = Float.isNaN(yaw) ? 0f : yaw;
+        if (Log.isLoggable("Cv10HandPose", Log.DEBUG) && head != null && report.orientationValid &&
+                sample.arrivalNs - lastHeadingLog > 250_000_000L) {
+            lastHeadingLog = sample.arrivalNs;
+            Log.d("Cv10HandPose", "link=" + launcherInput.connectionGeneration + " home=" +
+                    launcherInput.recenterGeneration + " valid=" + values[4] + " offset=" + yaw +
+                    " head=" + head.x + "," + head.y + "," + head.z + "," + head.w +
+                    " hand=" + report.x + "," + report.y + "," + report.z + "," + report.w);
+        }
         return sample.arrivalNs;
     }
 

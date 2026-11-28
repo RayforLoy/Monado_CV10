@@ -193,8 +193,8 @@ android {
         minSdkVersion project.sharedMinSdk
         targetSdkVersion project.sharedTargetSdk
 
-        versionCode = 105
-        versionName = '0.1.4-rc.2'
+        versionCode = 106
+        versionName = '0.1.4-rc.3'
 
         println versionName
         println versionCode
@@ -208,7 +208,9 @@ android {
                 arguments "-DEigen3_DIR=${project.eigenCMakeDir}",
                     "-DANDROID_PLATFORM=${project.sharedMinSdk}",
                     "-DANDROID_STL=${project.stl}",
-                    "-DANDROID_ARM_NEON=TRUE"
+                    "-DANDROID_ARM_NEON=TRUE",
+                    "-DXRT_CV10_CONTROLLER_MODEL_FILE=" + (project.findProperty('cv10ControllerModel') ?
+                        rootProject.file(project.property('cv10ControllerModel')).absolutePath.replace('\\', '/') : '')
 
             }
             if (project.pythonBinary != null) {

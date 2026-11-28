@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -56,6 +57,19 @@ public class Client implements ServiceConnection {
      */
     @Keep public IMonado monado = null;
 
+    @Keep
+    public int getControllerModelFd() {
+        IMonado service = monado;
+        if (service == null) return -1;
+        try {
+            android.os.ParcelFileDescriptor model = service.getCv10ControllerModel();
+            return model == null ? -1 : model.detachFd();
+        } catch (android.os.RemoteException e) {
+            Log.w(TAG, "CF20 controller model unavailable", e);
+            return -1;
+        }
+    }
+
     /**
      * Indicates that we tried to connect but failed.
      *
@@ -95,6 +109,8 @@ public class Client implements ServiceConnection {
     // The client owns the presentation when the service cannot draw its own window.
     private MonadoView appView;
     private Runnable releaseCv10RateVote;
+    private Cv10ClientPhonePad phonePad;
+    private final IBinder phoneLife = new Binder();
     private boolean closed;
     private Intent runtimeWakeIntent;
 
@@ -128,6 +144,11 @@ public class Client implements ServiceConnection {
         }
     }
 
+    @Keep
+    public synchronized void phoneSession(boolean active) {
+        if (!closed && phonePad != null) phonePad.session(active);
+    }
+
     private void shutdown() {
         synchronized (this) {
             closed = true;
@@ -138,6 +159,10 @@ public class Client implements ServiceConnection {
             if (releaseCv10RateVote != null) {
                 new Handler(Looper.getMainLooper()).post(releaseCv10RateVote);
                 releaseCv10RateVote = null;
+            }
+            if (phonePad != null) {
+                phonePad.close();
+                phonePad = null;
             }
         }
         monado = null;
@@ -260,7 +285,18 @@ public class Client implements ServiceConnection {
             ParcelFileDescriptor[] fds = ParcelFileDescriptor.createSocketPair();
             ours = fds[0];
             theirs = fds[1];
-            monado.connect(theirs);
+            if (context_ instanceof Activity && isCv10RuntimePackage(packageName)
+                    && !packageName.equals(context_.getPackageName()) && MonadoView.canPresentOnCv10(context_)) {
+                ICv10PhonePad remote = monado.connectWithPhonePad(theirs, phoneLife);
+                if (remote != null) {
+                    synchronized (this) {
+                        if (closed) remote.close();
+                        else phonePad = new Cv10ClientPhonePad((Activity) context_, runtimePackageContext, remote);
+                    }
+                }
+            } else {
+                monado.connect(theirs);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             Log.e(TAG, "could not create socket pair: " + e);

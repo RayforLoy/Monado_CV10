@@ -99,6 +99,21 @@ public:
 		return ipc_server_mainloop_add_fd(server, &server->ml, fd);
 	}
 
+	bool primarySession(int pid)
+	{
+		std::lock_guard lock(server_mutex);
+		if (!server || !startup_complete) return false;
+		os_mutex_lock(&server->global_state.lock);
+		int index = server->global_state.active_client_index;
+		bool match = false;
+		if (index >= 0 && index < IPC_MAX_CLIENTS) {
+			const volatile auto &state = server->threads[index].ics.client_state;
+			match = state.pid == pid && state.session_active && !state.session_overlay;
+		}
+		os_mutex_unlock(&server->global_state.lock);
+		return match;
+	}
+
 	int32_t
 	shutdownServer()
 	{
@@ -179,6 +194,19 @@ private:
 	static constexpr std::chrono::seconds START_TIMEOUT_SECONDS = 40s;
 };
 } // namespace
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_org_freedesktop_monado_ipc_MonadoImpl_nativePrimarySession(JNIEnv *, jclass, jint pid)
+{
+	return IpcServerHelper::instance().primarySession(pid);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_freedesktop_monado_openxr_1runtime_Cv10ControllerLauncherInput_nativeRequestViewRecenter(JNIEnv *, jclass, jlong time_ns)
+{
+	android_globals_set_cv10_home_time_ns(time_ns);
+	U_LOG_I("CF20 Home requested local-space recenter");
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_org_freedesktop_monado_ipc_MonadoImpl_nativeSetCv10IpdMm(JNIEnv *, jclass, jint ipd_mm)

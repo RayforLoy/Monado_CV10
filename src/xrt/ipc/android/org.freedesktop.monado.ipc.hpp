@@ -79,6 +79,11 @@ namespace org::freedesktop::monado::ipc {
 		bool
 		requestRuntimeWake();
 
+		void phoneSession(bool active);
+
+		int32_t
+		getControllerModelFd();
+
 		/*!
 		 * Wrapper for a constructor
 		 *
@@ -138,6 +143,8 @@ namespace org::freedesktop::monado::ipc {
 			jni::method_t markAsDiscardedByNative;
 			jni::method_t blockingConnect;
 			jni::method_t requestRuntimeWake;
+			jni::method_t phoneSession;
+			jni::method_t getControllerModelFd;
 
 			/*!
 			 * Singleton accessor

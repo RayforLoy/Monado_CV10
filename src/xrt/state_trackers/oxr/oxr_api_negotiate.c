@@ -274,6 +274,24 @@ handle_non_null(struct oxr_instance *inst, struct oxr_logger *log, const char *n
 	ENTRY_IF_EXT(xrThermalGetTemperatureTrendEXT, EXT_thermal_query);
 #endif // OXR_HAVE_EXT_thermal_query
 
+#ifdef OXR_HAVE_EXT_render_model
+	ENTRY_IF_EXT(xrCreateRenderModelEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrDestroyRenderModelEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrGetRenderModelPropertiesEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrCreateRenderModelSpaceEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrCreateRenderModelAssetEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrDestroyRenderModelAssetEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrGetRenderModelAssetDataEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrGetRenderModelAssetPropertiesEXT, EXT_render_model);
+	ENTRY_IF_EXT(xrGetRenderModelStateEXT, EXT_render_model);
+#endif
+
+#ifdef OXR_HAVE_EXT_interaction_render_model
+	ENTRY_IF_EXT(xrEnumerateInteractionRenderModelIdsEXT, EXT_interaction_render_model);
+	ENTRY_IF_EXT(xrEnumerateRenderModelSubactionPathsEXT, EXT_interaction_render_model);
+	ENTRY_IF_EXT(xrGetRenderModelPoseTopLevelUserPathEXT, EXT_interaction_render_model);
+#endif
+
 #ifdef OXR_HAVE_EXT_hand_tracking
 	ENTRY_IF_EXT(xrCreateHandTrackerEXT, EXT_hand_tracking);
 	ENTRY_IF_EXT(xrDestroyHandTrackerEXT, EXT_hand_tracking);

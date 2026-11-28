@@ -192,6 +192,9 @@ struct ipc_client_state
 	uint32_t local_space_overseer_index;
 	//! Index of localfloorspace in ipc client.
 	uint32_t local_floor_space_index;
+#ifdef XRT_OS_ANDROID
+	int64_t cv10_last_home_ns;   //!< Owned by this client's IPC thread.
+#endif
 	//! Index of localfloorspace in space overseer.
 	uint32_t local_floor_space_overseer_index;
 

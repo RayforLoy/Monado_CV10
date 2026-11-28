@@ -27,6 +27,7 @@ import org.freedesktop.monado.auxiliary.UiProvider
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class MonadoOpenXrAndroidModule {
+    @Binds abstract fun bindPhonePad(pad: Cv10PhoneControllerService): org.freedesktop.monado.auxiliary.Cv10PhonePadHost
     @Binds abstract fun bindUiProvider(uiProvider: MonadoOpenXrUiProvider): UiProvider
 
     @Binds

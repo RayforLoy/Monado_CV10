@@ -24,6 +24,10 @@ final class Cv10SimulationCalibration {
             return (float) Math.atan2(2f * (x*z + w*y), 1f - 2f * (x*x + y*y));
         }
 
+        boolean hasHeading() {
+            return Math.abs(2f * (w*x - y*z)) < 0.98f;
+        }
+
         boolean level() {
             // The user holds both devices level and points them forward, buttons up.
             return 1f - 2f * (x*x + z*z) > 0.94f;
@@ -36,6 +40,28 @@ final class Cv10SimulationCalibration {
         float neckDeltaY() {
             // Y component of Q * (0, 0.075, -0.0805) - (0, 0.075, -0.0805).
             return -0.15f * (x*x + z*z) - 0.161f * (y*z - w*x);
+        }
+    }
+
+    /** Align the CF20's independent horizontal reference with the HMD once per connection. */
+    static final class Heading {
+        private int connection = -1, handled;
+        private float saved = Float.NaN, offset = Float.NaN;
+
+        float resolve(int link, int recenter, float savedYaw, Orientation head, long ns, Cv10ControllerReport hand) {
+            if (link != connection || Float.compare(saved, savedYaw) != 0) {
+                handled = link == connection ? recenter : 0;
+                connection = link;
+                saved = offset = savedYaw;
+            }
+            if ((!Float.isNaN(offset) && handled == recenter) || !hand.orientationValid ||
+                    head == null || Math.abs(head.ns - ns) > MAX_GAP_NS || !head.hasHeading()) return offset;
+            Orientation raw = new Orientation(ns, hand.x, hand.y, hand.z, hand.w);
+            if (raw.hasHeading()) {
+                offset = (float) Math.IEEEremainder(head.yaw() - raw.yaw(), 2 * Math.PI);
+                handled = recenter;
+            }
+            return offset;
         }
     }
 

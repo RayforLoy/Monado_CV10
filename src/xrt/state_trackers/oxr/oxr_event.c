@@ -190,6 +190,21 @@ oxr_event_push_XrEventDataSessionStateChanged(struct oxr_logger *log,
 	return XR_SUCCESS;
 }
 
+#ifdef OXR_HAVE_EXT_interaction_render_model
+XrResult
+oxr_event_push_render_models_changed(struct oxr_logger *log, struct oxr_instance *inst)
+{
+	XrEventDataInteractionRenderModelsChangedEXT *changed;
+	struct oxr_event *event = NULL;
+	ALLOC(log, inst, &event, &changed);
+	changed->type = XR_TYPE_EVENT_DATA_INTERACTION_RENDER_MODELS_CHANGED_EXT;
+	lock(inst);
+	push(inst, event);
+	unlock(inst);
+	return XR_SUCCESS;
+}
+#endif
+
 XrResult
 oxr_event_push_XrEventDataInteractionProfileChanged(struct oxr_logger *log, struct oxr_session *sess)
 {

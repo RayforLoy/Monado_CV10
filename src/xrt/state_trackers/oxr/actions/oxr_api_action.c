@@ -398,6 +398,49 @@ oxr_xrSuggestInteractionProfileBindings(XrInstance instance,
 	    &dpad_state);                                       //
 }
 
+#ifdef OXR_HAVE_EXT_interaction_profile_battery_state_display
+static XrResult
+get_profile_battery(struct oxr_logger *log,
+                    struct oxr_session *sess,
+                    XrPath user,
+                    XrPath profile,
+                    XrBatteryStateDisplayEXT *battery)
+{
+	battery->stateFlags = 0;
+	battery->batteryLevel = 0.0f;
+	if (profile == XR_NULL_PATH) {
+		return XR_SUCCESS;
+	}
+
+	struct oxr_roles roles;
+	XrResult ret = oxr_roles_init_on_stack(log, &roles, sess->sys);
+	if (XR_FAILED(ret)) {
+		return ret;
+	}
+	const struct oxr_instance_path_cache *paths = &sess->sys->inst->path_cache;
+	struct xrt_device *xdev = NULL;
+#define PICK_ROLE(ROLE) if (user == paths->ROLE) { xdev = GET_XDEV_BY_ROLE(&roles, ROLE); }
+	OXR_FOR_EACH_VALID_SUBACTION_PATH(PICK_ROLE)
+#undef PICK_ROLE
+	if (xdev == NULL || !xdev->supported.battery_status) {
+		return XR_SUCCESS;
+	}
+
+	bool present = false, charging = false;
+	float level = 0.0f;
+	xrt_result_t xret = xrt_device_get_battery_status(xdev, &present, &charging, &level);
+	if (xret == XRT_SUCCESS && present && level >= 0.0f && level <= 1.0f) {
+		battery->batteryLevel = level;
+		battery->stateFlags = XR_BATTERY_STATE_DISPLAY_STATE_VALID_BIT_EXT;
+		if (charging) {
+			battery->stateFlags |= XR_BATTERY_STATE_DISPLAY_STATE_CHARGING_BIT_EXT;
+		}
+	}
+	// An unavailable reading does not establish that a device has no battery.
+	return XR_SUCCESS;
+}
+#endif
+
 XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrGetCurrentInteractionProfile(XrSession session,
                                    XrPath topLevelUserPath,
@@ -453,6 +496,15 @@ oxr_xrGetCurrentInteractionProfile(XrSession session,
 	    &sess->action_context,                                 //
 	    topLevelUserPath,                                      //
 	    interactionProfile);                                   //
+#ifdef OXR_HAVE_EXT_interaction_profile_battery_state_display
+	if (XR_SUCCEEDED(ret) && inst->extensions.EXT_interaction_profile_battery_state_display) {
+		XrBatteryStateDisplayEXT *battery = OXR_GET_OUTPUT_FROM_CHAIN(
+		    interactionProfile->next, XR_TYPE_BATTERY_STATE_DISPLAY_EXT, XrBatteryStateDisplayEXT);
+		if (battery != NULL) {
+			ret = get_profile_battery(&log, sess, topLevelUserPath, interactionProfile->interactionProfile, battery);
+		}
+	}
+#endif
 	if (ret == XR_SUCCESS) {
 		return oxr_session_success_result(sess);
 	}

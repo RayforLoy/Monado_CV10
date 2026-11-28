@@ -4,7 +4,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 安装
 
-**v0.1.4-rc.2** 在手机和 Broker 中显示为 **Monado CV10**，预发布 APK 沿用 rc.1 的 `org.cv10.monado.out_of_process.launcher_preview` 包名和签名，可覆盖 rc.1，或与 v0.1.3 稳定版共存。它包含原厂手机与 CF20 控制、Pocket XR 光学视场与可选超分辨率，以及外屏识别和帧周期更新。本次预发布待实机验收。[v0.1.4-rc.2 APK 与 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.2)
+**v0.1.4-rc.3** 在第三方 OpenXR 会话中自动显示手机竖屏手柄。CF20 和手机可以分别占用左右手，也可以在启动器交换。CF20 支持华为按键、触控板、手柄电量和旋转角速度，头显可向应用发送佩戴事件。Fold7 版 APK 为 arm64-v8a，沿用 `org.cv10.monado.out_of_process.launcher_preview` 和此前的签名，可覆盖 rc.2。[下载与 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.3) · [Fold7 实测与应用接入](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-company-handoff/docs/fold7-dual-controller.md)
 
 **整合预发布 v0.1.4-rc.1** 把 OpenXR 运行时、离线 2D/3D 启动器、Pocket XR 外显、CF20 手柄和实验性 6DoF 套件放进同一个 ARM 安装包。它在手机和 Broker 中显示为 **Monado CV10 Preview**，包名为 `org.cv10.monado.out_of_process.launcher_preview`。此包可与稳定版并存，覆盖旧预览版时须匹配签名。[整合预发布和 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.1) · [Fold7 整合包实测](history/fold7-unified-runtime.md)
 
@@ -36,6 +36,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 需要让 Fold7 主屏独立跑 120 Hz 时，在启动 OpenXR 应用前启动 Shizuku，确认已授权 Monado CV10，然后在 Monado 菜单选择 **开启独立 120 Hz**。
 
+如需关闭 Wi-Fi 和 Shizuku 后继续使用，在同一菜单选择 **离线保持 120 Hz**。菜单变为 **已保持 120 Hz · 恢复原刷新率** 后可以停止 Shizuku，拔插眼镜或重启手机仍会保留系统最低值。这项设置也影响日常亮屏并可能增加耗电。离线开关会关闭按会话自动提频。结束使用时启动已授权的 Shizuku，回到菜单选择恢复；若先点了恢复，菜单会显示 **等待恢复原刷新率 · 需要 Shizuku**，启动 Shizuku 后再打开 Monado 即可继续。原来没有设最低值的手机会恢复为自适应，用户在其他地方更改的刷新率会保留。
+
 ## 离线应用启动器
 
 在 **Monado CV10 → 应用启动器** 中直接点选本机应用，或者连接 CV10 后选 **打开 3D 启动器**。启动器读取本机安装列表，无需账户或 Shizuku 权限。应用从手机主屏启动，OpenXR 画面由运行时输出到眼镜。在 Broker 选中当前安装的运行时，保持三星外接显示为 **已镜像**。使用已发布的 v0.1.4-rc.1 时，相应的应用和 Broker 条目显示为 **Monado CV10 Preview**。
@@ -47,7 +49,8 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - **手机控制时**，转动手机瞄准，轻点确认，中央区域横滑翻页。从两侧标记向内滑动返回，从底部标记向上滑后松手回菜单首页，保持约一秒会将菜单和光标一起回正。标记位于 Android 系统手势区内侧，屏幕最外沿由系统处理。折叠屏上使用前台启动器触摸区，电源键沿用 Android 行为。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
 - **CF20 控制时**，已选用的 CF20 连上后自动接管指针，按确认键选择，返回键关闭 3D 菜单，横滑手柄触控板翻页。短按手柄主页键回菜单首页，长按约一秒使菜单和指针回正。断开后等待原手柄重连，也可轻触手机上的提示恢复手机控制。[原厂手机与 CF20 的切换](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/oem-controller-switching.md)
 - **3D 菜单光标**采用原厂的世界空间规则。白色空心环落在命中的控件上，射线在约 80% 的命中距离处收尖。指向空处时，光环移到默认远端并缩为四分之一。菜单、环和射线逐眼绘制，共用深度缓冲。
-- **让手机控制第三方 OpenXR 应用**时，先在 2D **应用启动器**点 **手机操控 OpenXR 应用**。首次在 Android 设置允许悬浮窗后，返回再点一次。手机出现 **确认** 和 **瞄准回正** 按钮后，打开第三方 OpenXR 应用。转动手机瞄准，在悬浮控制条上点击确认。Monado 将它映射为右手 `khr/simple_controller` 的 `aim/pose` 和 `select/click`。已运行的应用需要重新打开 OpenXR 系统才能发现新启用的手机手柄。CF20 的有效报告优先，启用原厂 6DoF 双手模式时由套件占用左右手。点击控制条上的取消或通知里的 **停止手机手柄** 可关闭此模式。
+- **第三方应用中的手机手柄**　在 Monado 的应用启动器中打开「手机操控 OpenXR 应用」，可启用竖屏手柄并选择角色。默认双手模式下，单用手机时手机为右手，连接 CF20 后 CF20 为右手、手机为左手。「仅手机」固定手机为右手，「左右互换」在双手使用时将 CF20 分到左手。应用需绑定相应的 OpenXR 手部路径才能使用该手。
+- 从桌面或启动器打开第三方 OpenXR 应用，当前会话开始后，手机显示竖屏控制面板。移动手机瞄准，按下或按住「确认」操作应用，「菜单」发送菜单按键，「回正指向」将手机瞄准对齐头显。点「隐藏手柄」可恢复该应用的手机界面，下一次 OpenXR 会话会再次按设置显示。离开应用、结束会话或打开系统 USB 授权窗口时，面板释放手机输入。手机面板使用当前应用的窗口。
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
 
 连接 CV10 时，内置 3D 菜单使用预览包自带的 Monado CV10，以适配镜片的双目方向。未连接 CV10 时，菜单先使用 Broker 选中的运行时，系统 Loader 报告不可用时再用内置运行时重试。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
@@ -155,6 +158,7 @@ Fold7 上的 CV10 Compute 合成使用同时支持图形和计算的 Vulkan 队�
 ## 手柄与定位套件
 
 - **更多选项 → CV10 蓝牙手柄** 提供 CF20 的扫描、配对和输入诊断。系统提示时允许附近设备访问。
+- **第三方 OpenXR 应用中的 CF20 回正**　首次连接时，把手柄前端沿视线水平指向前方。没有保存过贴合校准的 CF20 会用头显的水平方向对齐右手的握持与瞄准姿态。游戏或影院内想调整正前方时，面向目标、手柄前指，长按手柄 Home 约一秒。运行时重设当前应用的 `LOCAL` 和 `LOCAL_FLOOR` 水平朝向，并对齐手柄；该次手柄偏移只在本次连接有效。使用 `STAGE` 的固定场地和应用自己锁定的内容有各自的坐标原点。3D 启动器内的相同长按由启动器处理，继续同时回正菜单与指针。
 - **CV10 蓝牙手柄 → Huawei 6DoF Kit · 定位交互套件** 提供校准读取、Y8 双目、头部定位和左右手柄的实验入口。运行原厂头部 SLAM 需要用户自行导入对应的 ARM64 `libarvr_slam.so`。套件的头手完整 6DoF 尚待真机验收。[连接与校准流程](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/README.md)
 
 ## 原厂手机线
@@ -194,6 +198,22 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 预览包位于 `src/xrt/targets/openxr_android/build/outputs/apk/outOfProcess/debug/`。Gradle 同时为 APK 和原生 IPC 客户端设置预览包名 `org.cv10.monado.out_of_process.launcher_preview`。默认静态 C++ 标准库配置的 ARM64 APK 已通过所有 `PT_LOAD` 段的 16 KiB 对齐检查及 `zipalign -c -P 16 -v 4`。使用 4 KiB 内存页的 Fold7 在更新对齐包后未再显示兼容提示。16 KiB Android 16 模拟器已验证安装和运行时加载。[验收记录](history/fold7-offline-launcher.md#16-kib-系统安装与启动失败回归) · [Android 16 KiB 内存页支持](https://developer.android.com/guide/practices/page-sizes)
 
 历史 APK 和对应实验说明见 [apk/archive](apk/archive) 和 [history](history)。上游项目说明与许可证见 [README.upstream.md](README.upstream.md) 和 [LICENSE](LICENSE)。
+
+### 手机和 CF20 同时作为 OpenXR 输入设备
+
+自动模式下，手机单用时提供右手。收到 CF20 输入后，CF20 占右手，手机占左手。交换模式将 CF20 放到左手，手机维持右手。仅手机模式关闭 CF20 的输入和系统 Home 手势。两路设备独立运行，报告过期 250 ms 后会释放对应角色。运行中连接、断开或交换均通过 OpenXR 的交互配置变化通知客户端。6DoF 套件使用其原有左右手设备。
+
+支持 `XR_HUAWEI_controller_interaction` 的应用可绑定 Home、返回、音量、二值扳机、触控板按压与触摸、触控板 XY 以及握持和瞄准姿态。CF20 的简单手柄绑定继续将扳机或触控板确认合并为 `select/click`。CF20 固件的已核实协议只提供输入，此实现未声明可用的振动输出。手柄姿态的角速度由连续有效四元数转换到基准空间，以 rad/s 返回。首次采样、回正及跨越超过 100 ms 的间隔后，需要新的有效样本对。原始陀螺仪的轴向和刻度可使用 `Cv10Cf20Gyro` 的 DEBUG 日志对照。该日志按报告到达时间配对四元数和原厂 SDK 三轴刻度。
+
+### 第三方应用读取 CF20 和手机手柄模型
+
+公开 APK 支持在 Monado CV10 首页的「更多选项 → 导入已校准的 CF20 手柄模型」选择本地 GLB。运行时校验文件摘要，保存到应用私有目录。重新打开 OpenXR 应用后，使用真实 CF20 的那只手可以提供模型。未导入时，CF20 的按键、瞄准和握持位姿仍可用。手机触控板启用并产生姿态后，运行时可独立提供随包分发的手机模型。提取步骤和已校准文件的摘要见[模型说明](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-company-handoff/controller/cf20-openxr-model.md)。
+
+自行构建也可指定 `-Pcv10ControllerModel=D:/path/to/cf20.glb` 嵌入本地模型。坐标约定为握持原点、按键朝上、前端朝 OpenXR 局部 −Z。公开 APK 内置原创手机模型，机身为 73 × 149 mm，网格局部 +Z 指向屏幕正面，+Y 指向手机顶边。手机模型保留实际俯仰与滚转，回正校准水平朝向。手机和 CF20 共用肩腕位置估算；手机模型和射线共用同一个手位。手机射线沿用平放时沿顶边、竖持时朝背面的瞄准校准。手机和 CF20 的 GLB 使用各自的缓存 UUID。
+
+应用同时启用 `XR_EXT_render_model` 与 `XR_EXT_interaction_render_model`，为左手和右手分别绑定动作，并调用 `xrSyncActions`。收到 `XrEventDataInteractionRenderModelsChangedEXT` 后重新枚举模型。用 `xrGetRenderModelPropertiesEXT` 取得当前会话的缓存 ID，再通过 `xrCreateRenderModelAssetEXT` 和 `xrGetRenderModelAssetDataEXT` 两次调用取得 GLB。两种模型都是静态网格，动画节点数为 0。请对每个模型调用 `xrGetRenderModelPoseTopLevelUserPathEXT` 识别左右手，并为它单独创建模型空间。角色交换或设备断开后，重新枚举的 ID 反映当前来源，旧模型空间不再定位。
+
+模型位置由 `xrCreateRenderModelSpaceEXT` 创建的空间给出。当预测显示时刻同时具备位置和方向的 `TRACKED` 标志时绘制。通过 `xrGetRenderModelPoseTopLevelUserPathEXT` 确定模型当前位于哪只手。使用该手 `/input/aim/pose` 的局部 −Z 发射射线。驱动已计入射线原点相对握持处向前 69 mm、向上 20 mm 的位移。模型只对应物理 CF20，手机虚拟手柄和 6DoF 套件均使用自己的姿态来源。
 
 ## DisplayPort 通道诊断
 

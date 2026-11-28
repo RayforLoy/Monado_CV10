@@ -1,20 +1,30 @@
 param(
     [Parameter(Mandatory)][string]$OutputDir,
-    [switch]$UnifiedPreview
+    [switch]$UnifiedPreview,
+    [ValidateSet('arm64-v8a','armeabi-v7a')][string]$PreviewAbi
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$version = '0.1.4-rc.2'
+$version = '0.1.4-rc.3'
+if ($PreviewAbi -and !$UnifiedPreview) { throw 'PreviewAbi requires UnifiedPreview' }
 $builds = if ($UnifiedPreview) {
-    @{ Name = "Monado-CV10-$version.apk"; Arguments = @('-Pcv10LauncherPreview=true') }
+    $arguments = @('-Pcv10LauncherPreview=true')
+    if ($PreviewAbi) { $arguments += "-Pcv10Abi=$PreviewAbi" }
+    @{ Name = "Monado-CV10-$version.apk"; Arguments = $arguments }
 } else {
     foreach ($abi in 'arm64-v8a', 'armeabi-v7a') {
         @{ Name = "Monado-CV10-$version-$abi.apk"; Arguments = @("-Pcv10Abi=$abi") }
     }
 }
 $bt = Join-Path $env:ANDROID_HOME 'build-tools/36.0.0'
-$key = Join-Path $env:USERPROFILE '.android/debug.keystore'
-if (!(Test-Path $key)) { throw "Missing local Android development signing key: $key" }
+$key = $env:CV10_ANDROID_KEYSTORE
+$passwordArgs = @()
+if (!$key) {
+    $key = Join-Path $env:USERPROFILE '.android/debug.keystore'
+    $passwordArgs = @('--ks-pass', 'pass:android')
+}
+if (!(Test-Path -LiteralPath $key -PathType Leaf)) { throw "Signing keystore not found: $key" }
+$key = (Get-Item -LiteralPath $key).FullName
 $dest = (New-Item -ItemType Directory -Force $OutputDir).FullName
 Push-Location $root
 try {
@@ -28,7 +38,7 @@ try {
         if (!$inputApk) { throw "Unsigned APK missing" }
         & "$bt/zipalign.exe" -f -P 16 4 $inputApk.FullName "$dest/aligned.tmp.apk"
         if ($LASTEXITCODE) { throw 'zipalign failed' }
-        & "$bt/apksigner.bat" sign --ks $key --ks-key-alias androiddebugkey --ks-pass pass:android --v4-signing-enabled false --out "$dest/$name" "$dest/aligned.tmp.apk"
+        & "$bt/apksigner.bat" sign --ks $key --ks-key-alias androiddebugkey @passwordArgs --v4-signing-enabled false --out "$dest/$name" "$dest/aligned.tmp.apk"
         if ($LASTEXITCODE) { throw 'Signing failed' }
         & "$bt/apksigner.bat" verify --verbose --print-certs "$dest/$name" > "$dest/$name-signature.txt"
         if ($LASTEXITCODE) { throw 'Signature verification failed' }

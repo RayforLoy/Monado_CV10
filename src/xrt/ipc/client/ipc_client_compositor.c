@@ -26,6 +26,9 @@
 #include "shared/ipc_protocol.h"
 #include "client/ipc_client.h"
 #include "ipc_client_generated.h"
+#ifdef XRT_OS_ANDROID
+#include "android/ipc_client_android.h"
+#endif
 
 #include <string.h>
 #include <stdio.h>
@@ -505,6 +508,9 @@ ipc_compositor_begin_session(struct xrt_compositor *xc, const struct xrt_begin_s
 	IPC_TRACE(icc->ipc_c, "Compositor begin session.");
 
 	xret = ipc_call_session_begin(icc->ipc_c);
+#ifdef XRT_OS_ANDROID
+	if (xret == XRT_SUCCESS) ipc_client_android_phone_session(icc->ipc_c->ica, true);
+#endif
 	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_session_begin");
 }
 
@@ -519,6 +525,9 @@ ipc_compositor_end_session(struct xrt_compositor *xc)
 	IPC_TRACE(icc->ipc_c, "Compositor end session.");
 
 	xret = ipc_call_session_end(icc->ipc_c);
+#ifdef XRT_OS_ANDROID
+	if (xret == XRT_SUCCESS) ipc_client_android_phone_session(icc->ipc_c->ica, false);
+#endif
 	IPC_CHK_ALWAYS_RET(icc->ipc_c, xret, "ipc_call_session_end");
 }
 
@@ -878,6 +887,9 @@ ipc_compositor_destroy(struct xrt_compositor *xc)
 
 	assert(icc->compositor_created);
 
+#ifdef XRT_OS_ANDROID
+	ipc_client_android_phone_session(icc->ipc_c->ica, false);
+#endif
 	os_precise_sleeper_deinit(&icc->sleeper);
 
 	icc->compositor_created = false;

@@ -490,6 +490,68 @@ XRAPI_ATTR XrResult XRAPI_CALL
 oxr_xrSessionInsertDebugUtilsLabelEXT(XrSession session, const XrDebugUtilsLabelEXT *labelInfo);
 
 
+#ifdef OXR_HAVE_EXT_render_model
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateRenderModelEXT(XrSession session,
+                           const XrRenderModelCreateInfoEXT *createInfo,
+                           XrRenderModelEXT *renderModel);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyRenderModelEXT(XrRenderModelEXT renderModel);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetRenderModelPropertiesEXT(XrRenderModelEXT renderModel,
+                                  const XrRenderModelPropertiesGetInfoEXT *getInfo,
+                                  XrRenderModelPropertiesEXT *properties);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateRenderModelSpaceEXT(XrSession session, const XrRenderModelSpaceCreateInfoEXT *createInfo, XrSpace *space);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrCreateRenderModelAssetEXT(XrSession session,
+                                const XrRenderModelAssetCreateInfoEXT *createInfo,
+                                XrRenderModelAssetEXT *asset);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrDestroyRenderModelAssetEXT(XrRenderModelAssetEXT asset);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetRenderModelAssetDataEXT(XrRenderModelAssetEXT asset,
+                                 const XrRenderModelAssetDataGetInfoEXT *getInfo,
+                                 XrRenderModelAssetDataEXT *buffer);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetRenderModelAssetPropertiesEXT(XrRenderModelAssetEXT asset,
+                                       const XrRenderModelAssetPropertiesGetInfoEXT *getInfo,
+                                       XrRenderModelAssetPropertiesEXT *properties);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetRenderModelStateEXT(XrRenderModelEXT renderModel,
+                             const XrRenderModelStateGetInfoEXT *getInfo,
+                             XrRenderModelStateEXT *state);
+#endif
+
+#ifdef OXR_HAVE_EXT_interaction_render_model
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrEnumerateInteractionRenderModelIdsEXT(XrSession session,
+                                            const XrInteractionRenderModelIdsEnumerateInfoEXT *getInfo,
+                                            uint32_t renderModelIdCapacityInput,
+                                            uint32_t *renderModelIdCountOutput,
+                                            XrRenderModelIdEXT *renderModelIds);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrEnumerateRenderModelSubactionPathsEXT(XrRenderModelEXT renderModel,
+                                            const XrInteractionRenderModelSubactionPathInfoEXT *info,
+                                            uint32_t pathCapacityInput,
+                                            uint32_t *pathCountOutput,
+                                            XrPath *paths);
+
+XRAPI_ATTR XrResult XRAPI_CALL
+oxr_xrGetRenderModelPoseTopLevelUserPathEXT(XrRenderModelEXT renderModel,
+                                            const XrInteractionRenderModelTopLevelUserPathGetInfoEXT *info,
+                                            XrPath *topLevelUserPath);
+#endif
+
 /*
  *
  * oxr_api_hand_tracking.c

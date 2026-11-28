@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-/** Only the three operations on this single owner-profile system setting are available. */
+/** Only the Fold7 owner's minimum refresh rate can be changed by this service. */
 @Keep
 public final class Cv10RefreshUserService extends ICv10Refresh.Stub {
     private static final String RATE = "min_refresh_rate";
@@ -77,6 +77,12 @@ public final class Cv10RefreshUserService extends ICv10Refresh.Stub {
         }
         relinquish();
         return true;
+    }
+
+    @Override public synchronized boolean setPersistent(String expectedOriginal) {
+        if (owner != null || !valid(expectedOriginal) || !Objects.equals(expectedOriginal, read())) return false;
+        settings("put", TARGET);
+        return TARGET.equals(read());
     }
 
     @Override public synchronized void relinquish() {

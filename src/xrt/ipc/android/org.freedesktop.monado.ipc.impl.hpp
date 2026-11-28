@@ -44,6 +44,17 @@ namespace org::freedesktop::monado::ipc {
 		return object().call<bool>(Meta::data().requestRuntimeWake);
 	}
 
+	inline void Client::phoneSession(bool active)
+	{
+		object().call<void>(Meta::data().phoneSession, active);
+	}
+
+	inline int32_t
+	Client::getControllerModelFd()
+	{
+		return object().call<int32_t>(Meta::data().getControllerModelFd);
+	}
+
 	inline Client
 	Client::construct(void *nativePointer)
 	{

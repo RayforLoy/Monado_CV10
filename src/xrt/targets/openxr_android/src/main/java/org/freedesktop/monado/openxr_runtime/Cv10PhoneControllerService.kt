@@ -1,194 +1,120 @@
 // SPDX-License-Identifier: BSL-1.0
 package org.freedesktop.monado.openxr_runtime
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.graphics.PixelFormat
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.hardware.display.DisplayManager
-import android.os.Build
-import android.os.IBinder
-import android.os.PowerManager
-import android.provider.Settings
-import android.util.Log
-import android.view.Display
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.view.WindowManager
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.Toast
-import androidx.core.content.ContextCompat
+import android.os.Handler
+import android.os.Looper
+import android.view.Surface
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.cos
 import kotlin.math.sin
+import org.freedesktop.monado.auxiliary.Cv10ControllerRoles
+import org.freedesktop.monado.auxiliary.Cv10PhonePadHost
 
-/** The pad owns its touches while the OpenXR client keeps Android and OpenXR focus. */
-class Cv10PhoneControllerService : Service(), SensorEventListener {
+/** The Monado runtime owns the phone IMU; the focused app supplies only pad button transitions. */
+@Singleton
+class Cv10PhoneControllerService @Inject constructor(@ApplicationContext private val context: Context) :
+    Cv10PhonePadHost, SensorEventListener {
+    private val sensors = context.getSystemService(SensorManager::class.java)
+    private val rotationSensor = sensors.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
+        ?: sensors.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+    private val handler = Handler(Looper.getMainLooper())
     private val orientation = Cv10PhoneOrientation()
-    private var pad: LinearLayout? = null
-    private var windows: WindowManager? = null
-    private var receiverRegistered = false
-    private var screenOn = false
-    @Volatile private var sample: PoseSample? = null
+    private var owner: Any? = null
+    private var rotation = 0
+    private var heading = 0f
+    private var centerEpoch = 0
+    @Volatile private var pose: Pose? = null
+    @Volatile private var held = 0
     @Volatile private var selectUntil = 0L
+    @Volatile private var menuUntil = 0L
 
-    private val events = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == SPATIAL_VISIBILITY) {
-                pad?.visibility = if (intent.getBooleanExtra("visible", false)) View.GONE else View.VISIBLE
-                return
-            }
-            screenOn = intent.action == Intent.ACTION_SCREEN_ON
-            sample = null
-            selectUntil = 0L
-            orientation.reset()
-        }
+    @Synchronized override fun activate(client: Any, portraitRotation: Int): Boolean {
+        if (portraitRotation !in Surface.ROTATION_0..Surface.ROTATION_270 ||
+            !Cv10ControllerRoles.enabled(context) || rotationSensor == null) return false
+        if (owner === client && rotation == portraitRotation) return true
+        if (owner == null && !sensors.registerListener(this, rotationSensor, SensorManager.SENSOR_DELAY_GAME, handler)) return false
+        owner = client
+        rotation = portraitRotation
+        heading = 0f
+        held = 0; selectUntil = 0; menuUntil = 0
+        pose = null
+        orientation.reset()
+        current = this
+        return true
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == STOP) {
-            stopSelf()
-            return START_NOT_STICKY
-        }
-        if (pad != null) return START_NOT_STICKY
-
-        val manager = getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.cv10_phone_start),
-            NotificationManager.IMPORTANCE_LOW))
-        val stop = PendingIntent.getService(this, 0, Intent(this, javaClass).setAction(STOP),
-            PendingIntent.FLAG_IMMUTABLE)
-        startForeground(NOTIFICATION_ID, Notification.Builder(this, CHANNEL)
-            .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle(getString(R.string.cv10_phone_active))
-            .setOngoing(true)
-            .addAction(Notification.Action.Builder(null, getString(R.string.cv10_phone_stop), stop).build())
-            .build())
-
-        try {
-            if (!Settings.canDrawOverlays(this)) error("Overlay permission is required")
-            val sensors = getSystemService(SensorManager::class.java)
-            val rotation = sensors.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
-                ?: sensors.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-                ?: error("No rotation sensor")
-            val display = getSystemService(DisplayManager::class.java).getDisplay(Display.DEFAULT_DISPLAY)
-                ?: error("No phone display")
-            val displayContext = createDisplayContext(display)
-            val context = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                displayContext.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
-            } else {
-                displayContext
-            }
-            val overlay = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                addView(Button(context).apply {
-                    setText(R.string.cv10_phone_select)
-                    setOnClickListener {
-                        if (sample != null) selectUntil = System.nanoTime() + SELECT_PULSE_NS
-                    }
-                })
-                addView(Button(context).apply {
-                    setText(R.string.cv10_phone_recenter)
-                    setOnClickListener { this@Cv10PhoneControllerService.orientation.center() }
-                })
-                addView(Button(context).apply {
-                    setText(android.R.string.cancel)
-                    setOnClickListener { stopSelf() }
-                })
-            }
-            val layout = WindowManager.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT).apply {
-                gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            }
-            val windowManager = context.getSystemService(WindowManager::class.java)
-            windowManager.addView(overlay, layout)
-            windows = windowManager
-            pad = overlay
-            val filter = IntentFilter(Intent.ACTION_SCREEN_OFF).apply {
-                addAction(Intent.ACTION_SCREEN_ON)
-                addAction(SPATIAL_VISIBILITY)
-            }
-            screenOn = getSystemService(PowerManager::class.java).isInteractive
-            ContextCompat.registerReceiver(this, events, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-            receiverRegistered = true
-            check(sensors.registerListener(this, rotation, SensorManager.SENSOR_DELAY_GAME))
-            current = this
-        } catch (error: RuntimeException) {
-            Log.w(TAG, "Couldn't start the OpenXR phone controller", error)
-            Toast.makeText(this, R.string.cv10_phone_unavailable, Toast.LENGTH_SHORT).show()
-            stopSelf()
-        }
-        return START_NOT_STICKY
-    }
-
-    override fun onDestroy() {
+    @Synchronized override fun release(client: Any) {
+        if (owner !== client) return
+        owner = null
         current = null
-        sample = null
-        selectUntil = 0L
-        getSystemService(SensorManager::class.java).unregisterListener(this)
-        if (receiverRegistered) unregisterReceiver(events)
-        pad?.let { windows?.removeViewImmediate(it) }
-        pad = null
-        super.onDestroy()
+        sensors.unregisterListener(this)
+        pose = null
+        held = 0; selectUntil = 0; menuUntil = 0
+        orientation.reset()
+    }
+
+    @Synchronized override fun buttons(client: Any, buttons: Int) {
+        if (owner !== client) return
+        val rising = buttons and held.inv()
+        if (rising and 1 != 0) selectUntil = System.nanoTime() + 32_000_000L
+        if (rising and 2 != 0) menuUntil = System.nanoTime() + 32_000_000L
+        held = buttons
+    }
+
+    @Synchronized override fun recenter(client: Any) {
+        if (owner === client) center()
+    }
+
+    @Synchronized private fun center() {
+        centerEpoch = (centerEpoch + 1) and 0xffff
+        orientation.center()
+        val head = Cv10SimulationSettings.head
+        if (head != null && head.hasHeading() && System.nanoTime() - head.ns in 0..500_000_000L) heading = head.yaw()
+        if (orientation.hasSample) publish()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
-    override fun onSensorChanged(event: SensorEvent) {
-        if (!screenOn) return
-        val rotation = pad?.display?.rotation ?: return
-        orientation.update(event.values, rotation)
-        val yaw = -orientation.yaw * 0.5f
-        val pitch = orientation.pitch * 0.5f
-        val cy = cos(yaw)
-        val sy = sin(yaw)
-        val cp = cos(pitch)
-        val sp = sin(pitch)
-        // OpenXR aims along -Z, with Y up. Yaw is applied after pitch.
-        sample = PoseSample(System.nanoTime(), cy * sp, sy * cp, -sy * sp, cy * cp)
+    @Synchronized override fun onSensorChanged(event: SensorEvent) {
+        if (owner == null) return
+        if (orientation.update(event.values, rotation)) center() else publish()
     }
 
-    private data class PoseSample(val time: Long, val x: Float, val y: Float, val z: Float, val w: Float)
+    private fun publish() {
+        val yaw = (heading - orientation.yaw) * 0.5f
+        val pitch = orientation.pitch * 0.5f
+        val cy = cos(yaw); val sy = sin(yaw); val cp = cos(pitch); val sp = sin(pitch)
+        pose = Pose(System.nanoTime(), cy * sp, sy * cp, -sy * sp, cy * cp, centerEpoch, orientation.grip(heading))
+    }
+
+    private data class Pose(val time: Long, val x: Float, val y: Float, val z: Float, val w: Float, val centerEpoch: Int,
+                            val grip: Cv10PhoneRotation)
 
     companion object {
-        private const val TAG = "Cv10PhoneController"
-        private const val CHANNEL = "cv10_phone_controller"
-        private const val STOP = "org.cv10.monado.action.STOP_PHONE_CONTROLLER"
-        private const val SPATIAL_VISIBILITY = "org.cv10.monado.action.SPATIAL_LAUNCHER_VISIBILITY"
-        private const val NOTIFICATION_ID = 10170
-        private const val SELECT_PULSE_NS = 100_000_000L
         @Volatile private var current: Cv10PhoneControllerService? = null
-
         @JvmStatic fun isRunning() = current != null
-
-        internal fun showSpatialLauncher(context: Context, visible: Boolean) {
-            context.sendBroadcast(Intent(SPATIAL_VISIBILITY).setPackage(context.packageName).putExtra("visible", visible))
-        }
-
+        @JvmStatic fun recenterToHead() { current?.center() }
         @JvmStatic fun read(values: FloatArray): Long {
-            val service = current ?: return 0
-            val pose = service.sample ?: return 0
-            values[0] = pose.x
-            values[1] = pose.y
-            values[2] = pose.z
-            values[3] = pose.w
+            val pad = current ?: return 0
+            val pose = pad.pose ?: return 0
+            val now = System.nanoTime()
+            if (now - pose.time > 500_000_000L) return 0
+            values[0] = pose.x; values[1] = pose.y; values[2] = pose.z; values[3] = pose.w
             values[4] = 1f
-            values[5] = if (pose.time < service.selectUntil) 1f else 0f
-            values[6] = 0f
+            values[5] = if (pad.held and 1 != 0 || now < pad.selectUntil) 1f else 0f
+            values[6] = if (pad.held and 2 != 0 || now < pad.menuUntil) 1f else 0f
             values[7] = 1f
+            if (values.size > 14) {
+                values[8] = pose.grip.x; values[9] = pose.grip.y; values[10] = pose.grip.z; values[11] = pose.grip.w
+                values[14] = pose.centerEpoch.toFloat()
+            }
             return pose.time
         }
     }

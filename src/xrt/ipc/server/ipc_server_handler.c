@@ -25,6 +25,13 @@
 #include "xrt/xrt_compositor.h"
 #include "xrt/xrt_results.h"
 
+#ifdef XRT_OS_ANDROID
+#include "android/android_globals.h"
+#include "b_session.h"
+#include "b_space_overseer.h"
+static void cv10_handle_home(volatile struct ipc_client_state *ics);
+#endif
+
 #ifdef XRT_GRAPHICS_SYNC_HANDLE_IS_FD
 #include <unistd.h>
 #endif
@@ -434,6 +441,9 @@ ipc_handle_session_create(volatile struct ipc_client_state *ics,
 	assert(xcn_ptr == NULL || xcn != NULL);
 
 	ics->xs = xs;
+#ifdef XRT_OS_ANDROID
+	ics->cv10_last_home_ns = android_globals_get_cv10_home_time_ns();
+#endif
 	ics->xc = xcn != NULL ? &xcn->base : NULL;
 
 	if (ics->xc != NULL) {
@@ -456,6 +466,9 @@ ipc_handle_session_create(volatile struct ipc_client_state *ics,
 xrt_result_t
 ipc_handle_session_poll_events(volatile struct ipc_client_state *ics, union xrt_session_event *out_xse)
 {
+#ifdef XRT_OS_ANDROID
+	cv10_handle_home(ics);
+#endif
 	// Have we created the session?
 	if (ics->xs == NULL) {
 		return XRT_ERROR_IPC_SESSION_NOT_CREATED;
@@ -945,6 +958,32 @@ ipc_handle_compositor_get_info(volatile struct ipc_client_state *ics, struct xrt
 	return XRT_SUCCESS;
 }
 
+#ifdef XRT_OS_ANDROID
+static void
+cv10_handle_home(volatile struct ipc_client_state *ics)
+{
+	int64_t request = android_globals_get_cv10_home_time_ns();
+	if (request == 0 || request == ics->cv10_last_home_ns) return;
+	ics->cv10_last_home_ns = request;
+	os_mutex_lock(&ics->server->global_state.lock);
+	bool primary = ics->server_thread_index == ics->server->global_state.active_client_index;
+	bool applicable = primary && ics->client_state.session_active && !ics->client_state.session_overlay;
+	os_mutex_unlock(&ics->server->global_state.lock);
+	int64_t age = os_monotonic_get_ns() - request;
+	if (!applicable || age < 0 || age > 1000000000 || ics->xs == NULL ||
+	    ics->local_space_index >= IPC_MAX_CLIENT_SPACES || ics->local_floor_space_index >= IPC_MAX_CLIENT_SPACES) {
+		U_LOG_I("CF20 Home skipped client=%u primary=%d active=%d age_ms=%.1f", ics->client_state.id,
+		        primary, ics->client_state.session_active, (double)age * 1e-6);
+		return;
+	}
+	// These IDs and pointers belong to this client's thread, including session/space teardown.
+	struct b_session *session = (struct b_session *)ics->xs;
+	xrt_result_t result = b_space_overseer_recenter_local_pair(ics->server->xso, ics->xspcs[ics->local_space_index],
+	                                                          ics->xspcs[ics->local_floor_space_index], &session->sink);
+	U_LOG_I("CF20 Home local-space recenter client=%u result=%d", ics->client_state.id, (int)result);
+}
+#endif
+
 xrt_result_t
 ipc_handle_compositor_predict_frame(volatile struct ipc_client_state *ics,
                                     int64_t *out_frame_id,
@@ -963,6 +1002,10 @@ ipc_handle_compositor_predict_frame(volatile struct ipc_client_state *ics,
 	 * to make this client/session active/visible/focused.
 	 */
 	ipc_server_activate_session(ics);
+
+#ifdef XRT_OS_ANDROID
+	cv10_handle_home(ics);
+#endif
 
 	int64_t gpu_time_ns = 0;
 	return xrt_comp_predict_frame(        //

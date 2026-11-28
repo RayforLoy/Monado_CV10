@@ -19,6 +19,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import org.freedesktop.monado.auxiliary.Cv10RefreshLease
 import org.freedesktop.monado.auxiliary.IServiceNotification
+import org.freedesktop.monado.auxiliary.Cv10PhonePadHost
 
 /**
  * Implementation of a Service that provides the Monado AIDL interface.
@@ -33,12 +34,13 @@ class MonadoService : Service(), Watchdog.ShutdownListener {
     private lateinit var watchdog: Watchdog
 
     @Inject lateinit var serviceNotification: IServiceNotification
+    @Inject lateinit var phonePadHost: Cv10PhonePadHost
 
     override fun onCreate() {
         super.onCreate()
 
         refreshLease = Cv10RefreshLease.get(this)
-        binder = MonadoImpl(this, refreshLease::onAccepted)
+        binder = MonadoImpl(this, refreshLease::onAccepted, phonePadHost)
         watchdog =
             Watchdog(
                 // If the surface comes from client, just stop the service when client disconnected

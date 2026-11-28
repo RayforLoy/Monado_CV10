@@ -57,6 +57,9 @@ ipc_client_android_blocking_connect(struct ipc_client_android *ica);
 bool
 ipc_client_android_can_wake_runtime(struct ipc_client_android *ica);
 
+void
+ipc_client_android_phone_session(struct ipc_client_android *ica, bool active);
+
 bool
 ipc_client_android_wake_runtime(void *client);
 

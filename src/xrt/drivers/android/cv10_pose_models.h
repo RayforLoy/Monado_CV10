@@ -12,6 +12,10 @@ struct cv10_arm_model
 
 #define CV10_DEFAULT_EYE_HEIGHT_M 1.50f
 
+/** Translate the grip origin to the CF20 ray origin in local controller coordinates. */
+void
+cv10_cf20_apply_aim_offset(struct xrt_space_relation *hand);
+
 /** Huawei's neck pivot, with floor-relative eye height at the neutral orientation. */
 void
 cv10_head_model_apply(float eye_height, struct xrt_space_relation *head);
@@ -24,5 +28,5 @@ void
 cv10_arm_model_apply(struct cv10_arm_model *model,
                      int64_t sample_ns,
                      const struct xrt_space_relation *head,
-                     bool aim,
+                     bool right,
                      struct xrt_space_relation *hand);

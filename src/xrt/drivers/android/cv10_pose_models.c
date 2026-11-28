@@ -77,7 +77,7 @@ void
 cv10_arm_model_apply(struct cv10_arm_model *model,
                      int64_t sample_ns,
                      const struct xrt_space_relation *head,
-                     bool aim,
+                     bool right,
                      struct xrt_space_relation *hand)
 {
 	hand->relation_flags &= ~(XRT_SPACE_RELATION_POSITION_VALID_BIT | XRT_SPACE_RELATION_POSITION_TRACKED_BIT |
@@ -118,20 +118,12 @@ cv10_arm_model_apply(struct cv10_arm_model *model,
 	math_quat_rotate(&torso, &elbow, &elbow_world);
 
 	const struct xrt_vec3 elbow_offset = {
-	    0.22f - 0.13f * extension,
+	    (right ? 1.0f : -1.0f) * (0.22f - 0.13f * extension),
 	    -0.75f + 0.20f * extension,
 	    0.26f - 0.10f * extension,
 	};
 	struct xrt_vec3 wrist_offset = {0, 0, -0.65f};
-	if (aim) {
-		// The CF20's ray is forward along the grip rotation, starting just above and ahead of the wrist.
-		const struct xrt_vec3 ray_offset = {0, 0.020f, -0.069f};
-		struct xrt_vec3 offset;
-		math_quat_rotate_vec3(&orientation, &ray_offset, &offset);
-		hand->pose.position = offset;
-	} else {
-		hand->pose.position = (struct xrt_vec3){0};
-	}
+	hand->pose.position = (struct xrt_vec3){0};
 	struct xrt_vec3 rotated_elbow, rotated_wrist;
 	math_quat_rotate_vec3(&torso, &elbow_offset, &rotated_elbow);
 	math_quat_rotate_vec3(&elbow_world, &wrist_offset, &rotated_wrist);
@@ -139,4 +131,13 @@ cv10_arm_model_apply(struct cv10_arm_model *model,
 	math_vec3_accum(&rotated_wrist, &hand->pose.position);
 	math_vec3_accum(&head->pose.position, &hand->pose.position);
 	hand->relation_flags |= XRT_SPACE_RELATION_POSITION_VALID_BIT;
+}
+
+void
+cv10_cf20_apply_aim_offset(struct xrt_space_relation *hand)
+{
+	const struct xrt_vec3 ray_offset = {0, 0.020f, -0.069f};
+	struct xrt_vec3 offset;
+	math_quat_rotate_vec3(&hand->pose.orientation, &ray_offset, &offset);
+	math_vec3_accum(&offset, &hand->pose.position);
 }

@@ -427,6 +427,13 @@ oxr_verify_extensions(struct oxr_logger *log, const struct oxr_extension_status 
 	}
 #endif
 
+#ifdef OXR_HAVE_EXT_interaction_render_model
+	if (extensions->EXT_interaction_render_model && !extensions->EXT_render_model) {
+		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,
+		                 "XR_EXT_interaction_render_model requires XR_EXT_render_model");
+	}
+#endif
+
 #ifdef OXR_HAVE_EXT_dpad_binding
 	if (extensions->EXT_dpad_binding && !extensions->KHR_binding_modification) {
 		return oxr_error(log, XR_ERROR_VALIDATION_FAILURE,

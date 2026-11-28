@@ -31,7 +31,22 @@ struct cv10_device
 	struct m_relation_history *kit_history;
 	bool use_kit;
 	_Atomic float eye_height;
+	_Atomic int wear_state;
 };
+
+static xrt_result_t
+cv10_update_inputs(struct xrt_device *xdev)
+{
+	struct cv10_device *d = (struct cv10_device *)xdev;
+	const int state = atomic_load_explicit(&d->wear_state, memory_order_relaxed);
+	struct xrt_input *wear = &xdev->inputs[1];
+	if (wear->active != (state >= 0) || wear->value.boolean != (state == 1)) {
+		wear->timestamp = os_monotonic_get_ns();
+	}
+	wear->active = state >= 0;
+	wear->value.boolean = state == 1;
+	return XRT_SUCCESS;
+}
 
 static bool
 jni_error(JNIEnv *env)
@@ -148,7 +163,7 @@ cv10_worker(void *ptr)
 	if (!read) goto done;
 	jmethodID close = (*env)->GetMethodID(env, cls, "close", "()V");
 	if (!close) goto done;
-	jfloatArray output = (*env)->NewFloatArray(env, 6);
+	jfloatArray output = (*env)->NewFloatArray(env, 7);
 	if (!output) goto done;
 	jobject reader = (*env)->NewObject(env, cls, ctor, context);
 	if (jni_error(env) || !reader) goto done;
@@ -172,11 +187,15 @@ cv10_worker(void *ptr)
 			last_mapped = 0;
 			peak_rad_s = 0;
 			last_log = 0;
-			if (sample_ns < 0) continue;
+			if (sample_ns < 0) {
+				atomic_store_explicit(&d->wear_state, -1, memory_order_relaxed);
+				continue;
+			}
 		}
-		float values[6];
-		(*env)->GetFloatArrayRegion(env, output, 0, 6, values);
+		float values[7];
+		(*env)->GetFloatArrayRegion(env, output, 0, 7, values);
 		if (jni_error(env)) break;
+		atomic_store_explicit(&d->wear_state, (int)values[6], memory_order_relaxed);
 		const int64_t arrival = os_monotonic_get_ns();
 		const int64_t observed_offset = arrival - sample_ns;
 		// A USB arrival bounds sample time from above. Follow the low-latency
@@ -222,6 +241,7 @@ cv10_worker(void *ptr)
 	}
 	(*env)->CallVoidMethod(env, reader, close);
 done:
+	atomic_store_explicit(&d->wear_state, -1, memory_order_relaxed);
 	jni_error(env);
 	(*vm)->DetachCurrentThread(vm);
 	return NULL;
@@ -334,7 +354,7 @@ cv10_get_view_poses(struct xrt_device *xdev,
 struct xrt_device *
 cv10_device_create(void)
 {
-	struct cv10_device *d = U_DEVICE_ALLOCATE(struct cv10_device, U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE, 1, 0);
+	struct cv10_device *d = U_DEVICE_ALLOCATE(struct cv10_device, U_DEVICE_ALLOC_HMD | U_DEVICE_ALLOC_TRACKING_NONE, 2, 0);
 	if (!d) return NULL;
 	struct xrt_device *xdev = &d->base;
 	xdev->name = XRT_DEVICE_GENERIC_HMD;
@@ -345,6 +365,11 @@ cv10_device_create(void)
 	xdev->get_view_poses = cv10_get_view_poses;
 	xdev->get_visibility_mask = u_device_get_visibility_mask;
 	xdev->inputs[0].name = XRT_INPUT_GENERIC_HEAD_POSE;
+	xdev->inputs[1].name = XRT_INPUT_GENERIC_HEAD_DETECT;
+	xdev->inputs[1].active = false;
+	xdev->supported.presence = true;
+	xdev->update_inputs = cv10_update_inputs;
+	atomic_init(&d->wear_state, -1);
 	xdev->supported.orientation_tracking = true;
 	xdev->supported.position_tracking = false;
 	// The simulated pose already has floor-relative height, so there is no nominal origin lift.

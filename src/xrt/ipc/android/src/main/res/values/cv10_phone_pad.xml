@@ -1,0 +1,8 @@
+<resources>
+    <string name="cv10_pad_title">Phone controller</string>
+    <string name="cv10_pad_hint">Point your phone at a target in the headset.</string>
+    <string name="cv10_pad_select">Select</string>
+    <string name="cv10_pad_menu">Menu</string>
+    <string name="cv10_pad_center">Center aim</string>
+    <string name="cv10_pad_hide">Hide controller</string>
+</resources>

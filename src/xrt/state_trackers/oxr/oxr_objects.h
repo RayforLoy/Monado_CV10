@@ -468,6 +468,46 @@ oxr_space_to_openxr(struct oxr_space *spc)
 	return XRT_CAST_PTR_TO_OXR_HANDLE(XrSpace, spc);
 }
 
+#ifdef OXR_HAVE_EXT_render_model
+enum oxr_cv10_model_kind
+{
+	OXR_MODEL_CF20,
+	OXR_MODEL_PHONE,
+	OXR_MODEL_COUNT,
+};
+
+struct oxr_cv10_model_source
+{
+	XrRenderModelIdEXT id;
+	struct xrt_device_id device;
+	XrPath user_path;
+	bool subaction_active;
+	bool issued_uuid;
+};
+
+// Spaces remain valid handles after their originating model is destroyed.
+struct oxr_render_model_lifetime
+{
+	struct xrt_reference reference;
+	XrRenderModelIdEXT id;
+	enum oxr_cv10_model_kind kind;
+	bool live; // Protected by the session action-context mutex.
+};
+
+void
+oxr_render_model_lifetime_unref(struct oxr_render_model_lifetime *lifetime);
+
+XrResult
+oxr_render_model_sync(struct oxr_logger *log, struct oxr_session *sess);
+
+XrResult
+oxr_event_push_render_models_changed(struct oxr_logger *log, struct oxr_instance *inst);
+
+XrResult
+oxr_space_render_model_create(struct oxr_logger *log, struct oxr_session *sess,
+                              struct oxr_render_model_lifetime *lifetime, struct oxr_space **out_space);
+#endif
+
 XrResult
 oxr_space_action_create(struct oxr_logger *log,
                         struct oxr_session *sess,
@@ -1397,6 +1437,11 @@ struct oxr_session
 	 */
 	struct oxr_session_action_context action_context;
 
+#ifdef OXR_HAVE_EXT_render_model
+	// Serialized with action_context.sync_actions_mutex.
+	struct oxr_cv10_model_source render_models[OXR_MODEL_COUNT];
+#endif
+
 	/*!
 	 * Per-session map of action key to action attachment (thread-safe).
 	 */
@@ -1744,6 +1789,9 @@ struct oxr_space
 	{
 		struct xrt_space *xs;
 	} xdev_pose;
+#ifdef OXR_HAVE_EXT_render_model
+	struct oxr_render_model_lifetime *render_model;
+#endif
 };
 
 /*!

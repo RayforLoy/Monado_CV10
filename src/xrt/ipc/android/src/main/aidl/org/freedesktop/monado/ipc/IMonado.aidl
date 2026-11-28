@@ -11,6 +11,7 @@ package org.freedesktop.monado.ipc;
 
 import android.os.ParcelFileDescriptor;
 import android.view.Surface;
+import org.freedesktop.monado.ipc.ICv10PhonePad;
 
 interface IMonado {
     /*!
@@ -27,4 +28,6 @@ interface IMonado {
      * Asking service whether it has the capbility to draw over other apps or not.
      */
     boolean canDrawOverOtherApps();
+    ParcelFileDescriptor getCv10ControllerModel();
+    ICv10PhonePad connectWithPhonePad(in ParcelFileDescriptor fd, IBinder clientLife);
 }
