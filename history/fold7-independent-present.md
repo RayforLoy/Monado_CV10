@@ -501,6 +501,14 @@ The Windows differential fixture runs the original and experimental GLSL routine
 
 The ARM64 `Monado-CV10-quad-warp-arm64-v8a.apk` built and passed signature and 16 KiB alignment checks. Its SHA-256 is `7481518d61dc466f2689b32d5d14172dadc87d6ef7c0ca05011f86453acaf8d1`. For the Fold7 comparison, leave the stream GLES fence setting the same in both arms and switch only the polynomial option. Restart Monado between arms. Compare GPU p95, fresh source buffers, exact CV10 present fences and the right lens with the same four-view workspace, temperature range and yaw replay.
 
+#### Packed optical distortion maps
+
+Set `debug.xrt.CV10_PACK_DISTORTION_MAPS=true` before starting Monado to test two optical-map reads per compute output pixel. The first linear-filtered texel holds the red and green UV pairs as four 32-bit floats. The second still holds the blue UV pair. Source images retain separate chromatic samples, the same distortion grid and 1280×1280 center views. The experiment defaults to off. It falls back to three maps when the device lacks the necessary optimal-tiling format features or cannot create the packed resources. [Vulkan format features](https://docs.vulkan.org/refpages/latest/refpages/source/VkFormatFeatureFlagBits.html)
+
+The [Vulkan differential check](fold7-packed-distortion-check.py) exercised the production lookup with two distinct synthetic eyes, floating-point UV outside the unit square and fractional sampling across 5.12 million pixels on each adapter. Both the RTX 3090 and AMD Radeon reported zero UV differences between the packed and separate images. This fixture checks filtering and channel selection. It does not measure frame render time or optical output. To repeat, install `vulkan==1.3.275.1` in Python 3.11 and run `python history/fold7-packed-distortion-check.py --gpu 0 --glslang <glslangValidator path>`.
+
+The signed `Monado-CV10-packed-distortion-arm64-v8a.apk` has SHA-256 `8abd2835ae2653842b51a2a808814fbca8c02dfea361588ade449d0e21383daf`. For the Fold7 A/B, use the same APK, keep zero-copy, four views, GLES FFR, late warp and the phone mode fixed, and restart Monado after changing the flag. The runtime logs `CV10 packed red and green distortion maps` when the test path is active. Compare Monado GPU p95 by frame along with the actual CV10 presents and lens clarity. The mobile result remains unmeasured.
+
 ## 直出帧的姿态记录
 
 按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。

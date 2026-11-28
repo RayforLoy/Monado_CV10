@@ -162,7 +162,8 @@ update_compute_shared_descriptor_set(struct vk_bundle *vk,
                                      VkBuffer ubo_buffer,
                                      VkDeviceSize ubo_size,
                                      VkDescriptorSet descriptor_set,
-                                     uint32_t view_count)
+                                     uint32_t view_count,
+                                     bool packed_distortion)
 {
 	VkDescriptorImageInfo src_image_info[XRT_MAX_VIEWS];
 	for (uint32_t i = 0; i < view_count; ++i) {
@@ -173,8 +174,12 @@ update_compute_shared_descriptor_set(struct vk_bundle *vk,
 
 	VkDescriptorImageInfo distortion_image_info[3 * XRT_MAX_VIEWS];
 	for (uint32_t i = 0; i < 3 * view_count; ++i) {
+		// Keep the shared descriptor layout complete. The packed shader never reads the middle group.
+		const uint32_t image_index = packed_distortion && i >= view_count && i < 2 * view_count
+		                                 ? i + view_count
+		                                 : i;
 		distortion_image_info[i].sampler = distortion_samplers[i];
-		distortion_image_info[i].imageView = distortion_image_views[i];
+		distortion_image_info[i].imageView = distortion_image_views[image_index];
 		distortion_image_info[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	}
 
@@ -332,6 +337,7 @@ dispatch_project_pipeline(struct render_compute *render,
 	data->distortion_options[0] = r->enable_enhanced_render_mode ? 1.0f : 0.0f;
 	data->distortion_options[1] = insets != NULL ? RENDER_LAYER_DEFAULT_INSET_BLEND_EDGE : 0.0f;
 	data->distortion_options[2] = use_warp_polynomial ? 1.0f : 0.0f;
+	data->distortion_options[3] = r->distortion.packed_red_green ? 1.0f : 0.0f;
 	for (uint32_t i = 0; i < render->r->view_count; ++i) {
 		data->views[i] = views[i];
 		data->post_transforms[i] = src_norm_rects[i];
@@ -390,7 +396,8 @@ dispatch_project_pipeline(struct render_compute *render,
 	    r->compute.distortion.ubo.buffer, //
 	    VK_WHOLE_SIZE,                    //
 	    render->shared_descriptor_set,    //
-	    render->r->view_count);           //
+	    r->view_count,                    //
+	    r->distortion.packed_red_green);  //
 
 	vk->vkCmdBindPipeline(              //
 	    r->cmd,                         //
@@ -816,7 +823,8 @@ render_compute_clear(struct render_compute *render,
 	    r->compute.clear.ubo.buffer,      //
 	    VK_WHOLE_SIZE,                    // ubo_size
 	    render->shared_descriptor_set,    // descriptor_set
-	    render->r->view_count);           //
+	    r->view_count,                    //
+	    r->distortion.packed_red_green);  //
 
 	vk->vkCmdBindPipeline(              //
 	    r->cmd,                         //

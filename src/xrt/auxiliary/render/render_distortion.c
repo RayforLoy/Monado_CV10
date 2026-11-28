@@ -13,10 +13,12 @@
 #include "math/m_matrix_2x2.h"
 #include "math/m_vec2.h"
 
+#include "util/u_debug.h"
 #include "vk/vk_mini_helpers.h"
 
 #include "render/render_interface.h"
 
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_pack_distortion_maps, "CV10_PACK_DISTORTION_MAPS", false)
 
 /*
  *
@@ -27,11 +29,11 @@
 XRT_CHECK_RESULT static VkResult
 create_distortion_image_and_view(struct vk_bundle *vk,
                                  VkExtent2D extent,
+                                 VkFormat format,
                                  VkDeviceMemory *out_device_memory,
                                  VkImage *out_image,
                                  VkImageView *out_image_view)
 {
-	VkFormat format = VK_FORMAT_R32G32_SFLOAT;
 	VkImage image = VK_NULL_HANDLE;
 	VkDeviceMemory device_memory = VK_NULL_HANDLE;
 	VkImageView image_view = VK_NULL_HANDLE;
@@ -141,9 +143,9 @@ queue_upload_for_first_level_and_layer_locked(
 
 XRT_CHECK_RESULT static VkResult
 create_and_queue_upload_locked(struct vk_bundle *vk,
-                               struct vk_cmd_pool *pool,
                                VkCommandBuffer cmd,
                                VkBuffer src_buffer,
+                               VkFormat format,
                                VkDeviceMemory *out_image_device_memory,
                                VkImage *out_image,
                                VkImageView *out_image_view)
@@ -157,6 +159,7 @@ create_and_queue_upload_locked(struct vk_bundle *vk,
 	ret = create_distortion_image_and_view( //
 	    vk,                                 // vk_bundle
 	    extent,                             // extent
+	    format,                             // format
 	    &device_memory,                     // out_device_memory
 	    &image,                             // out_image
 	    &image_view);                       // out_image_view
@@ -184,6 +187,17 @@ struct texture
 	struct xrt_vec2 pixels[RENDER_DISTORTION_IMAGE_DIMENSIONS][RENDER_DISTORTION_IMAGE_DIMENSIONS];
 };
 
+struct distortion_rg_texel
+{
+	struct xrt_vec2 red;
+	struct xrt_vec2 green;
+};
+
+struct distortion_rg_texture
+{
+	struct distortion_rg_texel pixels[RENDER_DISTORTION_IMAGE_DIMENSIONS][RENDER_DISTORTION_IMAGE_DIMENSIONS];
+};
+
 struct tan_angles_transforms
 {
 	struct xrt_vec2 offset;
@@ -197,7 +211,8 @@ create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
                                               struct render_buffer *g_buffer,
                                               struct render_buffer *b_buffer,
                                               uint32_t view,
-                                              bool pre_rotate)
+                                              bool pre_rotate,
+                                              bool packed)
 {
 	VkBufferUsageFlags usage_flags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 	VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -217,25 +232,28 @@ create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
 		m_mat2x2_multiply(&rot, &rotation_90_cw, &rot);
 	}
 
-	VkDeviceSize size = sizeof(struct texture);
-
-	ret = render_buffer_init(vk, r_buffer, usage_flags, properties, size);
+	const VkDeviceSize r_size = packed ? sizeof(struct distortion_rg_texture) : sizeof(struct texture);
+	ret = render_buffer_init(vk, r_buffer, usage_flags, properties, r_size);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
-	VK_NAME_BUFFER(vk, r_buffer->buffer, "distortion r_buffer");
-	ret = render_buffer_init(vk, g_buffer, usage_flags, properties, size);
-	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
-	VK_NAME_BUFFER(vk, g_buffer->buffer, "distortion g_buffer");
-	ret = render_buffer_init(vk, b_buffer, usage_flags, properties, size);
+	VK_NAME_BUFFER(vk, r_buffer->buffer, "distortion red or red-green buffer");
+	ret = render_buffer_init(vk, b_buffer, usage_flags, properties, sizeof(struct texture));
 	VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
 	VK_NAME_BUFFER(vk, b_buffer->buffer, "distortion b_buffer");
 
 	ret = render_buffer_map(vk, r_buffer);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
-	ret = render_buffer_map(vk, g_buffer);
-	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
 	ret = render_buffer_map(vk, b_buffer);
 	VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
 
+	if (!packed) {
+		ret = render_buffer_init(vk, g_buffer, usage_flags, properties, sizeof(struct texture));
+		VK_CHK_WITH_GOTO(ret, "render_buffer_init", err_buffers);
+		VK_NAME_BUFFER(vk, g_buffer->buffer, "distortion g_buffer");
+		ret = render_buffer_map(vk, g_buffer);
+		VK_CHK_WITH_GOTO(ret, "render_buffer_map", err_buffers);
+	}
+
+	struct distortion_rg_texture *rg = r_buffer->mapped;
 	struct texture *r = r_buffer->mapped;
 	struct texture *g = g_buffer->mapped;
 	struct texture *b = b_buffer->mapped;
@@ -262,14 +280,20 @@ create_and_fill_in_distortion_buffer_for_view(struct vk_bundle *vk,
 				VK_CHK_WITH_GOTO(VK_ERROR_UNKNOWN, "xrt_device_compute_distortion", err_buffers);
 			}
 
-			r->pixels[row][col] = result.r;
-			g->pixels[row][col] = result.g;
+			if (packed) {
+				rg->pixels[row][col] = (struct distortion_rg_texel){result.r, result.g};
+			} else {
+				r->pixels[row][col] = result.r;
+				g->pixels[row][col] = result.g;
+			}
 			b->pixels[row][col] = result.b;
 		}
 	}
 
 	render_buffer_unmap(vk, r_buffer);
-	render_buffer_unmap(vk, g_buffer);
+	if (!packed) {
+		render_buffer_unmap(vk, g_buffer);
+	}
 	render_buffer_unmap(vk, b_buffer);
 
 	return VK_SUCCESS;
@@ -286,7 +310,8 @@ static bool
 render_distortion_buffer_init(struct render_resources *r,
                               struct vk_bundle *vk,
                               struct xrt_device *xdev,
-                              bool pre_rotate)
+                              bool pre_rotate,
+                              bool packed)
 {
 	struct render_buffer bufs[RENDER_DISTORTION_IMAGES_SIZE] = {0};
 	VkDeviceMemory device_memories[RENDER_DISTORTION_IMAGES_SIZE] = {VK_NULL_HANDLE};
@@ -308,13 +333,14 @@ render_distortion_buffer_init(struct render_resources *r,
 	 * Buffers with data to upload.
 	 * view_count=2,RRGGBB
 	 * view_count=3,RRRGGGBBB
+	 * When packed, the first group stores both red and green and the middle group is unused.
 	 */
 	for (uint32_t i = 0; i < r->view_count; ++i) {
 		ret = create_and_fill_in_distortion_buffer_for_view(vk, xdev,
 		                                                    &bufs[r->view_count * 0 + i], // r_buffer
 		                                                    &bufs[r->view_count * 1 + i], // g_buffer
 		                                                    &bufs[r->view_count * 2 + i], // b_buffer
-		                                                    i, pre_rotate);
+		                                                    i, pre_rotate, packed);
 		VK_CHK_WITH_GOTO(ret, "create_and_fill_in_distortion_buffer_for_view", err_resources);
 	}
 
@@ -331,11 +357,15 @@ render_distortion_buffer_init(struct render_resources *r,
 	VK_NAME_COMMAND_BUFFER(vk, upload_buffer, "render_resources distortion command buffer");
 
 	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT(r); i++) {
+		if (bufs[i].buffer == VK_NULL_HANDLE) {
+			continue;
+		}
+		const VkFormat format = packed && i < r->view_count ? VK_FORMAT_R32G32B32A32_SFLOAT : VK_FORMAT_R32G32_SFLOAT;
 		ret = create_and_queue_upload_locked( //
 		    vk,                               // vk_bundle
-		    pool,                             // pool
 		    upload_buffer,                    // cmd
 		    bufs[i].buffer,                   // src_buffer
+		    format,                           // format
 		    &device_memories[i],              // out_image_device_memory
 		    &images[i],                       // out_image
 		    &image_views[i]);                 // out_image_view
@@ -352,6 +382,7 @@ render_distortion_buffer_init(struct render_resources *r,
 	 */
 
 	r->distortion.pre_rotated = pre_rotate;
+	r->distortion.packed_red_green = packed;
 
 	for (uint32_t i = 0; i < RENDER_DISTORTION_IMAGES_COUNT(r); i++) {
 		r->distortion.device_memories[i] = device_memories[i];
@@ -415,7 +446,21 @@ render_distortion_images_ensure(struct render_resources *r,
 {
 	if (r->distortion.image_views[0] == VK_NULL_HANDLE || pre_rotate != r->distortion.pre_rotated) {
 		render_distortion_images_fini(r);
-		return render_distortion_buffer_init(r, vk, xdev, pre_rotate);
+		if (debug_get_bool_option_cv10_pack_distortion_maps()) {
+			const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+			                                      VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT |
+			                                      VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+			VkFormatProperties properties;
+			vk->vkGetPhysicalDeviceFormatProperties(vk->physical_device, VK_FORMAT_R32G32B32A32_SFLOAT,
+			                                        &properties);
+			if ((properties.optimalTilingFeatures & required) == required &&
+			    render_distortion_buffer_init(r, vk, xdev, pre_rotate, true)) {
+				U_LOG_I("CV10 packed red and green distortion maps");
+				return true;
+			}
+			U_LOG_W("CV10 packed distortion maps unavailable, using separate channels");
+		}
+		return render_distortion_buffer_init(r, vk, xdev, pre_rotate, false);
 	}
 
 	return true;

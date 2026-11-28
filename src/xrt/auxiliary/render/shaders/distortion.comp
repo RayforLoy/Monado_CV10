@@ -216,8 +216,11 @@ void main()
 
 	vec2 dist_uv = position_to_uv(extent, ix, iy);
 
-	vec2 r_uv = texture(distortion[k_view_count * 0 + iz], dist_uv).xy;
-	vec2 g_uv = texture(distortion[k_view_count * 1 + iz], dist_uv).xy;
+	vec4 red_green = texture(distortion[iz], dist_uv);
+	vec2 r_uv = red_green.xy;
+	vec2 g_uv = ubo.distortion_options.w > 0.0
+	               ? red_green.zw
+	               : texture(distortion[k_view_count + iz], dist_uv).xy;
 	vec2 b_uv = texture(distortion[k_view_count * 2 + iz], dist_uv).xy;
 
 	// Sample the source with distorted and chromatic-aberration corrected samples.

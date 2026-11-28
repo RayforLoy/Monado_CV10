@@ -558,6 +558,9 @@ struct render_resources
 
 		//! Whether distortion images have been pre-rotated 90 degrees.
 		bool pre_rotated;
+
+		//! The first group holds both red and green. The middle group has no images.
+		bool packed_red_green;
 	} distortion;
 };
 
