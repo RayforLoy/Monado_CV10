@@ -9,8 +9,10 @@
 #include <android/native_window_jni.h>
 #include <dlfcn.h>
 #include <jni.h>
+#include <linux/sync_file.h>
 #include <media/NdkImageReader.h>
 #include <poll.h>
+#include <sys/ioctl.h>
 #include <sys/system_properties.h>
 #include <time.h>
 #include <unistd.h>
@@ -317,6 +319,9 @@ public:
 		poll_swapchain = reinterpret_cast<PFN_xrCv10PollAndroidStreamImageMONADO>(poll_image);
 		this->width = static_cast<int32_t>(width);
 		this->height = static_cast<int32_t>(height);
+		char fence_setting[PROP_VALUE_MAX]{};
+		trace_fences = __system_property_get("debug.cv10.pocket_fence_trace", fence_setting) > 0 &&
+		               std::strcmp(fence_setting, "1") == 0;
 		const uint64_t usage = AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT;
 		ANativeWindow *window = nullptr;
 		if (AImageReader_newWithUsage(this->width, this->height, AIMAGE_FORMAT_RGBA_8888, usage,
@@ -369,6 +374,9 @@ public:
 			}
 			if (result != AMEDIA_OK) {
 				throw std::runtime_error("Cannot acquire a Pocket XR hardware buffer: " + std::to_string(result));
+			}
+			if (trace_fences) {
+				next.acquired_ns = monotonic_ns();
 			}
 			pending.discard();
 			pending = next;
@@ -431,6 +439,7 @@ private:
 	{
 		AImage *image = nullptr;
 		int fence = -1;
+		int64_t acquired_ns = 0;
 
 		void
 		discard()
@@ -441,6 +450,34 @@ private:
 			}
 		}
 	};
+
+	void
+	trace_ready(const PendingImage &image) const
+	{
+		const int64_t ready_ns = monotonic_ns();
+		uint64_t signal_ns = 0;
+		if (image.fence >= 0) {
+			// A merged sync file is ready only after its last child fence signals.
+			std::array<sync_fence_info, 8> children{};
+			sync_file_info info{};
+			if (ioctl(image.fence, SYNC_IOC_FILE_INFO, &info) == 0 && info.num_fences > 0 &&
+			    info.num_fences <= children.size()) {
+				info.sync_fence_info = reinterpret_cast<uintptr_t>(children.data());
+				if (ioctl(image.fence, SYNC_IOC_FILE_INFO, &info) == 0 && info.status == 1) {
+					for (uint32_t i = 0; i < info.num_fences; ++i) {
+						signal_ns = std::max(signal_ns, static_cast<uint64_t>(children[i].timestamp_ns));
+					}
+				}
+			}
+		}
+		int64_t stamp = 0;
+		if (AImage_getTimestamp(image.image, &stamp) == AMEDIA_OK) {
+			__android_log_print(ANDROID_LOG_INFO, tag,
+			                    "CV10_ACQUIRE stamp=%" PRId64 " acquired=%" PRId64 " observed=%" PRId64
+			                    " signal=%" PRIu64 " fence=%d",
+			                    stamp, image.acquired_ns, ready_ns, signal_ns, image.fence >= 0);
+		}
+	}
 
 	void
 	promote_ready()
@@ -457,6 +494,11 @@ private:
 			if (result < 0 || (fd.revents & POLLIN) == 0) {
 				throw std::runtime_error("Pocket XR acquire fence failed");
 			}
+		}
+		if (trace_fences) {
+			trace_ready(pending);
+		}
+		if (pending.fence >= 0) {
 			close(pending.fence);
 			pending.fence = -1;
 		}
@@ -485,6 +527,7 @@ private:
 	int64_t timestamp = 0;
 	int32_t width = 0;
 	int32_t height = 0;
+	bool trace_fences = false;
 };
 
 class DisplayCapture

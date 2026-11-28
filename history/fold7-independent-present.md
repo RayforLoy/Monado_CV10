@@ -91,6 +91,8 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 [跟随屏调度实验补丁](aosp-android16-defer-pending-slower-follower.patch) 基于同一 AOSP 提交，可独立应用。启动 SurfaceFlinger 前设置 `debug.sf.cv10_defer_pending_slower_followers=true`，使较慢的跟随屏在仍有未完成的呈现栅栏时跳过当前批次，下批检查就绪状态。原有背压策略继续按各自开关运行。实验标记同时记录较慢跟随屏的待完成栅栏数和最近的栅栏时间戳，可直接与内核 retire 事件对照。补丁通过独立反向和组合正向应用检查。验收应分别对照上游背压开关、较慢跟随屏延后和逐屏周期提示。若跟随屏的 present fence 早于 CRTC 释放排队资源，延后策略仍可能错过真正的忙碌区间。需核对新追踪里的延后标记、两路 CRTC 及真实呈现。此补丁尚未在 Fold7 系统上运行。
 
+验收须同时统计手机图层的实际呈现。若手机栅栏每次在提交后 16.67 ms 才就绪，而调度只在 11.11 ms 的 CV10 节拍检查，手机最早在第二个节拍提交，每秒可更新约 45 次。这个简化模型只用于评估跟随屏延后的取舍。若实机出现这种节奏，跟随屏还需按自己的信号和节拍调度，并验证手机提交不会跨越 CV10 的下一次关键合成时刻。
+
 ## Pocket 工作区性能对照
 
 每眼 2240×2240，GLES 固定中心 1×1、外围 2×2。两条路径保持同一 Bilibili 工作区，使用 34° 峰峰值、3 秒周期的模拟左右转头，连续比较约 15 秒；动态推荐内容随页面变化。熄屏对照的电池温度在 35.1–35.7°C，系统热状态分别为 1→2 和 2→2。右镜固定相机确认内容出画，刷新率由呈现时间戳统计。延迟是模拟头动信号的相位拟合，不是光学测得的运动到光子时延。
@@ -237,6 +239,29 @@ An isolated Pocket XR build requested a 3 ms earlier GLES wake without shifting 
 Monado submitted 90.00 times/s in all four runs, and all 3619 SurfaceFlinger presentation timestamps matched Vulkan feedback. Both lead runs had fewer new source frames per second and higher median delays than both controls. The p95 changes also differed across pairs. The Pocket XR branch retains its original draw schedule. The experimental APK, local patch and timing logs are archived under `pocket-bridge-lead-*` and `pocket-bridge-draw-lead-experiment.patch`. The APK SHA-256 is `0d7b37785a0406145077cc2d0766162bd718f86282e444c98f6ac316e97eca60`. The right lens camera captured no visible window in the B2 run. The previous APK hashes and the phone's 60 Hz mode were verified after restoring them.
 
 The traces are under `pocket-margin-*`, `pocket-pick-*`, `pocket-freecess-*`, `pocket-bg-unrestricted-*`, `pocket-direct-service-*`, and `pocket-controls-front-*` in the local evidence directory. `analyze-pocket-pipeline.py` joins source, draw, GPU and presentation timestamps. `analyze-pocket-pick-perfetto.py` finds the producer thread in the onset trace. The Monado diagnostic replay APK SHA-256 is `99d4fa267e8c0c1a113bbab17101d17be44eafa67d5cb0d0cbecd3f750ccfc2c`. The right-lens camera captured a dark image in this run, so the result describes the software rendering and presentation chain.
+
+### Pocket XR producer-buffer readiness
+
+The direct Android stream can log readiness with `debug.cv10.pocket_fence_trace=1`. `CV10_ACQUIRE` records the image's EGL timestamp, consumer acquisition time, successful fence-poll time and the kernel signal time of the last child of the acquire fence. An unavailable signal is recorded as zero. This mode reads fence information after the normal nonblocking poll succeeds. The regular path keeps the same polling and buffer ownership. [Readiness analysis](fold7-pocket-acquire-fence.py)
+
+Two more runs used the same four-view workspace, 2×2 full-field GLES mode, 1280×1280 center per eye, 2.0 ms OpenXR application margin and simulated yaw. Both started at thermal status 1 with a skin reading of 39.9°C. Monado submitted 90.00 frames/s and CV10 presented 60.31 times/s. All 1810 sampled SurfaceFlinger presentation timestamps matched Vulkan feedback. The median interval from the source read to Monado draw was 2.69–2.70 ms.
+
+The larger Perfetto capture paired 2811 producer `queueBuffer` calls with acquire fences. In the 15-second motion interval, 260 of 905 draws with actual-presentation feedback had a newer producer pre-swap record available by draw time. The trace bounded the queue and fence readiness of every newer candidate for 186 of these draws. A newer image was provably ready in 40 draws by the end of the launcher read, 173 draws one millisecond after the read, and 184 draws one millisecond before compositor draw. These bounds measure potential availability in the matched subset. The larger trace still reported discarded chunks. The smaller trace filled early and only bounded one such presented draw. The separate late-read comparison measures whether the launcher can use that opportunity while meeting the compositor deadline.
+
+The `pocket-acquire-fence-a*` fixtures include the Perfetto traces, matching logcats, and the CV10 layer's actual presentation times. The replay APK SHA-256 is `56c28ee5f51d5ceeca68801f57ff3b54064b3fc06a441df4310396c4d9b0a68b`.
+
+An A/B/B/A comparison used the same replay APK for all four arms. B requested a 1.1 ms delay only before the direct four-view stream read. The global application wake and compositor budgets were identical across arms. Battery temperature at the start of sampling was 35.2–36.2°C. A1 moved from thermal status 1 to 2. The other three arms started and ended at 2.
+
+| Arm | Read to Monado draw, p50 | Producer pre-swap to CV10 present, p50 / p95 | Fresh source images/s |
+| --- | ---: | ---: | ---: |
+| A1 | 2.74 ms | 55.05 / 68.69 ms | 60.11 |
+| B1 | 2.37 ms | 56.29 / 67.16 ms | 60.11 |
+| B2 | 2.34 ms | 44.33 / 55.35 ms | 60.24 |
+| A2 | 2.76 ms | 57.71 / 68.64 ms | 60.22 |
+
+The delay shortened the measured read-to-draw interval by 0.37–0.42 ms. The lower p95 ranged from 1.53 to 13.29 ms across the pairs, and the median rose in the first pair. Fresh-source rate was nearly unchanged. Monado submitted 90.00 frames/s. CV10 presented 60.31–60.36 times/s and all 3620 sampled actual timestamps matched. The simulated yaw fit remained within 1.3 ms of the requested phase in all arms with 0.19–0.23° RMS error. This fit uses tracked poses and CV10 timestamp feedback. The fixed right camera did not resolve the workspace, leaving optical clarity, smear and motion-to-photon delay unverified.
+
+The normal build keeps its existing latch timing. The archived `pocket-late-read-experiment.patch`, `pocket-late-read-*` traces and replay APK support repeating the test. The APK SHA-256 is `75b972a3a41e14e017791f4702d1a2ded0d08060716ff64518655809f5ed5bb8`.
 
 ## 直出帧的姿态记录
 
