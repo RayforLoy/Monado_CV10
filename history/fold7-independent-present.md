@@ -106,7 +106,7 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 以同一个 VSync ID 对齐两个目标器，用 CV10 的 `beginFrame … vsyncIn` 重建预计呈现时刻。强制 CV10 时钟的两段追踪中，629 次手机栅栏待完成检查有 627 次配到下一个内建屏 retire 信号。627 个信号全部迟于同批 CV10 预计呈现时刻超过 0.5 ms，两段各自的平均差为 10.347 和 10.342 ms。其中 243 次已向后调整过 CV10 的预计时刻。原调度时刻在这些样本里更早。AOSP 的跟随屏背压可在预计跟随屏 VSync 先到时容忍一个待完成栅栏。新查询使用的是实测 retire，说明这个硬件信号没有赶上该批 CV10 时限，启用背压后的实际跳过次数还需在系统构建上测量。[同批次时限 Perfetto 查询](fold7-slower-follower-deadline.sql)
 
-长等待发生在提交本帧栅栏以前。公开的同平台 DRM 内核代码在等同 CRTC 或同一平面的待完成提交前取得共享 `connection_mutex`，然后才准备栅栏和派发新工作。这与手机等待上一帧、CV10 同时被拖住的时间顺序相符。量产内核的具体锁和提交标志仍缺直接读数。[同平台 DRM 源码](https://github.com/LineageOS/android_kernel_qcom_sm8750-modules/blob/5d27ace07b893b611cf3ce1c301b760f32d59892/qcom/opensource/display-drivers/msm/msm_atomic.c#L871)
+长等待发生在提交本帧栅栏以前。公开的同平台 DRM 内核代码在等同 CRTC 或同一平面的待完成提交前取得共享 `connection_mutex`，然后才准备栅栏和派发新工作。这与手机等待上一帧、CV10 同时被拖住的时间顺序相符。后续[量产内核的阻塞调用栈](#量产内核的阻塞调用栈) 验证了外屏的锁路径。[同平台 DRM 源码](https://github.com/LineageOS/android_kernel_qcom_sm8750-modules/blob/5d27ace07b893b611cf3ce1c301b760f32d59892/qcom/opensource/display-drivers/msm/msm_atomic.c#L871)
 
 现有系统的 `debug.sf.follower_display_backpressure` 属性可临时写入，但写成 `true` 后，正在运行的 SurfaceFlinger 仍报告对应标志为 `false`。上游实现首次读入时缓存属性。从手机读取的分区 aconfig 名单也没有该标志，因此没有证据支持用运行中的 DeviceConfig 开启。实测已还原属性。[AOSP FlagManager](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/common/FlagManager.cpp#227)
 
@@ -152,7 +152,7 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 [提交窗口插桩补丁](aosp-android16-trace-follower-present-window.patch) 在实验系统上通过 `debug.sf.cv10_probe_pacesetter_display` 和 `debug.sf.cv10_probe_follower_display` 分别指定 CV10 和手机的 64 位物理显示 ID。合成前读取已排定的下一次 CV10 唤醒时间，手机输出在进入验证前再读上一帧栅栏，记录 `CV10 follower window`。按回放保留 retire 后 0.5 ms、CV10 下一次唤醒前 2 ms，以及手机预计呈现前 7.3 ms。缺少真实的下一次计划唤醒时单独标记。trace 的状态 0–5 分别对应窗口满足预算、上一栅栏无有效信号、retire 后保护期、无有效唤醒、CV10 时限不足、手机自身时限不足。该探针只记录判定，实际仍由原流程提交和处理缓冲释放。状态 0 还需结合 pacesetter 的实际完成事件，才能判断是否可以调度独立手机任务。八个条件边界已通过 Android arm64 编译检查，五补丁在独立 AOSP 基线正向应用和反向还原通过。量产 Fold7 仍运行原系统。
 
-从 Fold7 的 F9660ZCUDBZJ9 构建只读取得 `/vendor/lib64/libdrm.so`。SHA-256 为 `311a8f5fff41f49d7ae186a94aaf053f465d946b4e716deb1c4ac29fa1d21743`，Build ID 为 `5e3f95c5eb67ff212df8d1288c77a9f7`。ARM64 的 `drmModeAtomicCommit` 在 `0x13b48` 保存调用参数 `w2`，在 `0x13d48` 读回并在 `0x13e54` 写入 ioctl 结构的 flags。随后 `0x13e68` 把请求 `0xc03864bc` 传给 `drmIoctl`。因此需在上游 HAL 调用或内核入口观察该字段的实际值。量产系统拒绝 ADB 读取 Composer 服务、`libsdedrm.so`、`libsdmcore.so` 和 `msm_drm.ko` 的内容，仍无法确认实际调用选择了哪些 flags。[三星构建记录](https://doc.samsungmobile.com/SM-F9660/034393250731/eng.html)
+从 Fold7 的 F9660ZCUDBZJ9 构建只读取得 `/vendor/lib64/libdrm.so`。SHA-256 为 `311a8f5fff41f49d7ae186a94aaf053f465d946b4e716deb1c4ac29fa1d21743`，Build ID 为 `5e3f95c5eb67ff212df8d1288c77a9f7`。ARM64 的 `drmModeAtomicCommit` 在 `0x13b48` 保存调用参数 `w2`，在 `0x13d48` 读回并在 `0x13e54` 写入 ioctl 结构的 flags。随后 `0x13e68` 把请求 `0xc03864bc` 传给 `drmIoctl`。量产系统拒绝 ADB 读取 Composer 服务、`libsdedrm.so`、`libsdmcore.so` 和 `msm_drm.ko` 的内容。后续阻塞栈确认手机的提交进入了 DRM 的 nonblocking 分支。完整 flags 数值未采集。[三星构建记录](https://doc.samsungmobile.com/SM-F9660/034393250731/eng.html)
 
 ### CV10 进入内核提交前的跨屏等待
 
@@ -167,7 +167,36 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 在新旧四次强制外屏时钟采样中，等待至少 1 ms 的调用分别为 201/209、199/208、255/267 和 349/359。这些调用全部与手机的 `atomic_commit` 重叠，CV10 在手机调用结束后 0.5 ms 内进入自己的 `atomic_commit`。每次都由手机提交线程在该时段唤醒 CV10 工作线程。恢复自动时钟的三段采样包括约 9 秒后的追踪，每段的全部 209 次调用都有相同关系。四段初始自动时钟对照均没有达到 1 ms 的前置等待，CV10 retire 仍约 60 次/秒。既有手机熄屏组的 537 次 CV10 调用没有手机提交等待，CV10 retire 为 90.0 次/秒。
 
-同平台公开的 MSM 驱动在等待旧 CRTC 和 plane 腾出之前先取 DRM 的 `connection_mutex`，且 `nonblock` 分支也走该等待。这个顺序可以解释为何手机线程在自己的 `atomic_commit` 内等待时，外屏线程在进入其 `atomic_commit` 追踪区间前已睡眠。此次未采到 `lock/contention` 事件，量产 Fold7 的具体锁和 ioctl flags 仍待证实。后续实验应测两路从 Composer 调用开始到内核接收的时间，并判断提前延后手机提交是否让 CV10 避开这段跨屏等待。[同平台公开内核源码](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/d50b305f7da9e14715a25120a4ac7b1a4b8b97c3/vendor/qcom/opensource/display-drivers/msm/msm_atomic.c#L874) · [Perfetto 线程唤醒定义](https://perfetto.dev/docs/data-sources/cpu-scheduling)
+同平台公开的 MSM 驱动在等待旧 CRTC 和 plane 腾出之前先取 DRM 的 `connection_mutex`，且 `nonblock` 分支也走该等待。该批追踪没有采到 `lock/contention` 事件，后续在量产机的调度切换点用内核调用栈验证了这条等待链。[同平台公开内核源码](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/d50b305f7da9e14715a25120a4ac7b1a4b8b97c3/vendor/qcom/opensource/display-drivers/msm/msm_atomic.c#L874) · [Perfetto 线程唤醒定义](https://perfetto.dev/docs/data-sources/cpu-scheduling)
+
+#### 量产内核的阻塞调用栈
+
+在同一 Hello XR 会话、同一接线和手机 ON/60 模式下，分别采集 4 秒的系统自动、强制 CV10 和恢复自动时钟。Perfetto 的 `linux.perf` 在 Composer 线程的 `sched_switch` 采样，通过 `ftrace` 对齐休眠开始、唤醒者和两路 DRM 调用。仅采样内核帧。三星量产系统无需变更即可采集这些符号。[Perfetto 阻塞采样说明](https://perfetto.dev/docs/case-studies/scheduling-blockages) · [采集配置](fold7-drm-kernel-blocked-stacks.pbtxt) · [配对查询](fold7-drm-kernel-blocked-stacks.sql)
+
+| 系统时钟 | CV10 在连接器锁上睡眠 ≥ 1 ms | 平均 / 最大 | 被手机提交线程唤醒 | CV10 退役栅栏/秒 |
+| --- | ---: | ---: | ---: | ---: |
+| 初始自动 | 0 | — | 0 | 60.34 |
+| 强制 CV10 | 239 | 14.832 / 16.437 ms | 239 | 60.17 |
+| 恢复自动 | 239 | 7.367 / 7.857 ms | 239 | 60.34 |
+
+手机提交栈是 `drm_mode_atomic_ioctl → drm_atomic_nonblocking_commit → msm_atomic_commit → do_wait_intr`。在强制和恢复自动两段，分别有 236 和 239 次大于等于 1 ms 的睡眠由旧手机帧的 `crtc_commit:288` 工作线程唤醒。外屏的栈是 `drm_atomic_set_property → drm_atomic_get_connector_state → drm_modeset_lock → ww_mutex_lock_interruptible`。Linux 6.6 的这条连接器状态路径取得的是设备共享的 `connection_mutex`。表中所有长锁等待均由手机提交线程在其 `atomic_commit` 结束前后 0.5 ms 内唤醒。这样可以区分手机线程正在内核等上一帧，和 CV10 线程在自己进入 `atomic_commit` 前等同一个 DRM 设备的锁。[Linux 6.6 连接器状态](https://github.com/torvalds/linux/blob/v6.6/drivers/gpu/drm/drm_atomic.c#L997-L1008) · [Linux 6.6 原子请求分支](https://github.com/torvalds/linux/blob/v6.6/drivers/gpu/drm/drm_atomic_uapi.c)
+
+默认时钟首次启动时即使没有长锁等待，调度仍沿手机的节拍。仅切换到 CV10 时钟会提前发出手机的新提交，导致内核的跨屏锁等待。逐屏调度实验应在手机进入同步 HWC 验证前检查上一帧是否就绪，并同时保护 CV10 的提交窗口。独立线程仍会经过相同的 DRM 锁。
+
+本机 `ffr-quad/trace-fold7-drm-kstack.ps1` 保存采集配置，三份 `hello-drm-kstack-lit-*.perfetto-trace` 依次为初始自动、强制 CV10、恢复自动。SHA-256 分别为 `f6f0b5cccd3934d9be3cff94a74c7631eedabf1d43f86b01c38892b3d8c666c3`、`544d410d6975a34c8ecaec81a6eff380e2a89db11ba190407523c5d5abd694f5`、`74a1e184bb886ff5905f1e32eafaebec5dcfeb98b5350f3019e9f8ea127e734d`。
+
+在 Pocket XR 的同一 Bilibili 单窗工作区再次采集。启用缓冲直采、单次 Compute 四视图合成、每眼 1600×1600 全视场和 1280×1280 独立中心，GLES 中心 1×1、外围 2×2。手机始终亮屏 60 Hz。每段约 30 秒的追踪统计锁等待，连续 15 秒的 34° 峰峰值模拟转头用于统计实际呈现和延迟。强制组电池温度 32.4°C、热状态 0→1，恢复自动组 33.9°C、热状态 1→2。场景几何一致，Bilibili 动态内容和温控有差异。
+
+| 调度时钟 | Monado 提交/秒 | CV10 实呈/秒 | CV10 锁等待 ≥ 1 ms，匹配手机提交线程 | Pocket 提交至实呈 p50 / p95 |
+| --- | ---: | ---: | ---: | ---: |
+| 强制 CV10 | 89.80 | 60.31 | 1794 / 1794 | 35.58 / 46.82 ms |
+| 恢复自动 | 90.00 | 60.31 | 1788 / 1789 | 32.94 / 43.59 ms |
+
+两组各有 905 个 CV10 图层实际呈现时间戳与 Vulkan 反馈一致。长锁等待平均 12.381 / 13.707 ms，CV10 CRTC 的退役频率分别为 60.31 / 60.32 次/秒。手机栅栏信号相对该帧的 CRTC 工作结束最多提前 0.379 / 0.475 ms，仍落在实验准入的 0.5 ms 保护期内。两段的 Perfetto 统计均出现切片嵌套深度上限，锁等待来自独立的调度采样，图层实际呈现用外部的 SurfaceFlinger 和 Vulkan 时间戳核对。自动组在强制组之后采集，不能代表从未切换时钟的初始状态。
+
+按实际呈现时刻拟合模拟头动，源图像相位延迟分别为 51.9 / 49.3 ms。后期重投影后的姿态分别接近零差和提前约 1.7 ms。固定相机画面中心没有检测到右镜内容，光学拖影和运动到光子延迟仍待验证。
+
+本机 `ffr-quad` 保留 `pocket-inset-interleaved-kstack-*` 的追踪、日志、场景就绪记录和双目外显截图。强制、自动追踪的 SHA-256 分别为 `a462900cd9db1e8b2cfec24e2ee7521cbf167d41a10c76ef26b56e53e64ba3e1`、`66b7fde1796b71107ad87f83f1080dceb962fffca491ae455693889f1fbf30ed`。Monado 测试 APK 为 `611cbd69fd732e437180991f85c139cb009b6cf8fe4b1f5a8d02b0ce99f08ff6`，Pocket XR 为 `3abd1df3c67e6b0459a745ad353670cda1b7b91944e6c8d0ee588351cf601c5c`。完成后按 SHA-256 验证恢复原先安装包，手机回到桌面、60 Hz 和系统自动时钟。
 
 对已测量的阻塞路径，逐屏异步原型需覆盖 `Output::present` 中的同步验证，或在该调用前按准备就绪和时限把手机输出顺延到自己的机会。跨显示共享缓冲区仍需等待所有实际消费者，不能直接跳过 `postComposition` 的释放栅栏处理。原型验收要同时跟踪按屏在途帧、热插拔或切换模式时的旧任务、全局事务 VSync ID、虚拟输出及两块物理屏的真实呈现节奏。[与 ChatGPT 6 极高的源码审阅](https://chatgpt.com/c/6b09b179-eac8-83ea-8cae-87222af8fa41)
 

@@ -1,0 +1,39 @@
+# Replace 1825 in both the scope and the sched_switch filter with the
+# current PID of vendor.qti.hardware.display.composer-service.
+buffers { size_kb: 65536 fill_policy: RING_BUFFER }
+duration_ms: 4000
+data_sources {
+  config {
+    name: "linux.perf"
+    perf_event_config {
+      timebase {
+        period: 1
+        tracepoint {
+          name: "sched/sched_switch"
+          filter: "(prev_pid == 1825 || prev_comm ~ \"binder:1825*\" || prev_comm == \"sdm_hpd_process\") && prev_state != 0"
+        }
+        timestamp_clock: PERF_CLOCK_MONOTONIC
+      }
+      callstack_sampling {
+        scope { target_pid: 1825 }
+        kernel_frames: true
+        user_frames: UNWIND_SKIP
+      }
+      ring_buffer_pages: 512
+    }
+  }
+}
+data_sources {
+  config {
+    name: "linux.ftrace"
+    ftrace_config {
+      atrace_categories: "gfx"
+      atrace_categories: "hal"
+      atrace_categories: "sync"
+      ftrace_events: "ftrace/print"
+      ftrace_events: "sched/sched_switch"
+      ftrace_events: "sched/sched_wakeup"
+      ftrace_events: "sched/sched_waking"
+    }
+  }
+}
