@@ -252,8 +252,17 @@ cv10_pose(struct xrt_device *xdev, enum xrt_input_name name, int64_t at_ns, stru
 	// Cap prediction even if a client requests a distant future pose.
 	int64_t query = at_ns > latest + 50000000 ? latest + 50000000 : at_ns;
 	if (m_relation_history_get(d->history, query, out) != M_RELATION_HISTORY_RESULT_INVALID) {
-		if (d->kit_history) out->relation_flags &= ~XRT_SPACE_RELATION_POSITION_VALID_BIT;
-		else cv10_head_model_apply(atomic_load_explicit(&d->eye_height, memory_order_relaxed), out);
+		if (d->kit_history) {
+			out->relation_flags &= ~XRT_SPACE_RELATION_POSITION_VALID_BIT;
+		} else {
+			float eye_height = atomic_load_explicit(&d->eye_height, memory_order_relaxed);
+			// Cv10SimulationSettings.headSample returns negative height for a fixed head origin.
+			if (eye_height < 0.0f) {
+				out->pose.position = (struct xrt_vec3){0, -eye_height, 0};
+			} else {
+				cv10_head_model_apply(eye_height, out);
+			}
+		}
 	}
 	return XRT_SUCCESS;
 }

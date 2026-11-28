@@ -9,9 +9,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import androidx.core.content.ContextCompat;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 /** CF20 connection and launcher gestures outside the Khronos Simple Controller profile. */
-final class Cv10ControllerLauncherInput implements Cv10ControllerLink.Listener {
+final class Cv10ControllerLauncherInput {
     static final String EVENT = "org.freedesktop.monado.cv10.LAUNCHER_CONTROLLER_EVENT";
     private static final String REQUEST = "org.freedesktop.monado.cv10.LAUNCHER_CONTROLLER_REQUEST";
     static final String KIND = "kind";
@@ -23,8 +25,11 @@ final class Cv10ControllerLauncherInput implements Cv10ControllerLink.Listener {
     static final int SWIPE_LEFT = 5;
     static final int SWIPE_RIGHT = 6;
     static final long HOME_HOLD_MILLIS = 1000;
+    private static final long DOUBLE_HOME_MILLIS = 350;
 
     private final Context context;
+    private final BooleanSupplier doubleHomeEnabled;
+    private final Consumer<Cv10ControllerLink.Sample> doubleHome;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final BroadcastReceiver request = new BroadcastReceiver() {
         @Override
@@ -37,17 +42,28 @@ final class Cv10ControllerLauncherInput implements Cv10ControllerLink.Listener {
     private boolean receivedReport;
     private boolean homeDown;
     private long homeStart;
+    private long pendingHome;
+    private long pendingHomeUntil;
+    private boolean secondHome;
     private long touchStart;
     private int touchStartX, touchStartY, touchX, touchY;
     private final Runnable finishHomePress = () -> {
         if (ready && homeStart != 0) {
+            clearPendingHome();
             send(RECENTER, homeStart);
             homeStart = 0;
         }
     };
+    private final Runnable sendPendingHome = () -> {
+        send(HOME, pendingHome);
+        pendingHome = 0;
+    };
 
-    Cv10ControllerLauncherInput(Context context) {
+    Cv10ControllerLauncherInput(Context context, BooleanSupplier doubleHomeEnabled,
+                                Consumer<Cv10ControllerLink.Sample> doubleHome) {
         this.context = context.getApplicationContext();
+        this.doubleHomeEnabled = doubleHomeEnabled;
+        this.doubleHome = doubleHome;
         ContextCompat.registerReceiver(this.context, request, new IntentFilter(REQUEST),
                 ContextCompat.RECEIVER_NOT_EXPORTED);
     }
@@ -56,28 +72,52 @@ final class Cv10ControllerLauncherInput implements Cv10ControllerLink.Listener {
         context.sendBroadcast(new Intent(REQUEST).setPackage(context.getPackageName()));
     }
 
-    @Override
-    public void onReady(boolean ready) {
+    void onReady(boolean ready) {
         this.ready = ready;
         receivedReport = false;
         homeDown = false;
         homeStart = 0;
         touchStart = 0;
         handler.removeCallbacks(finishHomePress);
+        clearPendingHome();
         send(ready ? CONNECTED : DISCONNECTED, 0);
     }
 
-    @Override
-    public void onInput(Cv10ControllerReport report) {
+    void onInput(Cv10ControllerLink.Sample sample) {
+        Cv10ControllerReport report = sample.report;
         boolean pressed = report.isPressed(Cv10ControllerReport.HOME);
         if (receivedReport && pressed != homeDown) {
             if (pressed) {
                 homeStart = SystemClock.uptimeMillis();
+                if (pendingHome != 0 && homeStart >= pendingHomeUntil) {
+                    handler.removeCallbacks(sendPendingHome);
+                    sendPendingHome.run();
+                }
+                secondHome = pendingHome != 0 && doubleHomeEnabled.getAsBoolean();
+                if (secondHome) handler.removeCallbacks(sendPendingHome);
                 handler.postDelayed(finishHomePress, HOME_HOLD_MILLIS);
             } else if (homeStart != 0) {
                 handler.removeCallbacks(finishHomePress);
-                boolean held = SystemClock.uptimeMillis() - homeStart >= HOME_HOLD_MILLIS;
-                send(held ? RECENTER : HOME, homeStart);
+                long duration = SystemClock.uptimeMillis() - homeStart;
+                if (duration >= HOME_HOLD_MILLIS) {
+                    clearPendingHome();
+                    send(RECENTER, homeStart);
+                } else if (secondHome && duration <= DOUBLE_HOME_MILLIS && doubleHomeEnabled.getAsBoolean()) {
+                    clearPendingHome();
+                    doubleHome.accept(sample);
+                } else {
+                    if (pendingHome != 0) {
+                        send(HOME, pendingHome);
+                        clearPendingHome();
+                    }
+                    if (doubleHomeEnabled.getAsBoolean() && duration <= DOUBLE_HOME_MILLIS) {
+                        pendingHome = homeStart;
+                        pendingHomeUntil = SystemClock.uptimeMillis() + DOUBLE_HOME_MILLIS;
+                        handler.postDelayed(sendPendingHome, DOUBLE_HOME_MILLIS);
+                    } else {
+                        send(HOME, homeStart);
+                    }
+                }
                 homeStart = 0;
             }
         }
@@ -100,6 +140,12 @@ final class Cv10ControllerLauncherInput implements Cv10ControllerLink.Listener {
             }
             touchStart = 0;
         }
+    }
+
+    private void clearPendingHome() {
+        handler.removeCallbacks(sendPendingHome);
+        pendingHome = 0;
+        secondHome = false;
     }
 
     void close() {

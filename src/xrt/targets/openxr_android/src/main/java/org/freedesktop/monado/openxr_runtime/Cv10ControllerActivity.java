@@ -44,7 +44,9 @@ public class Cv10ControllerActivity extends Activity {
     private final Set<String> seen = new HashSet<>();
     private EditText address;
     private EditText eyeHeight;
+    private final EditText[] fixedPositionFields = new EditText[3];
     private TextView simulationStatus;
+    private TextView positionStatus;
     private TextView scanStatus, probeStatus;
     private final Runnable scanTimeout = () -> {
         stopScan();
@@ -133,12 +135,104 @@ public class Cv10ControllerActivity extends Activity {
         });
         simulationStatus = new TextView(this);
         layout.addView(simulationStatus);
+
+        addButton(layout, "华为桌面手臂模型 · Huawei arm model", () -> {
+            Cv10SimulationSettings.selectPositionMode(prefs, Cv10SimulationSettings.ARM_MODEL);
+            refreshPositionStatus();
+        });
+        LinearLayout coordinates = new LinearLayout(this);
+        String[] axes = {"X", "Y", "Z"};
+        for (int axis = 0; axis < axes.length; axis++) {
+            EditText field = new EditText(this);
+            field.setSingleLine(true);
+            field.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL |
+                    InputType.TYPE_NUMBER_FLAG_SIGNED);
+            field.setHint(axes[axis] + " (m)");
+            field.setContentDescription("固定手部坐标 " + axes[axis] + "，单位米");
+            fixedPositionFields[axis] = field;
+            coordinates.addView(field, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        }
+        layout.addView(coordinates);
+        showFixedPosition(Cv10SimulationSettings.fixedPosition(prefs));
+        addButton(layout, "保存固定位置 · Save fixed position", () -> {
+            float[] xyz = new float[3];
+            for (int axis = 0; axis < xyz.length; axis++) {
+                xyz[axis] = readNumber(fixedPositionFields[axis]);
+                if (!Float.isFinite(xyz[axis])) {
+                    fixedPositionFields[axis].setError("请输入坐标，单位米");
+                    return;
+                }
+            }
+            useFixedPosition(prefs, new Cv10OneShotCalibration.Position(xyz[0], xyz[1], xyz[2]));
+        });
+        addButton(layout, "Monado 固定偏移 (0.20, −0.30, −0.35)", () ->
+                useFixedPosition(prefs, new Cv10OneShotCalibration.Position(0.20f, -0.30f, -0.35f)));
+        addButton(layout, "华为 SDK 原点 (0, 0, 0)", () ->
+                useFixedPosition(prefs, new Cv10OneShotCalibration.Position(0f, 0f, 0f)));
+        addButton(layout, "准备单次 6DoF 校准 · One-move calibration", () -> {
+            float height = readNumber(eyeHeight);
+            if (!validateEyeHeight(height)) return;
+            if (!BluetoothAdapter.checkBluetoothAddress(savedAddress(this))) {
+                positionStatus.setText("请先配对并选用 CF20。");
+                return;
+            }
+            if (Cv10KitTrackingService.trackingRequested()) {
+                positionStatus.setText("请先关闭定位交互套件的头显追踪。");
+                return;
+            }
+            stopPairing();
+            stopProbe();
+            Cv10SimulationSettings.preparePositionCalibration(prefs, height);
+            refreshSimulationStatus();
+            refreshPositionStatus();
+        });
+        positionStatus = new TextView(this);
+        layout.addView(positionStatus);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refreshSimulationStatus();
+        refreshPositionStatus();
+    }
+
+    private void useFixedPosition(SharedPreferences prefs, Cv10OneShotCalibration.Position position) {
+        Cv10SimulationSettings.saveFixedPosition(prefs, position);
+        showFixedPosition(position);
+        refreshPositionStatus();
+    }
+
+    private void showFixedPosition(Cv10OneShotCalibration.Position position) {
+        fixedPositionFields[0].setText(Float.toString(position.x));
+        fixedPositionFields[1].setText(Float.toString(position.y));
+        fixedPositionFields[2].setText(Float.toString(position.z));
+    }
+
+    private void refreshPositionStatus() {
+        if (positionStatus == null) return;
+        SharedPreferences prefs = Cv10SimulationSettings.preferences(this);
+        switch (Cv10SimulationSettings.positionMode(prefs)) {
+            case Cv10SimulationSettings.FIXED:
+                positionStatus.setText("当前模式为固定位置 " + formatPosition(Cv10SimulationSettings.fixedPosition(prefs)));
+                break;
+            case Cv10SimulationSettings.ONE_SHOT:
+                Cv10OneShotCalibration.Position saved = Cv10SimulationSettings.shotPosition(prefs, savedAddress(this));
+                String message = saved == null ? "等待校准。" : "已锁定 " + formatPosition(saved) + "。";
+                if (Cv10SimulationSettings.positionStatus(prefs) == Cv10SimulationSettings.POSITION_FAILED) {
+                    message += " 上次校准未完成，可再试。";
+                }
+                positionStatus.setText(message + "\n进入 OpenXR 并平视。手柄按键朝上、前端朝前，贴住头显右侧，双击 Home。" +
+                        "听到提示音后，在 " + Cv10OneShotCalibration.DURATION_SECONDS +
+                        " 秒内移到舒适位置，停稳后再双击 Home 锁定。");
+                break;
+            default:
+                positionStatus.setText("当前模式为华为桌面手臂模型。手腕位置随手柄指向沿弧线变化。");
+        }
+    }
+
+    private static String formatPosition(Cv10OneShotCalibration.Position position) {
+        return String.format(Locale.ROOT, "(%.2f, %.2f, %.2f) m", position.x, position.y, position.z);
     }
 
     private void refreshSimulationStatus() {
@@ -155,16 +249,8 @@ public class Cv10ControllerActivity extends Activity {
     }
 
     private void saveSimulationHeight(boolean arm) {
-        float meters;
-        try {
-            meters = Float.parseFloat(eyeHeight.getText().toString().trim().replace(',', '.'));
-        } catch (NumberFormatException invalid) {
-            meters = Float.NaN;
-        }
-        if (!Cv10SimulationSettings.validHeight(meters)) {
-            eyeHeight.setError("请输入 0.50 到 2.50 米的离地眼高");
-            return;
-        }
+        float meters = readNumber(eyeHeight);
+        if (!validateEyeHeight(meters)) return;
         String saved = savedAddress(this);
         if (arm && !BluetoothAdapter.checkBluetoothAddress(saved)) {
             simulationStatus.setText("请先配对并选用 CF20。");
@@ -177,10 +263,29 @@ public class Cv10ControllerActivity extends Activity {
         if (arm) {
             stopPairing();
             stopProbe();
+            SharedPreferences prefs = Cv10SimulationSettings.preferences(this);
+            if (Cv10SimulationSettings.positionMode(prefs) == Cv10SimulationSettings.ONE_SHOT) {
+                Cv10SimulationSettings.selectPositionMode(prefs, Cv10SimulationSettings.ARM_MODEL);
+                refreshPositionStatus();
+            }
         }
         Cv10SimulationSettings.saveHeight(Cv10SimulationSettings.preferences(this), meters, arm ? saved : null);
         if (arm) refreshSimulationStatus();
         else simulationStatus.setText("模拟眼高已保存 · Eye height saved");
+    }
+
+    private boolean validateEyeHeight(float meters) {
+        if (Cv10SimulationSettings.validHeight(meters)) return true;
+        eyeHeight.setError("请输入 0.50 到 2.50 米的离地眼高");
+        return false;
+    }
+
+    private static float readNumber(EditText field) {
+        try {
+            return Float.parseFloat(field.getText().toString().trim().replace(',', '.'));
+        } catch (NumberFormatException invalid) {
+            return Float.NaN;
+        }
     }
 
     private void addButton(LinearLayout layout, String label, Runnable action) {

@@ -69,7 +69,7 @@ final class Cv10ControllerLink implements AutoCloseable {
     interface Listener {
         void onReady(boolean ready);
 
-        void onInput(Cv10ControllerReport report);
+        void onInput(Sample sample);
     }
 
     static final class Sample {
@@ -354,7 +354,6 @@ final class Cv10ControllerLink implements AutoCloseable {
                 malformedInput = sample;
                 return;
             }
-            latestInput = sample;
             if (phase == Phase.FIRST_INPUT) {
                 enter(Phase.STREAMING, 0, null);
                 fastRetries = 0;
@@ -362,7 +361,8 @@ final class Cv10ControllerLink implements AutoCloseable {
                 ready = true;
                 if (listener != null) listener.onReady(true);
             }
-            if (listener != null) listener.onInput(sample.report);
+            if (listener != null) listener.onInput(sample);
+            latestInput = sample;
         } else if (CONTROL_NOTIFY.equals(uuid)) {
             latestControl = new Sample(value, false);
             String version = Cv10ControllerCalibration.parseVersionResponse(value);

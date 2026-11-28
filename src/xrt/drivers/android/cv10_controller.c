@@ -17,6 +17,8 @@
 
 #define CV10_CONTROLLER_READER "org.freedesktop.monado.openxr_runtime.Cv10ControllerReader"
 #define CV10_REPORT_TIMEOUT_NS (250 * U_TIME_1MS_IN_NS)
+// Cv10ControllerReader.read(): orientation, buttons, source, yaw, fixed position flag and XYZ.
+#define CV10_CF20_REPORT_FLOATS 13
 
 enum cv10_controller_input
 {
@@ -42,6 +44,7 @@ struct cv10_controller
 	bool menu;
 	bool orientation_valid;
 	bool phone;
+	bool fixed_position;
 	float cf20_yaw;
 	bool kit;
 	bool right;
@@ -117,11 +120,13 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 	} else {
 		const bool phone = !d->kit && values[7] != 0;
 		const float yaw = (!d->kit && !phone) ? values[8] : 0.0f;
-		if (d->phone != phone || d->cf20_yaw != yaw) {
+		const bool fixed_position = !d->kit && !phone && values[9] != 0;
+		if (d->phone != phone || d->cf20_yaw != yaw || d->fixed_position != fixed_position) {
 			m_relation_history_clear(d->history);
 			d->pose_ns = 0;
 			d->report_ns = 0;
 			d->phone = phone;
+			d->fixed_position = fixed_position;
 			d->cf20_yaw = yaw;
 			d->arm = (struct cv10_arm_model){0};
 		}
@@ -150,12 +155,17 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 			} else if (phone) {
 				// Include the old standalone right-hand origin offset in the shared floor origin.
 				relation.pose.position = (struct xrt_vec3){0.40f, 1.00f, -0.85f};
-			} else if (yaw != 0.0f) {
-				const struct xrt_vec3 up = {0, 1, 0};
-				struct xrt_quat alignment, aligned;
-				math_quat_from_angle_vector(yaw, &up, &alignment);
-				math_quat_rotate(&alignment, &relation.pose.orientation, &aligned);
-				relation.pose.orientation = aligned;
+			} else {
+				if (fixed_position) {
+					relation.pose.position = (struct xrt_vec3){values[10], values[11], values[12]};
+				}
+				if (yaw != 0.0f) {
+					const struct xrt_vec3 up = {0, 1, 0};
+					struct xrt_quat alignment, aligned;
+					math_quat_from_angle_vector(yaw, &up, &alignment);
+					math_quat_rotate(&alignment, &relation.pose.orientation, &aligned);
+					relation.pose.orientation = aligned;
+				}
 			}
 			m_relation_history_push(d->history, &relation, pose_ns);
 			d->pose_ns = pose_ns;
@@ -232,7 +242,7 @@ controller_worker(void *ptr)
 	if (close == NULL) {
 		goto done;
 	}
-	jfloatArray buffer = (*env)->NewFloatArray(env, 9);
+	jfloatArray buffer = (*env)->NewFloatArray(env, CV10_CF20_REPORT_FLOATS);
 	if (buffer == NULL) {
 		goto done;
 	}
@@ -251,8 +261,8 @@ controller_worker(void *ptr)
 			if (current == 0) {
 				update_report(d, 0, 0, NULL);
 			} else {
-				float values[9];
-				(*env)->GetFloatArrayRegion(env, buffer, 0, 9, values);
+				float values[CV10_CF20_REPORT_FLOATS];
+				(*env)->GetFloatArrayRegion(env, buffer, 0, CV10_CF20_REPORT_FLOATS, values);
 				if (clear_exception(env)) {
 					break;
 				}
@@ -306,7 +316,7 @@ controller_pose(struct xrt_device *xdev, enum xrt_input_name name, int64_t at_ns
 		int64_t query = at_ns > d->pose_ns ? d->pose_ns : at_ns;
 		if (m_relation_history_get(d->history, query, out) == M_RELATION_HISTORY_RESULT_INVALID) {
 			out->pose.orientation.w = 1;
-		} else if (!d->kit && !d->phone) {
+		} else if (!d->kit && !d->phone && !d->fixed_position) {
 			struct xrt_space_relation head = XRT_SPACE_RELATION_ZERO;
 			if (xrt_device_get_tracked_pose(d->head, XRT_INPUT_GENERIC_HEAD_POSE, at_ns, &head) != XRT_SUCCESS) {
 				head = (struct xrt_space_relation)XRT_SPACE_RELATION_ZERO;
