@@ -622,6 +622,26 @@ adb -s $serial shell sfdo reset-forced-pacesetter
 
 这条路径已在实机对照中使用。原版 Hello XR 约 90.0 次实呈/秒，关闭手机面板并指定 CV10 时钟的独立 RGBX 探针测得 88.42 次实呈/秒，p95 仍为 11.111 ms。另一次熄屏对照保留手机作为调度时钟，CV10 只有 59.08 次 HWC 调用/秒。手动操作结束应执行复位。证据见 `trace-fold7-composer.ps1`、`mivr470-hello-phone-off*-scheduler.txt`、对应 Perfetto 文件，以及 `fold7-dpu-probe/run.ps1` 和 `summary.txt`。
 
+### 一次 ADB 启动，手机自行恢复
+
+[Fold7 熄屏脚本](fold7-cv10-screen-off.sh) 可由已配对的电脑启动一次。它在手机的 shell 进程中运行，识别当前的 CV10 物理显示 ID，按指定秒数熄灭手机面板。到期、收到终止信号、查不到同一个 CV10 或电量低于 20% 时恢复面板和系统时钟。以下用 60 秒作为示例。应先让 XR 应用出画，退出其他正在管理外显时钟的模式。
+
+```powershell
+adb -s $serial push history/fold7-cv10-screen-off.sh /data/local/tmp/fold7-cv10-screen-off.sh
+$panelJob = adb -s $serial shell 'setsid sh /data/local/tmp/fold7-cv10-screen-off.sh 60 </dev/null >/data/local/tmp/fold7-cv10-screen-off.log 2>&1 & echo $!'
+adb -s $serial shell cat /data/local/tmp/fold7-cv10-screen-off.log
+```
+
+若要在到期前恢复，向仍在运行的脚本发 `TERM`。日志应显示 `restored forced clock: nullopt`。
+
+```powershell
+adb -s $serial shell kill -TERM $panelJob
+```
+
+实测仍用带外接 5 V 的原厂线。先关闭 Shizuku 服务，再在同一原版 Hello XR 会话内以已授权的无线 ADB 启动 18 秒脚本。启动命令退出后，脚本由 Android 的 PID 1 托管，UID 为 2000。两块手机面板报告 OFF，外屏报告 ON，SurfaceFlinger 的六段滚动样本均为 90.0 次实际呈现/秒，p99 间隔为 11.1–11.2 ms。熄屏前及自动恢复后，手机在亮屏 60 Hz 模式，CV10 实呈稳态均为 60.3 次/秒。自动恢复清除了时钟覆盖，测试结束后重启了原有的 Shizuku 服务。
+
+外显系统截图里有双眼蓝块，固定相机未拍到右镜内容。这一轮确认了实际呈现栅栏与自动恢复，光学画面及物理拔线分支待验。此脚本只负责显示电源和时钟，Pocket XR 创建受信任虚拟屏或启动其他应用窗口时所需的授权另行处理。证据位于 `ffr-quad/hello-standalone-adb-panel-b-session.txt`、同前缀外显截图和右镜照片，以及 `head-motion/hello-standalone-adb-panel-b-*-cadence.txt`。
+
 ## 本机证据
 
 原始数据保存在主项目的 `.research/monado-rc2-fold7/pocket-performance/ffr-quad/`。同级 `head-motion/` 留有 `*-cadence.txt`。设备标签和实测 APK 摘要用于匹配本机安装，文档中的性能读数来自实验构建。
