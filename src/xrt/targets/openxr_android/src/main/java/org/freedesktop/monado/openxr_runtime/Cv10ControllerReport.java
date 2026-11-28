@@ -17,6 +17,7 @@ final class Cv10ControllerReport {
     final float gyroX, gyroY, gyroZ;
     final int touchX, touchY, battery;
     final boolean orientationValid;
+    final boolean figureEightDone, stillnessDone;
 
     private Cv10ControllerReport(byte[] data) {
         buttons = data[0] & 0xff;
@@ -32,6 +33,8 @@ final class Cv10ControllerReport {
         gyroX = data[12] * 2000f / 127f;
         gyroY = data[13] * 2000f / 127f;
         gyroZ = data[14] * 2000f / 127f;
+        stillnessDone = (data[12] & 1) != 0;
+        figureEightDone = (data[14] & 1) != 0;
         touchX = data[15] & 0xff;
         touchY = data[16] & 0xff;
         battery = data[17];

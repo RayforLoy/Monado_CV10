@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "cv10_controller.h"
+#include "cv10_pose_models.h"
 #include "cv10_device.h"
 
 #include <stdbool.h>
@@ -16,6 +17,8 @@
 
 #define CV10_CONTROLLER_READER "org.freedesktop.monado.openxr_runtime.Cv10ControllerReader"
 #define CV10_REPORT_TIMEOUT_NS (250 * U_TIME_1MS_IN_NS)
+// Cv10ControllerReader.read(): orientation, buttons, source, yaw, fixed position flag and XYZ.
+#define CV10_CF20_REPORT_FLOATS 13
 
 enum cv10_controller_input
 {
@@ -29,6 +32,8 @@ enum cv10_controller_input
 struct cv10_controller
 {
 	struct xrt_device base;
+	struct xrt_device *head;
+	struct cv10_arm_model arm;
 	struct os_thread_helper worker;
 	struct m_relation_history *history;
 	int64_t report_ns;
@@ -38,6 +43,9 @@ struct cv10_controller
 	bool select;
 	bool menu;
 	bool orientation_valid;
+	bool phone;
+	bool fixed_position;
+	float cf20_yaw;
 	bool kit;
 	bool right;
 };
@@ -106,9 +114,22 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 		d->report_ns = 0;
 		d->pose_ns = 0;
 		d->orientation_valid = false;
+		d->arm = (struct cv10_arm_model){0};
 		d->select = false;
 		d->menu = false;
 	} else {
+		const bool phone = !d->kit && values[7] != 0;
+		const float yaw = (!d->kit && !phone) ? values[8] : 0.0f;
+		const bool fixed_position = !d->kit && !phone && values[9] != 0;
+		if (d->phone != phone || d->cf20_yaw != yaw || d->fixed_position != fixed_position) {
+			m_relation_history_clear(d->history);
+			d->pose_ns = 0;
+			d->report_ns = 0;
+			d->phone = phone;
+			d->fixed_position = fixed_position;
+			d->cf20_yaw = yaw;
+			d->arm = (struct cv10_arm_model){0};
+		}
 		const bool select = values[5] != 0;
 		const bool menu = values[6] != 0;
 		if (d->report_ns == 0 || d->select != select) {
@@ -131,15 +152,27 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 			if (d->kit) {
 				relation.pose.position = (struct xrt_vec3){values[7], values[8], values[9]};
 				relation.relation_flags |= XRT_SPACE_RELATION_POSITION_TRACKED_BIT;
+			} else if (phone) {
+				// Include the old standalone right-hand origin offset in the shared floor origin.
+				relation.pose.position = (struct xrt_vec3){0.40f, 1.00f, -0.85f};
 			} else {
-				// Fixed aim-ray origin for the CF20's orientation-only measurements.
-				relation.pose.position = (struct xrt_vec3){0.20f, -0.30f, -0.35f};
+				if (fixed_position) {
+					relation.pose.position = (struct xrt_vec3){values[10], values[11], values[12]};
+				}
+				if (yaw != 0.0f) {
+					const struct xrt_vec3 up = {0, 1, 0};
+					struct xrt_quat alignment, aligned;
+					math_quat_from_angle_vector(yaw, &up, &alignment);
+					math_quat_rotate(&alignment, &relation.pose.orientation, &aligned);
+					relation.pose.orientation = aligned;
+				}
 			}
 			m_relation_history_push(d->history, &relation, pose_ns);
 			d->pose_ns = pose_ns;
 		} else if (!valid && d->orientation_valid) {
 			m_relation_history_clear(d->history);
 			d->pose_ns = 0;
+			d->arm = (struct cv10_arm_model){0};
 		}
 		d->orientation_valid = valid;
 	}
@@ -209,7 +242,7 @@ controller_worker(void *ptr)
 	if (close == NULL) {
 		goto done;
 	}
-	jfloatArray buffer = (*env)->NewFloatArray(env, 7);
+	jfloatArray buffer = (*env)->NewFloatArray(env, CV10_CF20_REPORT_FLOATS);
 	if (buffer == NULL) {
 		goto done;
 	}
@@ -228,8 +261,8 @@ controller_worker(void *ptr)
 			if (current == 0) {
 				update_report(d, 0, 0, NULL);
 			} else {
-				float values[7];
-				(*env)->GetFloatArrayRegion(env, buffer, 0, 7, values);
+				float values[CV10_CF20_REPORT_FLOATS];
+				(*env)->GetFloatArrayRegion(env, buffer, 0, CV10_CF20_REPORT_FLOATS, values);
 				if (clear_exception(env)) {
 					break;
 				}
@@ -283,6 +316,12 @@ controller_pose(struct xrt_device *xdev, enum xrt_input_name name, int64_t at_ns
 		int64_t query = at_ns > d->pose_ns ? d->pose_ns : at_ns;
 		if (m_relation_history_get(d->history, query, out) == M_RELATION_HISTORY_RESULT_INVALID) {
 			out->pose.orientation.w = 1;
+		} else if (!d->kit && !d->phone && !d->fixed_position) {
+			struct xrt_space_relation head = XRT_SPACE_RELATION_ZERO;
+			if (xrt_device_get_tracked_pose(d->head, XRT_INPUT_GENERIC_HEAD_POSE, at_ns, &head) != XRT_SUCCESS) {
+				head = (struct xrt_space_relation)XRT_SPACE_RELATION_ZERO;
+			}
+			cv10_arm_model_apply(&d->arm, query, &head, name == XRT_INPUT_SIMPLE_AIM_POSE, out);
 		}
 	}
 	os_thread_helper_unlock(&d->worker);
@@ -299,27 +338,28 @@ controller_destroy(struct xrt_device *xdev)
 }
 
 static struct xrt_device *
-controller_create(struct xrt_tracking_origin *origin, bool right)
+controller_create(struct xrt_tracking_origin *origin, struct xrt_device *head, bool right)
 {
 	struct cv10_controller *d =
 	    U_DEVICE_ALLOCATE(struct cv10_controller, origin ? 0 : U_DEVICE_ALLOC_TRACKING_NONE, CV10_INPUT_COUNT, 0);
 	if (d == NULL) {
 		return NULL;
 	}
-	d->kit = origin != NULL;
+	d->head = head;
+	d->kit = head == NULL;
 	d->right = right;
 	struct xrt_device *xdev = &d->base;
 	xdev->name = XRT_DEVICE_SIMPLE_CONTROLLER;
 	xdev->device_type = right ? XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER : XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER;
 	xdev->supported.orientation_tracking = true;
-	if (origin) {
-		xdev->tracking_origin = origin;
+	xdev->tracking_origin = origin;
+	if (d->kit) {
 		xdev->supported.position_tracking = true;
 		snprintf(xdev->str, sizeof(xdev->str), "Huawei CV10 6DoF %s controller", right ? "right" : "left");
 		snprintf(xdev->serial, sizeof(xdev->serial), "Huawei-CV10-Kit-%s", right ? "right" : "left");
 	} else {
-		snprintf(xdev->str, sizeof(xdev->str), "Huawei CF20 Bluetooth Controller");
-		snprintf(xdev->serial, sizeof(xdev->serial), "Huawei-CF20");
+		snprintf(xdev->str, sizeof(xdev->str), "CV10 Right Controller");
+		snprintf(xdev->serial, sizeof(xdev->serial), "CV10-Right");
 	}
 	u_device_populate_function_pointers(xdev, controller_pose, controller_destroy);
 	xdev->update_inputs = controller_update_inputs;
@@ -345,13 +385,13 @@ controller_create(struct xrt_tracking_origin *origin, bool right)
 }
 
 struct xrt_device *
-cv10_controller_create(void)
+cv10_controller_create(struct xrt_device *head)
 {
-	return controller_configured() ? controller_create(NULL, true) : NULL;
+	return controller_configured() ? controller_create(head->tracking_origin, head, true) : NULL;
 }
 
 struct xrt_device *
 cv10_kit_controller_create(struct xrt_tracking_origin *origin, bool right)
 {
-	return controller_create(origin, right);
+	return controller_create(origin, NULL, right);
 }

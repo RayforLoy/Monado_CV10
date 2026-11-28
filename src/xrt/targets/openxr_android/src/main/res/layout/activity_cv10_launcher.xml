@@ -19,6 +19,13 @@
         android:text="@string/cv10_open_spatial_launcher" />
 
     <Button
+        android:id="@+id/cv10_phone_controller"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/cv10_phone_start" />
+
+    <Button
         android:id="@+id/cv10_background_restricted"
         style="?android:attr/borderlessButtonStyle"
         android:layout_width="match_parent"

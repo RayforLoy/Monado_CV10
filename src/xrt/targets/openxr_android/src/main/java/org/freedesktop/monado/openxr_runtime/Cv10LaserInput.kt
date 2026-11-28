@@ -14,15 +14,12 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowInsets
 import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.hypot
-import kotlin.math.sqrt
 
 /** Turns the foreground phone into a pointer. The menu spans [-1, 1], with right and down positive. */
 internal class Cv10LaserInput(
     private val view: View,
     private val onAim: (Float, Float) -> Unit,
-    private val onConfirm: (Float, Float) -> Unit,
+    private val onConfirm: () -> Unit,
     private val onBack: () -> Unit,
     private val onHome: () -> Unit,
     private val onRecenter: () -> Unit,
@@ -32,16 +29,9 @@ internal class Cv10LaserInput(
     private val rotationSensor = sensors?.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR)
         ?: sensors?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     private val density = view.resources.displayMetrics.density
-    private val sample = FloatArray(9)
-    private val forward = FloatArray(3)
-    private val right = FloatArray(3)
-    private val up = FloatArray(3)
+    private val orientation = Cv10PhoneOrientation()
 
     private var running = false
-    private var hasSample = false
-    private var headingAxis = 2
-    private var headingSign = -1f
-    private var displayRotation = Surface.ROTATION_0
     private var aimX = 0f
     private var aimY = 0f
 
@@ -82,14 +72,14 @@ internal class Cv10LaserInput(
         if (!running) return
         running = false
         sensors?.unregisterListener(this)
-        hasSample = false
+        orientation.reset()
         cancelTouch()
     }
 
-    fun confirm() = onConfirm(aimX, aimY)
+    fun confirm() = onConfirm()
 
     fun recenter() {
-        if (hasSample) calibrate()
+        orientation.center()
         updateAim(0f, 0f)
         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
         onRecenter()
@@ -99,48 +89,14 @@ internal class Cv10LaserInput(
 
     override fun onSensorChanged(event: SensorEvent) {
         if (!running) return
-        SensorManager.getRotationMatrixFromVector(sample, event.values)
-        if (!hasSample || displayRotation != (view.display?.rotation ?: Surface.ROTATION_0)) {
-            hasSample = true
-            calibrate()
+        if (orientation.update(event.values, view.display?.rotation ?: Surface.ROTATION_0)) {
             updateAim(0f, 0f)
             return
         }
-
-        val x = headingSign * sample[headingAxis]
-        val y = headingSign * sample[headingAxis + 3]
-        val z = headingSign * sample[headingAxis + 6]
-        val horizontal = right[0] * x + right[1] * y
-        val vertical = up[0] * x + up[1] * y + up[2] * z
-        val depth = forward[0] * x + forward[1] * y + forward[2] * z
-        val targetX = atan2(horizontal, depth) / 0.52f
+        val targetX = orientation.yaw / 0.52f
         // Elevation increases upward while menu Y increases downward.
-        val targetY = -atan2(vertical, hypot(horizontal, depth)) / 0.40f
+        val targetY = -orientation.pitch / 0.40f
         updateAim(aimX + (targetX - aimX) * 0.35f, aimY + (targetY - aimY) * 0.35f)
-    }
-
-    private fun calibrate() {
-        displayRotation = view.display?.rotation ?: Surface.ROTATION_0
-        // A flat phone points from its top edge. An upright phone points from its back.
-        val topAxis = if (displayRotation == Surface.ROTATION_90 ||
-            displayRotation == Surface.ROTATION_270) 0 else 1
-        if (abs(sample[topAxis + 6]) < abs(sample[8])) {
-            headingAxis = topAxis
-            headingSign = if (displayRotation == Surface.ROTATION_90 ||
-                displayRotation == Surface.ROTATION_180) -1f else 1f
-        } else {
-            headingAxis = 2
-            headingSign = -1f
-        }
-        for (i in forward.indices) forward[i] = headingSign * sample[3 * i + headingAxis]
-
-        // The world's Z is gravity-up. Keep the pointer level even when the phone is rolled.
-        val horizontalLength = sqrt(forward[0] * forward[0] + forward[1] * forward[1])
-        right[0] = forward[1] / horizontalLength
-        right[1] = -forward[0] / horizontalLength
-        up[0] = right[1] * forward[2]
-        up[1] = -right[0] * forward[2]
-        up[2] = horizontalLength
     }
 
     override fun onTouch(v: View, event: MotionEvent): Boolean {
@@ -260,7 +216,7 @@ internal class Cv10LaserInput(
     }
 
     private fun aimByTouch(x: Float, y: Float) {
-        if (hasSample || zone != Zone.POINTER || view.width <= 0 || view.height <= 0) return
+        if (orientation.hasSample || zone != Zone.POINTER || view.width <= 0 || view.height <= 0) return
         updateAim((2 * x / view.width - 1).coerceIn(-1f, 1f), (2 * y / view.height - 1).coerceIn(-1f, 1f))
     }
 

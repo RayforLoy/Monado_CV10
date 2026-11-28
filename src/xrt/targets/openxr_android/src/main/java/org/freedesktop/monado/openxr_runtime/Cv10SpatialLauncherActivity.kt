@@ -32,11 +32,15 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.annotation.Keep
 import androidx.core.content.ContextCompat
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import org.freedesktop.monado.android_common.Cv10UsbAccess
 import org.freedesktop.monado.auxiliary.MonadoView
+
+private const val PANEL_WIDTH = 1280
+private const val PANEL_HEIGHT = 720
 
 /** An offline OpenXR app picker that runs in a separate client process. */
 class Cv10SpatialLauncherActivity : Activity() {
@@ -123,7 +127,7 @@ class Cv10SpatialLauncherActivity : Activity() {
             Cv10LaserInput(
                 view = controls,
                 onAim = { x, y -> renderState?.setAim(x, y) },
-                onConfirm = ::confirm,
+                onConfirm = { renderState?.requestPhoneClick() },
                 onBack = { close() },
                 onHome = ::goHome,
                 onRecenter = { renderState?.recenter() },
@@ -161,6 +165,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     override fun onResume() {
         super.onResume()
         resumed = true
+        Cv10PhoneControllerService.showSpatialLauncher(this, true)
         if (hasWindowFocus()) controllerInputSince = SystemClock.uptimeMillis()
         updateControls()
         Cv10ControllerLauncherInput.requestState(this)
@@ -169,6 +174,7 @@ class Cv10SpatialLauncherActivity : Activity() {
     override fun onPause() {
         directLaunch.onPause()
         resumed = false
+        Cv10PhoneControllerService.showSpatialLauncher(this, false)
         controllerInputSince = Long.MAX_VALUE
         input.stop()
         super.onPause()
@@ -215,7 +221,12 @@ class Cv10SpatialLauncherActivity : Activity() {
                         if (renderState?.ready == true && !closing) updateControls()
                     }
                 },
-                onControllerClick = { x, y -> runOnUiThread { if (canUseController()) confirm(x, y) } },
+                onPointerClick = { x, y, phone ->
+                    runOnUiThread {
+                        val phoneReady = resumed && hasWindowFocus() && controllerMode.usesPhone
+                        if (if (phone) phoneReady else canUseController()) confirm(x, y)
+                    }
+                },
                 onControllerBack = { runOnUiThread { if (canUseController()) close() } },
             )
         state.controllerMode = controllerMode.nativeValue
@@ -468,6 +479,7 @@ class Cv10SpatialLauncherActivity : Activity() {
         button(R.string.cv10_spatial_next, RectF(1002f, 613f, 1232f, 683f), false, next)
 
         hitTargets = targets
+        state.setPointerTargets(targets.map { it.bounds })
         state.updatePanel(bitmap)
     }
 
@@ -483,8 +495,6 @@ class Cv10SpatialLauncherActivity : Activity() {
 
     private companion object {
         private const val TAG = "Cv10SpatialLauncher"
-        private const val PANEL_WIDTH = 1280
-        private const val PANEL_HEIGHT = 720
         private const val PAGE_SIZE = 6
         private const val STARTUP_NOTICE_MILLIS = 15_000L
         private const val MONADO_CONNECT_ACTION = "org.freedesktop.monado.ipc.CONNECT"
@@ -510,13 +520,16 @@ private enum class LauncherControllerMode(val nativeValue: Int, val usesPhone: B
 /** Single-writer render commands shared by the Android UI and the OpenXR frame loop. */
 @Keep
 internal class SpatialLauncherState(
-    private val onControllerClick: (Float, Float) -> Unit = { _, _ -> },
+    private val onPointerClick: (Float, Float, Boolean) -> Unit = { _, _, _ -> },
     private val onControllerBack: () -> Unit = {},
     private val onReady: () -> Unit,
 ) {
     private val panel = AtomicReference<Bitmap>()
     private val packedAim = AtomicLong()
+    private val phoneClick = AtomicBoolean()
     private val recenterCount = AtomicInteger()
+
+    @Volatile private var pointerTargets = emptyList<RectF>()
 
     @Volatile var stop = false
     @Volatile var controllerMode = 0
@@ -537,7 +550,21 @@ internal class SpatialLauncherState(
 
     fun aimBits(): Long = packedAim.get()
 
-    fun controllerClick(x: Float, y: Float) = onControllerClick(x, y)
+    fun setPointerTargets(bounds: List<RectF>) {
+        pointerTargets = bounds
+    }
+
+    fun pointerTarget(x: Float, y: Float): Boolean {
+        val canvasX = (x + 1f) * PANEL_WIDTH / 2f
+        val canvasY = (y + 1f) * PANEL_HEIGHT / 2f
+        return pointerTargets.any { it.contains(canvasX, canvasY) }
+    }
+
+    fun requestPhoneClick() { phoneClick.set(true) }
+
+    fun takePhoneClick() = phoneClick.getAndSet(false)
+
+    fun pointerClick(x: Float, y: Float, phone: Boolean) = onPointerClick(x, y, phone)
 
     fun controllerBack() = onControllerBack()
 

@@ -45,7 +45,9 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - 首次使用或重新插入眼镜后，可从 Monado 菜单选择 **CV10 USB access**，预先允许访问 **HUAWEI GLASS HID**。3D 启动器也会在开启会话前请求权限，允许后会自动打开菜单。若从 2D 列表点选 XR 应用触发了权限提示，允许后会继续启动所选应用。拒绝后会停留在列表，可再次点选重试。
 - 应用列表优先使用应用声明的 OpenXR 沉浸式入口。仅有普通启动入口、但在清单请求 OpenXR 权限的应用也出现在 **仅显示 XR 应用** 中，例如需要先选择串流主机的 Moonlight XR。应用仍会在手机上打开自己的设置界面。若应用两个标记都未声明，可取消 **仅显示 XR 应用** 或在 3D 菜单切到 **全部应用** 后打开。[Fold7 从应用启动器打开 Moonlight XR](history/fold7-offline-launcher.md#从应用启动器打开-moonlight-xr)
 - **手机控制时**，转动手机瞄准，轻点确认，中央区域横滑翻页。从两侧标记向内滑动返回，从底部标记向上滑后松手回菜单首页，保持约一秒会将菜单和光标一起回正。标记位于 Android 系统手势区内侧，屏幕最外沿由系统处理。折叠屏上使用前台启动器触摸区，电源键沿用 Android 行为。[华为 VR Glass 手机操控方式](https://consumer.huawei.com/cn/support/content/zh-cn00776840/)
-- **CF20 控制时**，已选用的 CF20 连上后自动接管指针，按确认键选择，返回键关闭 3D 菜单，横滑手柄触控板翻页。短按手柄主页键回菜单首页，长按约一秒使菜单和指针回正。断开后等待原手柄重连，也可轻触手机上的提示恢复手机控制。手机手势和上述按键只作用于 Monado 的启动器，第三方应用按自己的 OpenXR 绑定处理。新增手势和输入切换待实机验收。[原厂手机与 CF20 的切换](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/oem-controller-switching.md)
+- **CF20 控制时**，已选用的 CF20 连上后自动接管指针，按确认键选择，返回键关闭 3D 菜单，横滑手柄触控板翻页。短按手柄主页键回菜单首页，长按约一秒使菜单和指针回正。断开后等待原手柄重连，也可轻触手机上的提示恢复手机控制。[原厂手机与 CF20 的切换](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/oem-controller-switching.md)
+- **3D 菜单光标**采用原厂的世界空间规则。白色空心环落在命中的控件上，射线在约 80% 的命中距离处收尖。指向空处时，光环移到默认远端并缩为四分之一。菜单、环和射线逐眼绘制，共用深度缓冲。
+- **让手机控制第三方 OpenXR 应用**时，先在 2D **应用启动器**点 **手机操控 OpenXR 应用**。首次在 Android 设置允许悬浮窗后，返回再点一次。手机出现 **确认** 和 **瞄准回正** 按钮后，打开第三方 OpenXR 应用。转动手机瞄准，在悬浮控制条上点击确认。Monado 将它映射为右手 `khr/simple_controller` 的 `aim/pose` 和 `select/click`。已运行的应用需要重新打开 OpenXR 系统才能发现新启用的手机手柄。CF20 的有效报告优先，启用原厂 6DoF 双手模式时由套件占用左右手。点击控制条上的取消或通知里的 **停止手机手柄** 可关闭此模式。
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
 
 连接 CV10 时，内置 3D 菜单使用预览包自带的 Monado CV10，以适配镜片的双目方向。未连接 CV10 时，菜单先使用 Broker 选中的运行时，系统 Loader 报告不可用时再用内置运行时重试。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)

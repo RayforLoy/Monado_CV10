@@ -32,6 +32,17 @@ class Cv10LauncherActivity : Activity() {
         findViewById<View>(R.id.cv10_launch_spatial).setOnClickListener {
             startActivity(Intent(this, Cv10SpatialLauncherActivity::class.java))
         }
+        findViewById<View>(R.id.cv10_phone_controller).setOnClickListener {
+            if (!Settings.canDrawOverlays(this)) {
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.fromParts("package", packageName, null)))
+                } catch (_: ActivityNotFoundException) {
+                    Toast.makeText(this, R.string.cv10_phone_unavailable, Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                startForegroundService(Intent(this, Cv10PhoneControllerService::class.java))
+            }
+        }
         findViewById<View>(R.id.cv10_background_restricted).setOnClickListener {
             openAppInfo(packageName)
         }
