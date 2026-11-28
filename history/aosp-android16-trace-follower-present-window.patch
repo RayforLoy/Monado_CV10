@@ -1,0 +1,136 @@
+diff --git a/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h b/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
+index 27f791f..65c4f61 100644
+--- a/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
++++ b/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
+@@ -18,4 +18,5 @@
+
+ #include <chrono>
++#include <cstdint>
+ #include <optional>
+ #include <unordered_set>
+@@ -101,4 +102,10 @@ struct CompositionRefreshArgs {
+     ICEPowerCallback* powerCallback = nullptr;
+
++    struct FollowerPresentProbe {
++        uint64_t displayId;
++        std::optional<nsecs_t> nextPacesetterWakeNs;
++    };
++    std::optional<FollowerPresentProbe> followerPresentProbe;
++
+     // System time for when frame refresh starts. Used for stats.
+     nsecs_t refreshStartTime = 0;
+diff --git a/services/surfaceflinger/CompositionEngine/include/compositionengine/FollowerPresentWindow.h b/services/surfaceflinger/CompositionEngine/include/compositionengine/FollowerPresentWindow.h
+new file mode 100644
+index 0000000..28f3d39
+--- /dev/null
++++ b/services/surfaceflinger/CompositionEngine/include/compositionengine/FollowerPresentWindow.h
+@@ -0,0 +1,41 @@
++// SPDX-License-Identifier: Apache-2.0
++
++#pragma once
++
++#include <cstdint>
++#include <optional>
++
++namespace android::compositionengine {
++
++// Values are recorded in trace. An open window alone does not establish that the
++// current pacesetter composition is complete or that an output can be abandoned.
++enum class FollowerPresentWindow {
++    kOpen,
++    kFenceUnavailable,
++    kRetireSettling,
++    kNoScheduledPacesetterWake,
++    kNextPacesetterWakeTooClose,
++    kFollowerPresentTooClose,
++};
++
++constexpr FollowerPresentWindow checkFollowerPresentWindow(
++        int64_t nowNs, std::optional<int64_t> retireNs, std::optional<int64_t> nextPacesetterWakeNs,
++        int64_t expectedFollowerPresentNs) {
++    // Fold7 research budgets. Replace with measurements of the intended execution path.
++    constexpr int64_t kRetireGuardNs = 500'000;
++    constexpr int64_t kPacesetterWakeGuardNs = 2'000'000;
++    constexpr int64_t kFollowerPresentLeadNs = 7'300'000;
++
++    if (!retireNs) return FollowerPresentWindow::kFenceUnavailable;
++    if (nowNs - *retireNs < kRetireGuardNs) return FollowerPresentWindow::kRetireSettling;
++    if (!nextPacesetterWakeNs) return FollowerPresentWindow::kNoScheduledPacesetterWake;
++    if (*nextPacesetterWakeNs - nowNs < kPacesetterWakeGuardNs) {
++        return FollowerPresentWindow::kNextPacesetterWakeTooClose;
++    }
++    if (expectedFollowerPresentNs - nowNs < kFollowerPresentLeadNs) {
++        return FollowerPresentWindow::kFollowerPresentTooClose;
++    }
++    return FollowerPresentWindow::kOpen;
++}
++
++} // namespace android::compositionengine
+diff --git a/services/surfaceflinger/CompositionEngine/src/Output.cpp b/services/surfaceflinger/CompositionEngine/src/Output.cpp
+index 9fe0528..a1e2e61 100644
+--- a/services/surfaceflinger/CompositionEngine/src/Output.cpp
++++ b/services/surfaceflinger/CompositionEngine/src/Output.cpp
+@@ -22,4 +22,5 @@
+ #include <compositionengine/CompositionRefreshArgs.h>
+ #include <compositionengine/DisplayColorProfile.h>
++#include <compositionengine/FollowerPresentWindow.h>
+ #include <compositionengine/LayerFE.h>
+ #include <compositionengine/LayerFECompositionState.h>
+@@ -39,4 +40,5 @@
+ #include <com_android_graphics_libgui_flags.h>
+
++#include <cinttypes>
+ #include <optional>
+ #include <thread>
+@@ -484,4 +486,28 @@ ftl::Future<std::monostate> Output::present(
+     }
+     GpuCompositionResult result;
++    if (refreshArgs.followerPresentProbe && getState().isEnabled) {
++        const auto& probe = *refreshArgs.followerPresentProbe;
++        const auto id = getDisplayIdVariant().and_then(asPhysicalDisplayId);
++        if (id && id->value == probe.displayId) {
++            if (const auto target = refreshArgs.frameTargets.get(*id)) {
++                const auto& frameTarget = *target->get();
++                const nsecs_t signalNs = frameTarget.presentFenceForPreviousFrame()->getSignalTime();
++                const auto retireNs = Fence::isValidTimestamp(signalNs)
++                        ? std::optional<nsecs_t>{signalNs}
++                        : std::nullopt;
++                const nsecs_t nowNs = systemTime();
++                const nsecs_t followerExpectedNs = frameTarget.expectedPresentTime().ns();
++                const auto window = checkFollowerPresentWindow(nowNs, retireNs,
++                                                               probe.nextPacesetterWakeNs,
++                                                               followerExpectedNs);
++                // Observe before validation. The normal presentation and fence ownership carry on.
++                SFTRACE_FORMAT_INSTANT(
++                        "CV10 follower window display=%" PRIu64 " status=%d now=%" PRId64
++                        " fence=%" PRId64 " nextWake=%" PRId64 " expected=%" PRId64,
++                        id->value, static_cast<int>(window), nowNs, signalNs,
++                        probe.nextPacesetterWakeNs.value_or(0), followerExpectedNs);
++            }
++        }
++    }
+     const bool predictCompositionStrategy = canPredictCompositionStrategy(refreshArgs);
+     if (predictCompositionStrategy) {
+diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
+index c448169..2278c2c 100644
+--- a/services/surfaceflinger/SurfaceFlinger.cpp
++++ b/services/surfaceflinger/SurfaceFlinger.cpp
+@@ -3231,3 +3231,18 @@ CompositeResultsPerDisplay SurfaceFlinger::composite(
+     }
+
++    static const uint64_t probeFollowerId =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_probe_follower_display", 0);
++    static const uint64_t probePacesetterId =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_probe_pacesetter_display", 0);
++    if (probeFollowerId != 0 && probeFollowerId != pacesetterId.value &&
++        probePacesetterId == pacesetterId.value) {
++        const auto next = mScheduler->getScheduledFrameResult();
++        std::optional<nsecs_t> nextWakeNs;
++        if (next && next->vsyncTime > pacesetterTarget.expectedPresentTime()) {
++            nextWakeNs = next->callbackTime.ns();
++        }
++        mainThreadRefreshArgs.followerPresentProbe =
++                compositionengine::CompositionRefreshArgs::FollowerPresentProbe{probeFollowerId,
++                                                                                nextWakeNs};
++    }
+     mCompositionEngine->present(mainThreadRefreshArgs);

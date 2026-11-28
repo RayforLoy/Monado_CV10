@@ -17,6 +17,8 @@
 
 临时的每显示器 60 Hz 模式偏好与撤销系统峰值限制组合会将手机物理模式切到 120 Hz，已排除该组读数并恢复原设置。
 
+同一接线下用系统快捷设置的「有线 DeX」做了两次对照。手机均保持 ON/60，CV10 的逻辑显示重建后只提供 640×480 和 640×533 的 60 Hz 模式，实测活动模式为 640×480、60 Hz。第二次等待 4.5 秒后结果相同，因此没有在这个模式下启动 OpenXR。关掉 DeX 后恢复 3200×1600、90 Hz 输出时序。随后原版 Hello XR 进入 FOCUSED，127 个完成呈现时间戳给出 60.31/s，外显截图有双目蓝块，右镜相机亮度第 90 百分位仍为 0。[三星有线 DeX 切换说明](https://www.samsung.com/us/apps/dex/)
+
 用直接渲染的工作区再次采集时，手机一直亮屏 60 Hz，采样前后两张手机屏幕截图的 SHA-256 相同。七秒内仍有 419 次手机屏 HWC 调用，平均 12.51 ms，CV10 HWC 为 60.32 次/秒。
 
 ### 图层快照对采样的影响
@@ -130,6 +132,8 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 [主线程等待查询](fold7-hwc-present-stage-times.sql) 在两段强制外屏时钟追踪中均读到 `Waiting on HWC` 平均 0.002 ms，分别有 360 和 269 次。另一次强制 GPU 合成的追踪仍出现 419 次手机 `HwcPresentOrValidateDisplay 3`，平均 13.504 ms。AOSP 的 `getDeviceCompositionChanges` 允许 HWC 在验证阶段直接呈现，成功时随即记录已返回的 present 和 release fences。带有相同芯片平台标记的公开 Composer 源码会把显式 `validate` 和合并命令分别以 `validate_only=true` 和 `false` 传给 `CommitOrPrepare`。三星私有实现的具体路径仍需实测。[AOSP HWComposer](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/DisplayHardware/HWComposer.cpp#535) · [公开 Composer 实现](https://github.com/LineageOS/android_hardware_qcom_display/blob/28edbb21cf722c6ce5acdd7711af9cc692167a12/composer/AidlComposerClient.cpp#L1276)
 
 [逐屏拆分验证与呈现的补丁](aosp-android16-validate-only-display.patch) 默认关闭。实验系统启动 SurfaceFlinger 前，把 `debug.sf.cv10_validate_only_display` 设为内屏的 64 位物理显示 ID，以 `dumpsys SurfaceFlinger --display-id` 为准。当前采样里的 Composer 显示 ID `3` 是另一套编号。补丁让指定屏走 AOSP 已有的分开验证和呈现路径，沿用其栅栏、最早可呈现时间和释放流程。插桩中的 `skipEligible=1` 表示这帧原本会走合并路径。用同一批图层、模式和时钟做开关对照，记录内屏验证、内屏呈现及 CV10 实际 retire 间隔。等待若移到内屏实际提交，可把逐屏准入点放在提交前。若独立验证仍然同步等待，就需继续检查 HAL 验证链。此补丁已做四补丁联合正反向应用检查，尚未编译或部署。
+
+[提交窗口插桩补丁](aosp-android16-trace-follower-present-window.patch) 在实验系统上通过 `debug.sf.cv10_probe_pacesetter_display` 和 `debug.sf.cv10_probe_follower_display` 分别指定 CV10 和手机的 64 位物理显示 ID。合成前读取已排定的下一次 CV10 唤醒时间，手机输出在进入验证前再读上一帧栅栏，记录 `CV10 follower window`。按回放保留 retire 后 0.5 ms、CV10 下一次唤醒前 2 ms，以及手机预计呈现前 7.3 ms。缺少真实的下一次计划唤醒时单独标记。trace 的状态 0–5 分别对应窗口满足预算、上一栅栏无有效信号、retire 后保护期、无有效唤醒、CV10 时限不足、手机自身时限不足。该探针只记录判定，实际仍由原流程提交和处理缓冲释放。状态 0 还需结合 pacesetter 的实际完成事件，才能判断是否可以调度独立手机任务。八个条件边界已通过 Android arm64 编译检查，五补丁在独立 AOSP 基线正向应用和反向还原通过。量产 Fold7 仍运行原系统。
 
 从 Fold7 的 F9660ZCUDBZJ9 构建只读取得 `/vendor/lib64/libdrm.so`。SHA-256 为 `311a8f5fff41f49d7ae186a94aaf053f465d946b4e716deb1c4ac29fa1d21743`，Build ID 为 `5e3f95c5eb67ff212df8d1288c77a9f7`。ARM64 的 `drmModeAtomicCommit` 在 `0x13b48` 保存调用参数 `w2`，在 `0x13d48` 读回并在 `0x13e54` 写入 ioctl 结构的 flags。随后 `0x13e68` 把请求 `0xc03864bc` 传给 `drmIoctl`。因此需在上游 HAL 调用或内核入口观察该字段的实际值。量产系统拒绝 ADB 读取 Composer 服务、`libsdedrm.so`、`libsdmcore.so` 和 `msm_drm.ko` 的内容，仍无法确认实际调用选择了哪些 flags。[三星构建记录](https://doc.samsungmobile.com/SM-F9660/034393250731/eng.html)
 
@@ -437,6 +441,7 @@ The final build also displayed the workspace through the original cable with the
 - `hello-client-lit-gpu.perfetto-trace` 和 `hello-hwc-present-stage-times.txt` 补充比较了强制 GPU 合成和两轮强制外屏时钟的主线程等待。
 - `fold7-follower-workload-guard-{050,075}.txt` 保存长样本回放。 `fold7-vendor-present/CHCDBZJ9/` 保存只读采集的 `libdrm.so` 和相关反汇编。
 - `hello-lit-optical-on60-*` 记录 35% 电量、内屏 60 Hz 时的短测。Hello XR 进入 FOCUSED，外显截图有双目蓝块。桌面和样例的右镜相机画面都接近全黑，亮度第 90 百分位均为 0。固定相机当时未取得可核对的光学画面，样例已退出并回到手机桌面。
+- `hello-wired-dex-settled-*` 是有线 DeX 的活动模式和可选模式，`hello-after-wired-dex-*` 是恢复镜像后的外显实呈、右镜实拍和 OpenXR 会话记录。
 - `pocket-policy-static-phone-summary.txt` 和 `hello-policy-static-phone-hashes.txt`，记录工作区直出时静置的手机界面。
 - `pocket-lit-layer-state.perfetto-trace`、`lit-layer-present-mode-comparison.txt`、`hello-present-asap-comparison.txt`、`fold7-backpressure-stages.txt` 和对应 `*-monado.log`，记录快返回的 HWC 调用、图层与 Vulkan 调度对照。尽早呈现实验 APK SHA-256 为 `d377c303c99109361a5d5f3f6145253abca9ccc2714f322a25c0c973092a410d`。
 
