@@ -81,7 +81,9 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 | 自动选手机 | 0/361 | 0.001 ms | 0.008 ms |
 | 强制 CV10 | 359/359 | 15.965 ms | 0.011 ms |
 
-同一批内核事件中，强制 CV10 时钟的 359 次重叠调用均匹配到 CRTC 288 的上一帧 `signal_retire_fence`。每次新调用都先进入 DRM，上一帧的 retire fence 平均再过 15.856 ms 才发出信号。信号平均比 CRTC 工作结束早 0.072 ms，最多早 0.448 ms。手机正常领跑时没有重叠，熄屏对照没有手机 DRM 调用。这些读数锁定了等待的那一帧，也量出了 retire fence 与 CRTC 工作结束之间的差距。量产系统的 SurfaceFlinger present fence 是否传回同一个信号仍待核对。[Perfetto 查询](fold7-drm-pending-commit.sql)
+同一批内核事件中，强制 CV10 时钟的 359 次重叠调用均匹配到 CRTC 288 的上一帧 `signal_retire_fence`。每次新调用都先进入 DRM，上一帧的 retire fence 平均再过 15.856 ms 才发出信号。信号平均比 CRTC 工作结束早 0.072 ms，最多早 0.448 ms。手机正常领跑时没有重叠，熄屏对照没有手机 DRM 调用。这些读数锁定了等待的那一帧，也量出了 retire fence 与 CRTC 工作结束之间的差距。[Perfetto 查询](fold7-drm-pending-commit.sql)
+
+从两组亮屏追踪中按物理显示 ID 读取 SurfaceFlinger 的 `PrevFramePending`。强制 CV10 时钟时，手机显示 `4630946872173396372` 的 629 次检查全为待完成，627 次检查落在 CRTC 288 的 `complete_commit` 区间。系统自动选手机时钟时为 0/630。自动模式下，根据 `LastSignaledFrameTime` 打印的相对时间重建信号，629/630 个与内核 retire 区间结束时间相差不超过 0.5 ms。追踪的相对时间只保留两位小数，含日志调用误差，结果建立了时间对应关系。熄屏对照的 537 次检查均无待完成的手机呈现。现有 SurfaceFlinger 追踪可据此校验实验补丁是否实际延后了仍在等待的跟随屏。[SurfaceFlinger 与 DRM Perfetto 查询](fold7-surfaceflinger-pending-fence.sql)
 
 长等待发生在提交本帧栅栏以前。公开的同平台 DRM 内核代码在等同 CRTC 或同一平面的待完成提交前取得共享 `connection_mutex`，然后才准备栅栏和派发新工作。这与手机等待上一帧、CV10 同时被拖住的时间顺序相符。量产内核的具体锁和提交标志仍缺直接读数。[同平台 DRM 源码](https://github.com/LineageOS/android_kernel_qcom_sm8750-modules/blob/5d27ace07b893b611cf3ce1c301b760f32d59892/qcom/opensource/display-drivers/msm/msm_atomic.c#L871)
 
@@ -218,6 +220,21 @@ The comparison used two pairs in reverse order, the same saved Bilibili workspac
 Across the steady 300-frame Pocket XR timer windows, query sums had p50 values of 0.03–0.07 ms with 2×2 and 0.05–0.12 ms with 1×1. These readings cover the bracketed GLES commands. Pose-to-fence and end-to-end times varied between pairs, so the experiment remains off by default. Monado submitted 89.93–90.00 times/s, and all 3618 SurfaceFlinger presentation timestamps matched Vulkan feedback. All sampled frames used late projection. The simulated yaw fit was within 0.8 ms of the requested phase (0.15–0.23° RMS); the fitted phase is derived from tracing. External screenshots captured workspace content. The fixed right lens camera did not capture a visible window, so optical clarity and smear are unverified.
 
 The local fixtures use `pocket-quad-ffr-{a1-1,b1-0,b2-0,a2-1}-default-calibrated-true-0-2.0`. Pocket XR APK SHA-256 is `6ecd33f1dcab5393d71872b448db06080d961b439b9fe3d68bc660198ccb5ebb` and the paired Monado replay APK SHA-256 is `99d4fa267e8c0c1a113bbab17101d17be44eafa67d5cb0d0cbeccd3f750ccfc2c`. The previous Monado preview and Pocket XR APKs were restored after the experiment and both installed hashes were verified. The phone returned to its launcher at 60 Hz with 33% battery.
+
+#### Direct producer draw lead
+
+The launcher read the producer buffer about 2.8 ms before Monado drew in the preceding four-view samples. Depending on the run, 94–1313 of about 1350 draw records had a newer producer pre-swap timestamp by the start of the compositor draw. A pre-swap stamp only establishes that Pocket XR reached the swap call. BufferQueue publication, acquire fence completion and matching pose metadata can follow later.
+
+An isolated Pocket XR build requested a 3 ms earlier GLES wake without shifting the intended display time, pose target, or EGL presentation timestamp. The same APK provided the zero-lead controls. All arms used the Bilibili workspace, simulated yaw, four-view direct import and 2×2 full-field shading. Thermal status started at 1 for A1, B1 and B2, and 2 for A2. The experiment moved the median pre-swap time earlier relative to its EGL presentation timestamp by 1.0–1.5 ms. The gap from the launcher's read to Monado draw held at about 2.8 ms.
+
+| Run | Requested lead | CV10 actual / new source frames per second | Pocket pre-swap to CV10 present p50 / p95 |
+| --- | ---: | ---: | ---: |
+| A1 | 0 ms | 60.29 / 60.22 | 55.91 / 68.89 ms |
+| B1 | 3 ms | 60.36 / 59.67 | 57.77 / 59.53 ms |
+| B2 | 3 ms | 60.31 / 59.31 | 57.43 / 68.76 ms |
+| A2 | 0 ms | 60.31 / 60.18 | 56.42 / 57.79 ms |
+
+Monado submitted 90.00 times/s in all four runs, and all 3619 SurfaceFlinger presentation timestamps matched Vulkan feedback. Both lead runs had fewer new source frames per second and higher median delays than both controls. The p95 changes also differed across pairs. The Pocket XR branch retains its original draw schedule. The experimental APK, local patch and timing logs are archived under `pocket-bridge-lead-*` and `pocket-bridge-draw-lead-experiment.patch`. The APK SHA-256 is `0d7b37785a0406145077cc2d0766162bd718f86282e444c98f6ac316e97eca60`. The right lens camera captured no visible window in the B2 run. The previous APK hashes and the phone's 60 Hz mode were verified after restoring them.
 
 The traces are under `pocket-margin-*`, `pocket-pick-*`, `pocket-freecess-*`, `pocket-bg-unrestricted-*`, `pocket-direct-service-*`, and `pocket-controls-front-*` in the local evidence directory. `analyze-pocket-pipeline.py` joins source, draw, GPU and presentation timestamps. `analyze-pocket-pick-perfetto.py` finds the producer thread in the onset trace. The Monado diagnostic replay APK SHA-256 is `99d4fa267e8c0c1a113bbab17101d17be44eafa67d5cb0d0cbecd3f750ccfc2c`. The right-lens camera captured a dark image in this run, so the result describes the software rendering and presentation chain.
 
