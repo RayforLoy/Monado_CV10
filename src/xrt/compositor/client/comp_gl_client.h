@@ -130,6 +130,13 @@ typedef struct xrt_swapchain *(*client_gl_swapchain_create_func_t)(struct xrt_co
 typedef xrt_result_t (*client_gl_insert_fence_func_t)(struct xrt_compositor *xc,
                                                       xrt_graphics_sync_handle_t *out_handle);
 
+enum client_gl_frame_layers
+{
+	CLIENT_GL_FRAME_NO_LAYERS,
+	CLIENT_GL_FRAME_ANDROID_STREAM_ONLY,
+	CLIENT_GL_FRAME_REQUIRES_SYNC,
+};
+
 /*!
  * @class client_gl_compositor
  *
@@ -171,6 +178,7 @@ struct client_gl_compositor
 	 */
 	struct os_mutex context_mutex;
 
+	enum client_gl_frame_layers frame_layers;
 	bool renderdoc_enabled;
 };
 

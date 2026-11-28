@@ -27,9 +27,13 @@
 
 #include "client/comp_gl_client.h"
 
+#include "util/u_debug.h"
 #include "util/u_logging.h"
 #include "util/u_trace_marker.h"
 
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_skip_stream_gl_fence, "CV10_SKIP_STREAM_GL_FENCE", false)
+#endif
 
 
 /*
@@ -223,6 +227,7 @@ client_gl_compositor_discard_frame(struct xrt_compositor *xc, int64_t frame_id)
 static xrt_result_t
 client_gl_compositor_layer_begin(struct xrt_compositor *xc, const struct xrt_layer_frame_data *data)
 {
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_NO_LAYERS;
 	// Pipe down call into native compositor.
 	return xrt_comp_layer_begin(to_native_compositor(xc), data);
 }
@@ -238,9 +243,11 @@ client_gl_compositor_layer_projection(struct xrt_compositor *xc,
 
 	xcn = to_native_compositor(xc);
 	assert(data->type == XRT_LAYER_PROJECTION);
+	struct client_gl_compositor *c = client_gl_compositor(xc);
 	const bool android_stream = xsc[0]->android_stream;
 	for (uint32_t i = 0; i < data->view_count; ++i) {
 		if (xsc[i]->android_stream != android_stream) {
+			c->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 			return XRT_ERROR_INVALID_ARGUMENT;
 		}
 		xscn[i] = &client_gl_swapchain(xsc[i])->xscn->base;
@@ -248,6 +255,9 @@ client_gl_compositor_layer_projection(struct xrt_compositor *xc,
 	struct xrt_layer_data d = *data;
 	if (!android_stream) {
 		d.flip_y = !d.flip_y;
+		c->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
+	} else if (c->frame_layers == CLIENT_GL_FRAME_NO_LAYERS) {
+		c->frame_layers = CLIENT_GL_FRAME_ANDROID_STREAM_ONLY;
 	}
 
 	return xrt_comp_layer_projection(xcn, xdev, xscn, &d);
@@ -265,6 +275,7 @@ client_gl_compositor_layer_projection_depth(struct xrt_compositor *xc,
 	struct xrt_swapchain *d_xscn[XRT_MAX_VIEWS];
 
 	assert(data->type == XRT_LAYER_PROJECTION_DEPTH);
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	xcn = to_native_compositor(xc);
 	for (uint32_t i = 0; i < data->view_count; ++i) {
@@ -288,6 +299,7 @@ client_gl_compositor_layer_quad(struct xrt_compositor *xc,
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_QUAD);
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	xcn = to_native_compositor(xc);
 	xscfb = to_native_swapchain(xsc);
@@ -308,6 +320,7 @@ client_gl_compositor_layer_cube(struct xrt_compositor *xc,
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_CUBE);
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	xcn = to_native_compositor(xc);
 	xscfb = to_native_swapchain(xsc);
@@ -328,6 +341,7 @@ client_gl_compositor_layer_cylinder(struct xrt_compositor *xc,
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_CYLINDER);
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	xcn = to_native_compositor(xc);
 	xscfb = to_native_swapchain(xsc);
@@ -348,6 +362,7 @@ client_gl_compositor_layer_equirect1(struct xrt_compositor *xc,
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_EQUIRECT1);
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	xcn = to_native_compositor(xc);
 	xscfb = to_native_swapchain(xsc);
@@ -368,6 +383,7 @@ client_gl_compositor_layer_equirect2(struct xrt_compositor *xc,
 	struct xrt_swapchain *xscfb;
 
 	assert(data->type == XRT_LAYER_EQUIRECT2);
+	client_gl_compositor(xc)->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	xcn = to_native_compositor(xc);
 	xscfb = to_native_swapchain(xsc);
@@ -384,6 +400,7 @@ client_gl_compositor_layer_passthrough(struct xrt_compositor *xc,
                                        const struct xrt_layer_data *data)
 {
 	struct client_gl_compositor *c = client_gl_compositor(xc);
+	c->frame_layers = CLIENT_GL_FRAME_REQUIRES_SYNC;
 
 	assert(data->type == XRT_LAYER_PASSTHROUGH);
 
@@ -409,6 +426,16 @@ client_gl_compositor_layer_commit(struct xrt_compositor *xc, xrt_graphics_sync_h
 	assert(!xrt_graphics_sync_handle_is_valid(sync_handle));
 
 	sync_handle = XRT_GRAPHICS_SYNC_HANDLE_INVALID;
+
+#ifdef XRT_GRAPHICS_BUFFER_HANDLE_IS_AHARDWAREBUFFER
+	if (c->frame_layers == CLIENT_GL_FRAME_ANDROID_STREAM_ONLY && !c->renderdoc_enabled &&
+	    debug_get_bool_option_cv10_skip_stream_gl_fence()) {
+		// The private Android stream contract has the launcher wait for the producer's acquire fence.
+		// No images in this frame were written by the launcher's GL context.
+		COMP_TRACE_IDENT(cv10_stream_commit_without_gl_fence);
+		return xrt_comp_layer_commit(&c->xcn->base, sync_handle);
+	}
+#endif
 
 	xrt_result_t xret = client_gl_compositor_context_begin(xc, CLIENT_GL_CONTEXT_REASON_SYNCHRONIZE);
 	if (xret == XRT_SUCCESS) {

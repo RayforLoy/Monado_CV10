@@ -1805,16 +1805,20 @@ private:
 				end_info.layers = layers;
 			}
 		}
+		const bool trace_source = convert_time != nullptr && end_info.layerCount > 0 && capture_timestamp != 0;
+		const int64_t end_frame_begin_ns = trace_source ? monotonic_ns() : 0;
 		check(xrEndFrame(session, &end_info), "xrEndFrame");
-		if (convert_time && end_info.layerCount > 0 && capture_timestamp != 0) {
+		if (trace_source) {
+			const int64_t end_frame_ns = monotonic_ns() - end_frame_begin_ns;
 			timespec time{};
 			if (XR_SUCCEEDED(convert_time(instance, end_info.displayTime, &time))) {
 				const auto layer_time = static_cast<long long>(time.tv_sec) * 1'000'000'000 + time.tv_nsec;
 				__android_log_print(ANDROID_LOG_INFO, tag,
 				                    "CV10_SOURCE stamp=%lld layer=%lld stream_begin=%" PRId64
-				                    " stream_end=%" PRId64 " pending_fence=%d fence_wait=%" PRId64,
+				                    " stream_end=%" PRId64 " pending_fence=%d fence_wait=%" PRId64
+				                    " end_frame_ns=%" PRId64,
 				                    static_cast<long long>(capture_timestamp), layer_time, stream_begin_ns,
-				                    stream_end_ns, stream_pending_fence, stream_fence_wait_ns);
+				                    stream_end_ns, stream_pending_fence, stream_fence_wait_ns, end_frame_ns);
 			}
 		}
 	}
