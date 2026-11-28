@@ -108,6 +108,19 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 较窄的保护窗下，第一段有一次手机提交时限错判，两段均未预测到占用 CV10 保护窗的提交。加宽保护窗会明显减少可用机会。独立排程原型需要在真正进入 HWC 前复查栅栏和 CV10 的剩余预算，并记录跳过原因。回放使用基线 p95 主线程预算、现有追踪的重建时钟和固定提前量。它没有包含独立提交对 Qualcomm Composer 等待链、调度抖动或新 retire 相位的反馈，不能用来报告设备已达到 60/90 Hz。现有 AOSP 实验仍需系统构建验证。
 
+### Pocket XR 长样本的调度回放
+
+把同一回放扩到四段约 30 秒的 Bilibili 工作区转头追踪，涵盖 1280×1280、1600×1600 全视场和同一 1280×1280 中心。以 7 ms 手机呈现提前量和 CV10 前后各 0.5 ms 保护窗估算。第二组 1600 档有一次 23.001 ms 的 CV10 retire 间隔，不符合 90 Hz 网格。回放在此拆成两段，不跨段预测，跳过 3 个边界窗口，仍按整段采样时长计算机会数。
+
+| 工作区追踪 | 可重建手机时隙 | 仅在 CV10 帧开始检查 | 独立排程 | 独立排程超时 / 与 CV10 冲突 |
+| --- | ---: | ---: | ---: | ---: |
+| 第一组 1280 | 1802 / 1802 | 43.95/s | 60.25/s | 2 / 0 |
+| 第一组 1600 | 1799 / 1799 | 44.36/s | 60.28/s | 1 / 0 |
+| 第二组 1280 | 1802 / 1802 | 44.38/s | 60.02/s | 6 / 2 |
+| 第二组 1600 | 1800 / 1803 | 43.86/s | 59.88/s | 5 / 3 |
+
+将保护窗加至 0.75 ms 时，独立排程估计为 59.92–60.28/s，仍有 8 次冲突。手机准备工作开始前，每次新收到 CV10 retire 就重新选择窗口，也未消除冲突，两档保护窗下分别剩 5 和 8 次。这个回放支持按屏调度，同时表明仅靠过去的 retire 相位无法保证隔离。实验系统应在实际进入 HWC 前核对上一帧的栅栏和下一次 CV10 截止时间，并在时钟异常或准备超预算时放弃该手机时隙。回放没有改变 Fold7 的实际呈现。
+
 ### 独立提交应覆盖验证阶段
 
 用 [HWC 调用外层切片查询](fold7-hwc-present-ancestors.sql) 复查上述两段追踪。在第一段，359/359 个手机 `HwcPresentOrValidateDisplay 3` 都位于 SurfaceFlinger 主线程的 `Output::present → prepareFrame → chooseCompositionStrategy → getDeviceCompositionChanges` 内，平均耗时 14.138 ms。第二段有 268/268 个，平均 13.930 ms。这个调用发生在 `Output::present` 返回 future 之前。现有并行 present 从 `prepareFrame` 之后才开始，单独调整 `future.get()` 仍会保留实测的长等待。[AOSP Output](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/CompositionEngine/src/Output.cpp#470)
@@ -117,6 +130,8 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 [主线程等待查询](fold7-hwc-present-stage-times.sql) 在两段强制外屏时钟追踪中均读到 `Waiting on HWC` 平均 0.002 ms，分别有 360 和 269 次。另一次强制 GPU 合成的追踪仍出现 419 次手机 `HwcPresentOrValidateDisplay 3`，平均 13.504 ms。AOSP 的 `getDeviceCompositionChanges` 允许 HWC 在验证阶段直接呈现，成功时随即记录已返回的 present 和 release fences。带有相同芯片平台标记的公开 Composer 源码会把显式 `validate` 和合并命令分别以 `validate_only=true` 和 `false` 传给 `CommitOrPrepare`。三星私有实现的具体路径仍需实测。[AOSP HWComposer](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/DisplayHardware/HWComposer.cpp#535) · [公开 Composer 实现](https://github.com/LineageOS/android_hardware_qcom_display/blob/28edbb21cf722c6ce5acdd7711af9cc692167a12/composer/AidlComposerClient.cpp#L1276)
 
 [逐屏拆分验证与呈现的补丁](aosp-android16-validate-only-display.patch) 默认关闭。实验系统启动 SurfaceFlinger 前，把 `debug.sf.cv10_validate_only_display` 设为内屏的 64 位物理显示 ID，以 `dumpsys SurfaceFlinger --display-id` 为准。当前采样里的 Composer 显示 ID `3` 是另一套编号。补丁让指定屏走 AOSP 已有的分开验证和呈现路径，沿用其栅栏、最早可呈现时间和释放流程。插桩中的 `skipEligible=1` 表示这帧原本会走合并路径。用同一批图层、模式和时钟做开关对照，记录内屏验证、内屏呈现及 CV10 实际 retire 间隔。等待若移到内屏实际提交，可把逐屏准入点放在提交前。若独立验证仍然同步等待，就需继续检查 HAL 验证链。此补丁已做四补丁联合正反向应用检查，尚未编译或部署。
+
+从 Fold7 的 F9660ZCUDBZJ9 构建只读取得 `/vendor/lib64/libdrm.so`。SHA-256 为 `311a8f5fff41f49d7ae186a94aaf053f465d946b4e716deb1c4ac29fa1d21743`，Build ID 为 `5e3f95c5eb67ff212df8d1288c77a9f7`。ARM64 的 `drmModeAtomicCommit` 在 `0x13b48` 保存调用参数 `w2`，在 `0x13d48` 读回并在 `0x13e54` 写入 ioctl 结构的 flags。随后 `0x13e68` 把请求 `0xc03864bc` 传给 `drmIoctl`。因此需在上游 HAL 调用或内核入口观察该字段的实际值。量产系统拒绝 ADB 读取 Composer 服务、`libsdedrm.so`、`libsdmcore.so` 和 `msm_drm.ko` 的内容，仍无法确认实际调用选择了哪些 flags。[三星构建记录](https://doc.samsungmobile.com/SM-F9660/034393250731/eng.html)
 
 对已测量的阻塞路径，逐屏异步原型需覆盖 `Output::present` 中的同步验证，或在该调用前按准备就绪和时限把手机输出顺延到自己的机会。跨显示共享缓冲区仍需等待所有实际消费者，不能直接跳过 `postComposition` 的释放栅栏处理。原型验收要同时跟踪按屏在途帧、热插拔或切换模式时的旧任务、全局事务 VSync ID、虚拟输出及两块物理屏的真实呈现节奏。[与 ChatGPT 6 极高的源码审阅](https://chatgpt.com/c/6b09b179-eac8-83ea-8cae-87222af8fa41)
 
@@ -420,6 +435,7 @@ The final build also displayed the workspace through the original cable with the
 
 - `hello-drm-lock-lit-{auto,forced}.perfetto-trace`、`hello-drm-lock-lit-{auto,forced}-dump.txt` 和 `trace-fold7-drm-lock.ps1`，记录两块屏的帧周期提示、HWC 调用和采样前后的物理模式。
 - `hello-client-lit-gpu.perfetto-trace` 和 `hello-hwc-present-stage-times.txt` 补充比较了强制 GPU 合成和两轮强制外屏时钟的主线程等待。
+- `fold7-follower-workload-guard-{050,075}.txt` 保存长样本回放。 `fold7-vendor-present/CHCDBZJ9/` 保存只读采集的 `libdrm.so` 和相关反汇编。
 - `hello-lit-optical-on60-*` 记录 35% 电量、内屏 60 Hz 时的短测。Hello XR 进入 FOCUSED，外显截图有双目蓝块。桌面和样例的右镜相机画面都接近全黑，亮度第 90 百分位均为 0。固定相机当时未取得可核对的光学画面，样例已退出并回到手机桌面。
 - `pocket-policy-static-phone-summary.txt` 和 `hello-policy-static-phone-hashes.txt`，记录工作区直出时静置的手机界面。
 - `pocket-lit-layer-state.perfetto-trace`、`lit-layer-present-mode-comparison.txt`、`hello-present-asap-comparison.txt`、`fold7-backpressure-stages.txt` 和对应 `*-monado.log`，记录快返回的 HWC 调用、图层与 Vulkan 调度对照。尽早呈现实验 APK SHA-256 为 `d377c303c99109361a5d5f3f6145253abca9ccc2714f322a25c0c973092a410d`。

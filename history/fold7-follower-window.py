@@ -129,14 +129,28 @@ def load_reference(auto_path, cv10_only_path):
     )
 
 
-def cv10_dispatch_grid(retires, lead):
-    for earlier, later in zip(retires, retires[1:]):
+def cv10_dispatch_runs(retires, lead):
+    first_retire = 0
+    grid = []
+    for index, (earlier, later) in enumerate(zip(retires, retires[1:])):
         gap = later - earlier
         steps = round(gap / CV10_PERIOD)
         if steps < 1 or abs(gap - steps * CV10_PERIOD) > 750_000:
-            raise ValueError(f"CV10 retire gap {gap / MS:.3f} ms does not fit the 90 Hz grid")
-        for step in range(steps):
-            yield earlier + round(step * gap / steps) - lead
+            if len(grid) >= 2:
+                yield grid, retires[first_retire:index + 1]
+            first_retire = index + 1
+            grid = []
+            continue
+        grid.extend(earlier + round(step * gap / steps) - lead for step in range(steps))
+    if len(grid) >= 2:
+        yield grid, retires[first_retire:]
+
+
+def phone_windows(phone_retires, first_dispatch, last_dispatch):
+    first = bisect_left(phone_retires, first_dispatch)
+    last = bisect_left(phone_retires, last_dispatch)
+    timestamps = phone_retires[first:last]
+    return list(zip(timestamps, timestamps[1:]))
 
 
 def first_joint_dispatch(ready, latest, grid, check_lead):
@@ -169,6 +183,21 @@ def causal_dispatch(ready, latest, ideal, previous_retires, reference, cv10, pho
                                 predicted_grid, cv10, phone, guard + margin)
 
 
+def rechecked_dispatch(ready, latest, ideal, retires, reference, cv10, phone, guard, margin):
+    index = bisect_right(retires, ready)
+    while index:
+        chosen = causal_dispatch(ready, latest, ideal, retires[max(0, index - 5):index],
+                                 reference, cv10, phone, guard, margin)
+        # Re-plan if another real CV10 retire arrives before the phone work starts.
+        # Once phone preparation starts, its main-thread budget is already reserved.
+        wake = chosen - phone.before_hwc if chosen is not None else latest - phone.before_hwc - margin
+        if index == len(retires) or retires[index] > wake:
+            return chosen
+        ready = retires[index]
+        index = bisect_right(retires, ready, lo=index)
+    return None
+
+
 def overlaps_cv10(chosen, grid, cv10, phone, guard):
     index = bisect_left(grid, chosen)
     return (index == 0 or index == len(grid) or
@@ -178,26 +207,30 @@ def overlaps_cv10(chosen, grid, cv10, phone, guard):
 
 def report(path, reference, guard, sf_budgets, prediction_margin):
     capture = read_capture(path)
-    grid = list(cv10_dispatch_grid(capture.cv10_retires, reference.cv10_lead))
-    if len(grid) < 2:
-        raise ValueError("The trace contains too few CV10 retire fences")
-    windows = [(earlier, later) for earlier, later in zip(capture.phone_retires, capture.phone_retires[1:])
-               if grid[0] <= earlier and later < grid[-1]]
-    if not windows:
+    runs = list(cv10_dispatch_runs(capture.cv10_retires, reference.cv10_lead))
+    if not runs:
+        raise ValueError("The trace contains no reconstructable CV10 dispatch intervals")
+    full_windows = phone_windows(capture.phone_retires, runs[0][0][0], runs[-1][0][-1])
+    windows = [(earlier, later, grid, retires) for grid, retires in runs
+               for earlier, later in phone_windows(capture.phone_retires, grid[0], grid[-1])]
+    if not full_windows or not windows:
         raise ValueError("The trace contains no complete phone retire windows")
 
-    span = (windows[-1][1] - windows[0][0]) / (1_000 * MS)
-    print(f"{path.stem}: {len(windows)} windows over {span:.3f} s")
+    span = (full_windows[-1][1] - full_windows[0][0]) / (1_000 * MS)
+    excluded = len(full_windows) - len(windows)
+    print(f"{path.stem}: {len(windows)} of {len(full_windows)} windows over {span:.3f} s "
+          f"({excluded} excluded across {len(runs)} CV10 timing runs)")
     print("Phone fence lead | Frame-start check | HWC-start check | Independent HWC | Independent main thread | "
-          "Causal main thread (late/overlap)")
+          "Causal main thread (late/overlap) | Recheck at CV10 retire (late/overlap)")
     hwc_budgets = (DispatchBudget(0, reference.cv10_call_duration), DispatchBudget(0, reference.phone_call_duration))
     budget_options = (hwc_budgets, sf_budgets)
     for lead_ms in (1, 3, 5, 7, 9):
         early, late = 0, 0
         shifts = [[] for _ in budget_options]
-        causal_phases = []
-        deadline_miss, overlaps = 0, 0
-        for previous, target in windows:
+        causal_phases = [[], []]
+        deadline_misses = [0, 0]
+        overlaps = [0, 0]
+        for previous, target, grid, retires in windows:
             ready = previous + PHONE_RETIRE_GUARD
             latest = target - lead_ms * MS - reference.phone_call_duration
             ideal = target - reference.phone_lead
@@ -207,25 +240,34 @@ def report(path, reference, guard, sf_budgets, prediction_margin):
                 chosen = independent_dispatch(ready, latest, ideal, grid, cv10, phone, guard)
                 if chosen is not None:
                     phases.append(abs(chosen - ideal))
-            index = bisect_right(capture.cv10_retires, ready)
+            index = bisect_right(retires, ready)
             if index == 0:
                 continue
             predicted_target = previous + reference.phone_period
-            chosen = causal_dispatch(ready, predicted_target - lead_ms * MS - reference.phone_call_duration,
-                                     predicted_target - reference.phone_lead,
-                                     capture.cv10_retires[max(0, index - 5):index],
-                                     reference, *sf_budgets, guard, prediction_margin)
-            if chosen is None:
-                continue
-            late_dispatch = chosen > latest
-            overlap = overlaps_cv10(chosen, grid, *sf_budgets, guard)
-            deadline_miss += late_dispatch
-            overlaps += overlap
-            if not late_dispatch and not overlap:
-                causal_phases.append(abs(chosen - ideal))
+            predicted_latest = predicted_target - lead_ms * MS - reference.phone_call_duration
+            predicted_ideal = predicted_target - reference.phone_lead
+            choices = (
+                causal_dispatch(ready, predicted_latest, predicted_ideal, retires[max(0, index - 5):index],
+                                reference, *sf_budgets, guard, prediction_margin),
+                rechecked_dispatch(ready, predicted_latest, predicted_ideal, retires,
+                                   reference, *sf_budgets, guard, prediction_margin),
+            )
+            for choice, chosen in enumerate(choices):
+                if chosen is None:
+                    continue
+                late_dispatch = chosen > latest
+                overlap = overlaps_cv10(chosen, grid, *sf_budgets, guard)
+                deadline_misses[choice] += late_dispatch
+                overlaps[choice] += overlap
+                if not late_dispatch and not overlap:
+                    causal_phases[choice].append(abs(chosen - ideal))
         dispatch = " | ".join(format_dispatch(phases, span) for phases in shifts)
+        causal_dispatches = " | ".join(
+            f"{format_dispatch(phases, span)} ({late}/{overlap})"
+            for phases, late, overlap in zip(causal_phases, deadline_misses, overlaps)
+        )
         print(f"{lead_ms} ms | {early} ({early / span:.2f}/s) | {late} ({late / span:.2f}/s) | {dispatch} | "
-              f"{format_dispatch(causal_phases, span)} ({deadline_miss}/{overlaps})")
+              f"{causal_dispatches}")
 
 
 def format_dispatch(phases, span):
