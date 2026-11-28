@@ -156,6 +156,16 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 量产系统也启用了以时长配置合成相位的属性，但 ADB 将当前三个 8,333,333 ns 时长原样传给 SurfaceFlinger 调试事务 1047 时，返回 `Operation not permitted`，相位读回无变化。[AOSP SurfaceFlinger 调试事务](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/SurfaceFlinger.cpp#7609)
 
+### 进入合成前延后手机帧
+
+[手机帧准入实验补丁](aosp-android16-late-follower-admission.patch) 默认关闭，基于与前述实验相同的 AOSP 提交。在实验系统启动 SurfaceFlinger 前，将 `debug.sf.cv10_gate_pacesetter_display` 和 `debug.sf.cv10_gate_follower_display` 分别设为 CV10 和手机的 64 位物理显示 ID。全局 `commit` 完成后，调度器在生成当轮合成目标时读取手机的在途栅栏。栅栏未完成或距离最近一次 retire 未满 0.5 ms 时，本轮先提交 CV10，下轮重新检查手机。手机这一轮不进入 `prepareFrame` 或 HWC 验证，也不登记新的呈现栅栏或完成统计。trace `CV10 late gate` 的 `decision` 0、1、2 分别代表继续、等待栅栏和等待 retire 保护期。
+
+补丁依赖上游 `force_slower_follower_gpu_composition` 为跳过的手机输出保留先前的 GPU 读栅栏，仅在手机屏已开启、刷新率较低、独享图层栈且上一轮完全由 GPU 合成时使用。几何、颜色、缓冲移除和可信呈现状态有变更时继续走原流程。保护期根据追踪中 retire 信号到手机工作线程释放的最大观测间隔 0.448 ms 取整。这一阶段不分配 CV10 两次节拍之间的手机任务，也不执行单独的时限检查。
+
+用手机熄屏对照估算，`commit` 结束到 CV10 进入 HWC 的中位间隔为 0.130 ms，帧开始到进入 HWC 则为 0.652 ms。在四段相同 Bilibili 场景的回放里，以 7 ms 手机呈现提前量计算，手机在 CV10 帧开始时有 43.79–44.26 次/秒的可用机会，推迟到 `commit` 后有 46.80–47.21 次/秒，推迟到 HWC 开始时有 47.54–47.75 次/秒。按手机自身时限独立排程的模型给出 59.85–60.28 次/秒，四段合计仍有六次与 CV10 的预计冲突。数据来自 [回放脚本](fold7-follower-window.py)，输出为本机 `ffr-quad/fold7-follower-late-gate-replay.txt`，计算的是手机可交帧机会。
+
+栅栏判定的八个边界用 Android NDK 编译，并在 Fold7 的 arm64 用户空间通过。六份 AOSP 补丁按文档顺序正向应用、反向还原通过。本轮没有构建完整 SurfaceFlinger，Fold7 仍使用量产系统。实验系统应先用 Hello XR 对照，确认判定 1、2 时没有当轮手机 HWC 调用，再在相同 Pocket XR 工作区记录手机和 CV10 的实际呈现时间、栅栏释放及热状态，判断延后策略是否消除了跨屏等待。
+
 ## Pocket 工作区性能对照
 
 每眼 2240×2240，GLES 固定中心 1×1、外围 2×2。两条路径保持同一 Bilibili 工作区，使用 34° 峰峰值、3 秒周期的模拟左右转头，连续比较约 15 秒；动态推荐内容随页面变化。熄屏对照的电池温度在 35.1–35.7°C，系统热状态分别为 1→2 和 2→2。右镜固定相机确认内容出画，刷新率由呈现时间戳统计。延迟是模拟头动信号的相位拟合，不是光学测得的运动到光子时延。

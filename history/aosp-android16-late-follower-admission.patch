@@ -1,0 +1,160 @@
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.cpp b/services/surfaceflinger/Scheduler/Scheduler.cpp
+index 18e6fcc..ffd6ae4 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.cpp
++++ b/services/surfaceflinger/Scheduler/Scheduler.cpp
+@@ -490,6 +490,9 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+         if (!ftl::contains(presentableDisplays, id)) continue;
+ 
+         FrameTargeter& targeter = *display.targeterPtr;
++        if (compositor.deferFollowerBeforeComposition(pacesetterPtr->displayId, id, targeter)) {
++            continue;
++        }
+         targeters.try_emplace(id, &targeter);
+     }
+ 
+diff --git a/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h b/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h
+new file mode 100644
+index 0000000..1f35537
+--- /dev/null
++++ b/services/surfaceflinger/Scheduler/include/scheduler/FollowerFenceAdmission.h
+@@ -0,0 +1,24 @@
++// SPDX-License-Identifier: Apache-2.0
++
++#pragma once
++
++#include <cstdint>
++#include <optional>
++
++namespace android::scheduler {
++
++enum class FollowerFenceAdmission { kReady, kWaitingForFence, kRetireSettling };
++
++constexpr FollowerFenceAdmission followerFenceAdmission(int64_t nowNs, bool pending,
++                                                         std::optional<int64_t> signalNs) {
++    if (pending) return FollowerFenceAdmission::kWaitingForFence;
++    // SM-F9660 research captures showed that the CRTC worker can remain busy for
++    // 0.448 ms after it signals the previous retire fence.
++    constexpr int64_t kRetireGuardNs = 500'000;
++    if (signalNs && (nowNs < *signalNs || nowNs - *signalNs < kRetireGuardNs)) {
++        return FollowerFenceAdmission::kRetireSettling;
++    }
++    return FollowerFenceAdmission::kReady;
++}
++
++} // namespace android::scheduler
+diff --git a/services/surfaceflinger/Scheduler/include/scheduler/interface/ICompositor.h b/services/surfaceflinger/Scheduler/include/scheduler/interface/ICompositor.h
+index 8673a22..9e2ee67 100644
+--- a/services/surfaceflinger/Scheduler/include/scheduler/interface/ICompositor.h
++++ b/services/surfaceflinger/Scheduler/include/scheduler/interface/ICompositor.h
+@@ -42,6 +42,13 @@ struct ICompositor {
+     // i.e. whether a frame should be composited for each display.
+     virtual bool commit(PhysicalDisplayId pacesetterId, const scheduler::FrameTargets&) = 0;
+ 
++    // Called after the global commit and before building the list of outputs for
++    // composition. A deferred output does not consume a new present fence.
++    virtual bool deferFollowerBeforeComposition(PhysicalDisplayId, PhysicalDisplayId,
++                                                const scheduler::FrameTargeter&) {
++        return false;
++    }
++
+     // Composites a frame for each display. CompositionEngine performs GPU and/or HAL composition
+     // via RenderEngine and the Composer HAL, respectively.
+     virtual CompositeResultsPerDisplay composite(PhysicalDisplayId pacesetterId,
+diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
+index c448169..22aabf9 100644
+--- a/services/surfaceflinger/SurfaceFlinger.cpp
++++ b/services/surfaceflinger/SurfaceFlinger.cpp
+@@ -87,6 +87,7 @@
+ #include <processgroup/processgroup.h>
+ #include <renderengine/RenderEngine.h>
+ #include <renderengine/impl/ExternalTexture.h>
++#include <scheduler/FollowerFenceAdmission.h>
+ #include <scheduler/FrameTargeter.h>
+ #include <statslog_surfaceflinger_bootstrap.h>
+ #include <sys/types.h>
+@@ -3100,6 +3101,71 @@ SurfaceFlinger::RefreshArgsPartition SurfaceFlinger::addOutputsToRefreshArgs(
+             .offloadedRefreshArgs = offloadedRefreshArgs};
+ }
+ 
++bool SurfaceFlinger::deferFollowerBeforeComposition(PhysicalDisplayId pacesetterId,
++                                                    PhysicalDisplayId followerId,
++                                                    const scheduler::FrameTargeter& targeter) {
++    static const uint64_t cv10Id =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_gate_pacesetter_display", 0);
++    static const uint64_t phoneId =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_gate_follower_display", 0);
++    if (cv10Id == 0 || phoneId == 0 || pacesetterId.value != cv10Id || followerId.value != phoneId) {
++        return false;
++    }
++
++    // A deferred output must not consume global geometry, color or buffer cleanup work.
++    // The upstream forced-client path retains the previous GPU read fence when it skips
++    // a slower follower. Keep ordinary composition if that path is unavailable.
++    if (!FlagManager::getInstance().force_slower_follower_gpu_composition() ||
++        mGeometryDirty.load() || mVisibleRegionsDirty || mFrontEndDisplayInfosChanged ||
++        mDrawingState.colorMatrixChanged || !mBufferIdsToUncache.empty() ||
++        !mLayersWithBuffersRemoved.empty() || mNumTrustedPresentationListeners > 0) {
++        return false;
++    }
++
++    {
++        Mutex::Autolock lock(mStateLock);
++        const auto cv10 = getDisplayDeviceLocked(pacesetterId);
++        const auto phone = getDisplayDeviceLocked(followerId);
++        if (!cv10 || !phone || phone->getPowerMode() != hal::PowerMode::ON) return false;
++        const auto& cv10Selector = cv10->refreshRateSelector();
++        const auto& phoneSelector = phone->refreshRateSelector();
++        if (!cv10Selector.hasActiveMode() || !phoneSelector.hasActiveMode()) return false;
++        const Fps cv10Rate = cv10Selector.getActiveMode().modePtr->getVsyncRate();
++        const Fps phoneRate = phoneSelector.getActiveMode().modePtr->getVsyncRate();
++        if (!cv10Rate.isValid() || !phoneRate.isValid() ||
++            phoneRate.getPeriod() <= cv10Rate.getPeriod()) {
++            return false;
++        }
++
++        const auto& phoneState = phone->getCompositionDisplay()->getState();
++        if (!phoneState.isEnabled || !phoneState.usesClientComposition ||
++            phoneState.usesDeviceComposition) {
++            return false;
++        }
++        for (const auto& [_, display] : mDisplays) {
++            if (display->getId() != phone->getId() &&
++                display->getLayerStack() == phone->getLayerStack()) {
++                return false;
++            }
++        }
++    }
++
++    const nsecs_t now = systemTime();
++    const nsecs_t signal = targeter.target().presentFenceForPreviousFrame()->getSignalTime();
++    const size_t pending = targeter.countPresentFencesPendingAt(TimePoint::fromNs(now));
++    const auto retire = Fence::isValidTimestamp(signal) ? std::optional<int64_t>{signal}
++                                                        : std::nullopt;
++    const auto decision = scheduler::followerFenceAdmission(now, pending != 0, retire);
++    SFTRACE_FORMAT_INSTANT("CV10 late gate display=%" PRIu64 " decision=%d pending=%zu "
++                           "now=%" PRId64 " fence=%" PRId64,
++                           followerId.value, static_cast<int>(decision), pending, now, signal);
++    if (decision == scheduler::FollowerFenceAdmission::kReady) return false;
++
++    // Retain the follower's last actual presentation and reconsider it on the next tick.
++    scheduleComposite(FrameHint::kNone);
++    return true;
++}
++
+ std::future<void> SurfaceFlinger::offloadGpuCompositedDisplays(
+         compositionengine::CompositionRefreshArgs offloadedRefreshArgs,
+         std::vector<std::pair<Layer*, LayerFE*>> offloadedLayers) {
+diff --git a/services/surfaceflinger/SurfaceFlinger.h b/services/surfaceflinger/SurfaceFlinger.h
+index 3fa85ea..d1f7580 100644
+--- a/services/surfaceflinger/SurfaceFlinger.h
++++ b/services/surfaceflinger/SurfaceFlinger.h
+@@ -682,6 +682,9 @@ private:
+     void configure() override REQUIRES(kMainThreadContext);
+     bool commit(PhysicalDisplayId pacesetterId, const scheduler::FrameTargets&) override
+             REQUIRES(kMainThreadContext);
++    bool deferFollowerBeforeComposition(PhysicalDisplayId pacesetterId, PhysicalDisplayId followerId,
++                                        const scheduler::FrameTargeter&) override
++            REQUIRES(kMainThreadContext);
+     CompositeResultsPerDisplay composite(PhysicalDisplayId pacesetterId,
+                                          const scheduler::FrameTargeters&) override
+             REQUIRES(kMainThreadContext);

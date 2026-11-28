@@ -65,6 +65,7 @@ def intervals_to_next(starts, ends, max_interval):
 class DispatchBudget:
     before_hwc: int
     after_hwc: int
+    post_commit_to_hwc: int = 0
 
 
 def read_sf_budget(path, hwc):
@@ -86,21 +87,29 @@ def read_sf_budget(path, hwc):
                 SELECT ts, dur, track_id, SUBSTR(name, 11) AS token
                 FROM main_slices WHERE depth = 0 AND name GLOB 'composite *'
             ),
+            commits AS (
+                SELECT ts + dur AS finish, track_id, SUBSTR(name, 8) AS token
+                FROM main_slices WHERE depth = 0 AND name GLOB 'commit [0-9]*'
+            ),
             calls AS (
                 SELECT ts, track_id FROM main_slices WHERE name = 'HwcPresentOrValidateDisplay {hwc}'
             )
             SELECT calls.ts - begins.ts AS before_hwc,
-                   composites.ts + composites.dur - calls.ts AS after_hwc
+                   composites.ts + composites.dur - calls.ts AS after_hwc,
+                   calls.ts - commits.finish AS post_commit_to_hwc
             FROM calls JOIN composites ON calls.track_id = composites.track_id
                  AND calls.ts BETWEEN composites.ts AND composites.ts + composites.dur
             JOIN begins ON begins.track_id = composites.track_id AND begins.token = composites.token
                 AND begins.ts <= composites.ts
+            JOIN commits ON commits.track_id = composites.track_id
+                AND commits.token = composites.token AND commits.finish <= composites.ts
         """))
     if len(rows) < 20:
         raise ValueError(f"{path} has too few paired SurfaceFlinger frames for display {hwc}: {len(rows)}")
     return DispatchBudget(
         before_hwc=round(quantiles([row.before_hwc for row in rows], n=20)[18]),
         after_hwc=round(quantiles([row.after_hwc for row in rows], n=20)[18]),
+        post_commit_to_hwc=round(median(row.post_commit_to_hwc for row in rows)),
     ), len(rows)
 
 
@@ -220,12 +229,13 @@ def report(path, reference, guard, sf_budgets, prediction_margin):
     excluded = len(full_windows) - len(windows)
     print(f"{path.stem}: {len(windows)} of {len(full_windows)} windows over {span:.3f} s "
           f"({excluded} excluded across {len(runs)} CV10 timing runs)")
-    print("Phone fence lead | Frame-start check | HWC-start check | Independent HWC | Independent main thread | "
+    print("Phone fence lead | Frame-start check | Post-commit check | HWC-start check | "
+          "Independent HWC | Independent main thread | "
           "Causal main thread (late/overlap) | Recheck at CV10 retire (late/overlap)")
     hwc_budgets = (DispatchBudget(0, reference.cv10_call_duration), DispatchBudget(0, reference.phone_call_duration))
     budget_options = (hwc_budgets, sf_budgets)
     for lead_ms in (1, 3, 5, 7, 9):
-        early, late = 0, 0
+        early, post_commit, late = 0, 0, 0
         shifts = [[] for _ in budget_options]
         causal_phases = [[], []]
         deadline_misses = [0, 0]
@@ -235,6 +245,7 @@ def report(path, reference, guard, sf_budgets, prediction_margin):
             latest = target - lead_ms * MS - reference.phone_call_duration
             ideal = target - reference.phone_lead
             early += first_joint_dispatch(ready, latest, grid, reference.check_to_hwc)
+            post_commit += first_joint_dispatch(ready, latest, grid, sf_budgets[0].post_commit_to_hwc)
             late += first_joint_dispatch(ready, latest, grid, 0)
             for phases, (cv10, phone) in zip(shifts, budget_options):
                 chosen = independent_dispatch(ready, latest, ideal, grid, cv10, phone, guard)
@@ -266,7 +277,8 @@ def report(path, reference, guard, sf_budgets, prediction_margin):
             f"{format_dispatch(phases, span)} ({late}/{overlap})"
             for phases, late, overlap in zip(causal_phases, deadline_misses, overlaps)
         )
-        print(f"{lead_ms} ms | {early} ({early / span:.2f}/s) | {late} ({late / span:.2f}/s) | {dispatch} | "
+        print(f"{lead_ms} ms | {early} ({early / span:.2f}/s) | {post_commit} ({post_commit / span:.2f}/s) | "
+              f"{late} ({late / span:.2f}/s) | {dispatch} | "
               f"{causal_dispatches}")
 
 
@@ -298,6 +310,7 @@ if __name__ == "__main__":
     print("Main-thread p95 from beginFrame to HWC start and from HWC start to composite end: "
           f"CV10 {cv10_sf.before_hwc / MS:.3f} + {cv10_sf.after_hwc / MS:.3f} ms ({cv10_count} pairs), "
           f"phone baseline {phone_sf.before_hwc / MS:.3f} + {phone_sf.after_hwc / MS:.3f} ms ({phone_count} pairs).")
+    print(f"Post-commit check is {cv10_sf.post_commit_to_hwc / MS:.3f} ms before CV10 HWC in the baseline (median).")
     print(f"Causal prediction uses a phone period of {reference.phone_period / MS:.3f} ms "
           f"and {args.prediction_margin_ms:.2f} ms extra deadline reserve.")
     for capture in args.capture:
