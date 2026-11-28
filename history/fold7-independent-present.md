@@ -509,6 +509,16 @@ The [Vulkan differential check](fold7-packed-distortion-check.py) exercised the 
 
 The signed `Monado-CV10-packed-distortion-arm64-v8a.apk` has SHA-256 `8abd2835ae2653842b51a2a808814fbca8c02dfea361588ade449d0e21383daf`. For the Fold7 A/B, use the same APK, keep zero-copy, four views, GLES FFR, late warp and the phone mode fixed, and restart Monado after changing the flag. The runtime logs `CV10 packed red and green distortion maps` when the test path is active. Compare Monado GPU p95 by frame along with the actual CV10 presents and lens clarity. The mobile result remains unmeasured.
 
+#### Fused reprojection with identical scanout poses
+
+`debug.xrt.CV10_QUAD_CONSTANT_WARP=true` enables an optional degree-one projection before the perspective divide for fused four-view frames. It compares the two matrices for each eye. When both eyes have identical start and end matrices, the coefficients for `u*v` and `v*v` vanish. The shader skips two vector multiply-add operations per color coordinate. It still evaluates the red, green and blue samples separately, using the same 1280×1280 inset, blend and enhancement. If either eye has a different end matrix, the existing matrix or rolling polynomial route applies according to its existing flag. The original matrix calculation also handles coordinates close to or behind the projection plane. The new flag defaults to false.
+
+The [Windows Vulkan fixture](fold7-constant-warp-check.py) compared the production shader against the original matrix routine at 1.28 million coordinate pairs per pose case. Eight cases used identical per-eye start and end matrices, including mixed rotations and directions that intersect the projection plane. The RTX 3090 and AMD Radeon each measured a maximum UV difference of `2.39e-7` for those cases and agreed on visibility for all samples. The near-plane fallback matched exactly. The fixture also reran seven rolling-matrix cases. From an x64 Visual Studio Developer PowerShell, install `vulkan==1.3.275.1` with Python 3.11 and run `py -3.11 history/fold7-constant-warp-check.py --glslang <glslangValidator path> --gpu 0`.
+
+For the Fold7 A/B, keep `CV10_QUAD_WARP_POLYNOMIAL` fixed between arms, along with the pack, inset, late warp and GLES FFR settings. Restart Monado between runs. Use the same Pocket workspace and motion sequence, and compare Monado GPU time with the CV10 retire cadence, fresh source frames and right lens. The desktop fixture is a coordinate comparison. Fold7 GPU performance and lens output remain unmeasured for this change.
+
+The signed ARM64 `Monado-CV10-constant-warp-arm64-v8a.apk` from the experiment had SHA-256 `1dbdd1bb549b680d1804004c9dae3ff1f871703d908c9070e1604f78d476f828` and passed 16 KiB ZIP and ELF alignment checks. The local build used version code 105. For a comparison with the current `v0.1.4-rc.4` release (version code 107), build this experiment on the release source with a compatible version code before installing.
+
 ## 直出帧的姿态记录
 
 按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。

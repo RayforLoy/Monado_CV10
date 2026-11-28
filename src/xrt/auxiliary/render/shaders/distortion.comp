@@ -109,10 +109,14 @@ vec2 transform_uv(vec2 uv, uint iz)
 	return transform_uv_subimage(uv, iz);
 }
 
-vec2 transform_uv_timewarp_polynomial(vec2 uv, uint iz)
+vec2 transform_uv_timewarp_polynomial(vec2 uv, uint iz, bool rolling)
 {
-	vec3 x_coefficient = fma(ubo.scanout_warp[iz][3].xyz, vec3(uv.y), ubo.scanout_warp[iz][1].xyz);
-	vec3 y_coefficient = fma(ubo.scanout_warp[iz][4].xyz, vec3(uv.y), ubo.scanout_warp[iz][2].xyz);
+	vec3 x_coefficient = ubo.scanout_warp[iz][1].xyz;
+	vec3 y_coefficient = ubo.scanout_warp[iz][2].xyz;
+	if (rolling) {
+		x_coefficient = fma(ubo.scanout_warp[iz][3].xyz, vec3(uv.y), x_coefficient);
+		y_coefficient = fma(ubo.scanout_warp[iz][4].xyz, vec3(uv.y), y_coefficient);
+	}
 	vec3 clip = fma(x_coefficient, vec3(uv.x), fma(y_coefficient, vec3(uv.y), ubo.scanout_warp[iz][0].xyz));
 	if (clip.z < 0.125) {
 		// Keep the original clipping behaviour near and behind the projection plane,
@@ -229,9 +233,10 @@ void main()
 		vec2 half_texel = 0.5 / vec2(textureSize(source[iz], 0));
 		float radius = length(g_uv - vec2(0.5));
 		if (ubo.distortion_options.z > 0.0) {
-			r_uv = transform_uv_timewarp_polynomial(r_uv, iz);
-			g_uv = transform_uv_timewarp_polynomial(g_uv, iz);
-			b_uv = transform_uv_timewarp_polynomial(b_uv, iz);
+			bool rolling = ubo.distortion_options.z == 1.0;
+			r_uv = transform_uv_timewarp_polynomial(r_uv, iz, rolling);
+			g_uv = transform_uv_timewarp_polynomial(g_uv, iz, rolling);
+			b_uv = transform_uv_timewarp_polynomial(b_uv, iz, rolling);
 		} else {
 			r_uv = transform_uv_timewarp(r_uv, iz);
 			g_uv = transform_uv_timewarp(g_uv, iz);

@@ -7,6 +7,8 @@
  * @ingroup aux_render
  */
 
+#include <string.h>
+
 #include "math/m_api.h"
 #include "math/m_matrix_4x4_f64.h"
 #include "util/u_debug.h"
@@ -16,6 +18,7 @@
 #include "render/render_interface.h"
 
 DEBUG_GET_ONCE_BOOL_OPTION(cv10_quad_warp_polynomial, "CV10_QUAD_WARP_POLYNOMIAL", false)
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_quad_constant_warp, "CV10_QUAD_CONSTANT_WARP", false)
 
 /*
  *
@@ -334,9 +337,17 @@ dispatch_project_pipeline(struct render_compute *render,
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.distortion.ubo.mapped;
 	const bool use_warp_polynomial = insets != NULL && debug_get_bool_option_cv10_quad_warp_polynomial();
+	// When both poses are identical, the clip transform has no uv or v*v term.
+	const size_t matrix_bytes = r->view_count * sizeof(data->transform_timewarp_scanout_begin[0]);
+	const bool use_constant_warp = insets != NULL && debug_get_bool_option_cv10_quad_constant_warp() &&
+	                               memcmp(data->transform_timewarp_scanout_begin, data->transform_timewarp_scanout_end,
+	                                      matrix_bytes) == 0;
 	data->distortion_options[0] = r->enable_enhanced_render_mode ? 1.0f : 0.0f;
 	data->distortion_options[1] = insets != NULL ? RENDER_LAYER_DEFAULT_INSET_BLEND_EDGE : 0.0f;
 	data->distortion_options[2] = use_warp_polynomial ? 1.0f : 0.0f;
+	if (use_constant_warp) {
+		data->distortion_options[2] = 2.0f;
+	}
 	data->distortion_options[3] = r->distortion.packed_red_green ? 1.0f : 0.0f;
 	for (uint32_t i = 0; i < render->r->view_count; ++i) {
 		data->views[i] = views[i];
@@ -345,7 +356,7 @@ dispatch_project_pipeline(struct render_compute *render,
 			data->inset_rects[i] = insets[i].rect;
 			data->context_to_inset[i] = insets[i].context_to_inset;
 		}
-		if (use_warp_polynomial) {
+		if (use_warp_polynomial || use_constant_warp) {
 			calc_scanout_warp_polynomial(&data->pre_transforms[i], &data->transform_timewarp_scanout_begin[i],
 			                             &data->transform_timewarp_scanout_end[i], data->scanout_warp[i]);
 		}
