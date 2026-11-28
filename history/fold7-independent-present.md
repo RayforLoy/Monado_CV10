@@ -573,6 +573,16 @@ Pocket XR 的 7070 次较早启动中，7066 次在上一次 SurfaceFlinger 合�
 
 用[旧帧 retire 和工作线程退出查询](fold7-drm-pending-commit.sql)处理同四段追踪。7,212 次能把等待配到手机上一帧 retire，retire 到 `complete_commit` 退出的 p95 为 0.198–0.235 ms，最大 0.671 ms。原 0.5 ms 保护时间在其中四次短于这个间隔。为 HAL 实验选择保护时间时，可从 0.75 ms 起测，并保留时限检查。这只是追踪观测到的范围，不能保证更高系统负载下仍能覆盖。若把等待移到 HAL 的实际 DRM 请求前，应验证该线程等待期间 CV10 的 DRM 请求已经能进入内核，并继续按真实呈现栅栏验收。附加输出为 `fold7-hwc-batch-order-timing.json` 和 `fold7-phone-retire-worker-pocket.json`。
 
+### 内屏在进入 DRM 前等待上一帧
+
+[Qualcomm HAL 实验补丁](sm8750-cv10-guard-phone-retire.patch) 基于公开的 SM8750 display-core `89aa1914da50aae0fb1b2ebf3db38d34fba5f748`。默认关闭。实验系统初始化 Composer 前，可将 `vendor.display.cv10_retire_guard_crtc` 设为要观察的内屏 DRM CRTC 编号。量产追踪所见的编号为 288。实验只在该内屏已亮、60 Hz 且正常异步提交时生效，保留同步提交、刷新率切换、受保护会话和电源转换的原路径。
+
+实验在准备本次 DRM 请求前，至多等待旧帧栅栏 17 ms。收到信号后，以内核时间戳为准预留 0.75 ms，整个准入窗口为 18 ms。公开驱动的 `RETIRE_FENCE_OFFSET=1` 会让栅栏在下一次提交结束后触发。连续使用该模式时，等待更早一笔提交返回的栅栏，它对应当前在途帧。遇到失败、模式过渡或空提交时清理缓存，超时或栅栏无效时走原有提交并记录原因。[Qualcomm 连接器栅栏偏移](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/d50b305f7da9e14715a25120a4ac7b1a4b8b97c3/vendor/qcom/opensource/display-drivers/msm/sde/sde_connector.c#L2319-L2338) · [栅栏信号时序](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/d50b305f7da9e14715a25120a4ac7b1a4b8b97c3/vendor/qcom/opensource/display-drivers/msm/sde/sde_fence.c#L1129-L1139)
+
+四段 Pocket XR 追踪的 7,212 条配对记录中，从 `HWDeviceDRM::AtomicCommit` 入口到旧帧 retire 的 p99 为 16.28–16.43 ms，最大 16.70 ms，均落在 17 ms 的等待窗内。Fold7 上运行从补丁源码提取的 arm64 探针，覆盖 10 个合成等待用例和 6 个栅栏历史状态检查。未触发的测试描述符在 17.059 ms 返回。探针也用 Fold7 驱动生成的 EGL 原生栅栏成功走过真实的 `poll` 和 `SYNC_IOC_FILE_INFO`。这次栅栏由离屏绘制生成。文档中的时序回放依据量产系统原有调度。证据位于 `ffr-quad/cv10-retire-guard-poll-replay.json`、`ffr-quad/cv10-retire-guard-check-device.txt` 和 `ffr-quad/build-cv10-retire-guard-check.py`。
+
+完整 Composer 尚未安装。可替换 HAL 的实验系统中，用同一 ON/60 场景核对 `CV10 wait before DRM` 区间与 `CV10 retire guard` 结果。成功时应看到外屏的 `atomic_commit` 能进入内核，内屏随后才提交；也需要确认内屏持续有新帧时，两个显示的实呈节奏。如果 SurfaceFlinger 仍在同步等待手机 HWC，此处移出的等待仍会出现在上层，需要配合逐屏调度。
+
 ### 手机画面未变时复用上一帧
 
 量产机的一段 Pocket XR 静置手机画面追踪录到 CV10 420 次、手机 419 次 HWC 验证或提交，频率均约 60.32 次/秒，手机调用平均耗时 12.51 ms。另一组 Hello XR 的两次手机截图 SHA-256 一致，仍记录到持续的手机 HWC 调用。截图不能证明两次采样之间每一帧的图层状态，固件也不会因为两个画面看起来一样就自动跳过手机提交。原始证据为 `pocket-policy-static-phone.perfetto-trace` 和 `hello-policy-static-phone-hashes.txt`。

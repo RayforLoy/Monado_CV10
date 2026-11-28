@@ -18,9 +18,12 @@ WITH phone_workers AS MATERIALIZED (
 ), atomic_fences AS MATERIALIZED (
     SELECT commit_slice.ts AS enter_ts,
            commit_slice.ts + commit_slice.dur AS exit_ts,
-           fence.ts AS fence_ts
+           fence.ts AS fence_ts,
+           hal_commit.ts AS hal_entry_ts
     FROM slice AS commit_slice
     JOIN slice AS request ON request.id = commit_slice.parent_id
+    LEFT JOIN slice AS hal_commit ON hal_commit.id = request.parent_id
+        AND hal_commit.name = 'HWDeviceDRM::AtomicCommit::'
     JOIN slice AS fence ON fence.parent_id = commit_slice.id
     JOIN thread_track AS track ON track.id = commit_slice.track_id
     JOIN thread USING (utid)
@@ -61,5 +64,13 @@ SELECT COUNT(*) AS calls,
        ROUND(PERCENTILE(previous_end_ts - previous_retire_ts, 95) / 1e6, 3)
            AS p95_previous_retire_to_end_ms,
        COUNT(*) FILTER (WHERE previous_end_ts - previous_retire_ts > 500000)
-           AS exceeded_500us
+           AS exceeded_500us,
+       COUNT(*) FILTER (WHERE hal_entry_ts IS NOT NULL AND previous_retire_ts IS NOT NULL)
+           AS retire_guard_replay_matches,
+       ROUND(PERCENTILE(MAX(0, previous_retire_ts - hal_entry_ts), 99) / 1e6, 3)
+           AS retire_guard_replay_p99_ms,
+       ROUND(MAX(previous_retire_ts - hal_entry_ts) / 1e6, 3)
+           AS retire_guard_replay_max_ms,
+       COUNT(*) FILTER (WHERE previous_retire_ts - hal_entry_ts > 17000000)
+           AS retire_guard_replay_over_17ms
 FROM matched_retires

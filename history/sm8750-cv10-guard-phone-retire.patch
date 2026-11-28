@@ -1,0 +1,171 @@
+diff --git a/sdm/libs/dal/hw_device_drm.cpp b/sdm/libs/dal/hw_device_drm.cpp
+index 635378861ba3a87ad641c0ddae365096fa64941f..db231bc38458b5625e2894c9412bf9aba2a2359b 100644
+--- a/sdm/libs/dal/hw_device_drm.cpp
++++ b/sdm/libs/dal/hw_device_drm.cpp
+@@ -41,10 +41,13 @@
+ #include <drm/drm_fourcc.h>
+ #include <drm_lib_loader.h>
+ #include <drm_res_mgr.h>
++#include <errno.h>
+ #include <fcntl.h>
+ #include <inttypes.h>
+ #include <linux/fb.h>
++#include <linux/sync_file.h>
+ #include <math.h>
++#include <poll.h>
+ #include <stdio.h>
+ #include <string.h>
+ #include <sys/ioctl.h>
+@@ -148,6 +151,77 @@ using std::unordered_map;
+
+ namespace sdm {
+
++namespace {
++
++constexpr uint64_t kNanosecondsPerSecond = 1000000000;
++constexpr uint64_t kRetireGuardNs = 750000;
++constexpr int kRetirePollMs = 17;
++constexpr uint64_t kRetireBudgetNs = 18000000;
++
++uint64_t MonotonicNs() {
++  timespec now = {};
++  if (clock_gettime(CLOCK_MONOTONIC, &now)) {
++    return 0;
++  }
++  return static_cast<uint64_t>(now.tv_sec) * kNanosecondsPerSecond + now.tv_nsec;
++}
++
++const char *WaitForRetireGuard(int fd) {
++  if (fd < 0) {
++    return "CV10 retire guard invalid fence";
++  }
++
++  const uint64_t start = MonotonicNs();
++  if (!start) {
++    return "CV10 retire guard clock error";
++  }
++  const uint64_t deadline = start + kRetireBudgetNs;
++  pollfd fence_poll = {fd, POLLIN, 0};
++  const int ready = poll(&fence_poll, 1, kRetirePollMs);
++  if (!ready) {
++    return "CV10 retire guard timeout";
++  }
++  if (ready < 0 || !(fence_poll.revents & POLLIN) || (fence_poll.revents & POLLERR)) {
++    return "CV10 retire guard fence error";
++  }
++
++  // This is a connector fence straight from the DRM request, with one timeline.
++  sync_fence_info signal = {};
++  sync_file_info fence = {};
++  fence.num_fences = 1;
++  fence.sync_fence_info = reinterpret_cast<uintptr_t>(&signal);
++  if (ioctl(fd, SYNC_IOC_FILE_INFO, &fence) || fence.num_fences != 1 ||
++      fence.status != 1 || signal.status != 1) {
++    return "CV10 retire guard fence info error";
++  }
++
++  const uint64_t now = MonotonicNs();
++  if (!now || !signal.timestamp_ns || signal.timestamp_ns > now) {
++    return "CV10 retire guard clock error";
++  }
++  const uint64_t target = signal.timestamp_ns + kRetireGuardNs;
++  if (now > deadline || target > deadline) {
++    return "CV10 retire guard timeout";
++  }
++  if (now < target) {
++    timespec wake = {static_cast<time_t>(target / kNanosecondsPerSecond),
++                     static_cast<long>(target % kNanosecondsPerSecond)};
++    int result;
++    do {
++      result = clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &wake, nullptr);
++    } while (result == EINTR && MonotonicNs() < deadline);
++    if (result) {
++      return "CV10 retire guard sleep error";
++    }
++    if (MonotonicNs() > deadline) {
++      return "CV10 retire guard timeout";
++    }
++  }
++  return "CV10 retire guard ready";
++}
++
++}  // namespace
++
+ std::unordered_map<uint32_t, std::atomic<uint32_t>> HWDeviceDRM::hw_dest_scaler_blocks_used_;
+ std::atomic<uint32_t> HWDeviceDRM::hw_ai_scaler_blocks_used_(0);
+ std::unordered_map<uint32_t, std::mutex> HWDeviceDRM::cwb_state_lock_;
+@@ -765,6 +839,12 @@ DisplayError HWDeviceDRM::Init() {
+   Debug::GetProperty(ENABLE_BRIGHTNESS_DRM_PROP, &value);
+   enable_brightness_drm_prop_ = (value == 1);
+
++  value = 0;
++  cv10_retire_guard_enabled_ =
++      disp_type_ == DRMDisplayType::PERIPHERAL &&
++      Debug::GetProperty("vendor.display.cv10_retire_guard_crtc", &value) == kErrorNone &&
++      value > 0 && static_cast<uint32_t>(value) == token_.crtc_id;
++
+   return kErrorNone;
+ }
+
+@@ -2369,6 +2449,21 @@ DisplayError HWDeviceDRM::DefaultCommit(HWLayersInfo *hw_layers_info) {
+ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
+   DTRACE_SCOPED();
+
++  const uint32_t retire_offset = hw_layers_info->retire_fence_offset;
++  const bool guard_frame =
++      cv10_retire_guard_enabled_ && !synchronous_commit_ && !first_cycle_ && retire_offset <= 1 &&
++      !secure_display_active_ && tui_state_ == kTUIStateNone && !IsSeamlessTransition() &&
++      pending_power_state_ == kPowerStateNone && last_power_mode_ == DRMPowerMode::ON &&
++      display_attributes_[current_mode_index_].fps == 60;
++  if (guard_frame && cv10_previous_retire_) {
++    Fence::ScopedRef previous;
++    DTRACE_BEGIN("CV10 wait before DRM");
++    const char *result = WaitForRetireGuard(previous.Get(cv10_previous_retire_));
++    DTRACE_END();
++    DTRACE_BEGIN(result);
++    DTRACE_END();
++  }
++
+   int64_t release_fence_fd = -1;
+   int64_t retire_fence_fd = -1;
+
+@@ -2409,6 +2504,16 @@ DisplayError HWDeviceDRM::AtomicCommit(HWLayersInfo *hw_layers_info) {
+   int ret = drm_atomic_intf_->Commit(sync_commit, false /* retain_planes*/);
+   shared_ptr<Fence> release_fence = Fence::Create(INT(release_fence_fd), "release");
+   shared_ptr<Fence> retire_fence = Fence::Create(INT(retire_fence_fd), "retire");
++  if (cv10_retire_guard_enabled_) {
++    if (guard_frame && !ret) {
++      // Offset one signals on the next commit. Use the fence from one commit earlier.
++      cv10_previous_retire_ = retire_offset == 0 ? retire_fence : cv10_next_retire_;
++      cv10_next_retire_ = retire_offset == 1 ? retire_fence : nullptr;
++    } else {
++      cv10_previous_retire_.reset();
++      cv10_next_retire_.reset();
++    }
++  }
+   if (ret) {
+     DLOGE("%s failed with error %d crtc %d", __FUNCTION__, ret, token_.crtc_id);
+     DumpHWLayers(hw_layers_info);
+@@ -3376,6 +3481,8 @@ void HWDeviceDRM::AddDimLayerIfNeeded() {
+
+ DisplayError HWDeviceDRM::NullCommit(bool synchronous, bool retain_planes) {
+   DTRACE_SCOPED();
++  cv10_previous_retire_.reset();
++  cv10_next_retire_.reset();
+   AddDimLayerIfNeeded();
+   drm_atomic_intf_->Perform(DRMOps::NULL_COMMIT_PANEL_FEATURES, 0 /* argument is not used */);
+   int ret = drm_atomic_intf_->Commit(synchronous , retain_planes);
+diff --git a/sdm/libs/dal/hw_device_drm.h b/sdm/libs/dal/hw_device_drm.h
+index 2fa5d84769d9cd3c6f09cca098ab68994f857da8..95d3822a74130e1cab29a3aa17a9ed60b54c83a2 100644
+--- a/sdm/libs/dal/hw_device_drm.h
++++ b/sdm/libs/dal/hw_device_drm.h
+@@ -356,6 +356,9 @@ class HWDeviceDRM : public HWInterface {
+   std::vector<HWDisplayAttributes> display_attributes_ = {};
+   uint32_t current_mode_index_ = 0;
+   sde_drm::DRMConnectorInfo connector_info_ = {};
++  bool cv10_retire_guard_enabled_ = false;
++  shared_ptr<Fence> cv10_previous_retire_;
++  shared_ptr<Fence> cv10_next_retire_;
+   bool first_cycle_ = true;
+   bool first_null_cycle_ = true;
+   HWMixerAttributes mixer_attributes_ = {};
