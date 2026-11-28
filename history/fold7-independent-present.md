@@ -85,6 +85,8 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 从两组亮屏追踪中按物理显示 ID 读取 SurfaceFlinger 的 `PrevFramePending`。强制 CV10 时钟时，手机显示 `4630946872173396372` 的 629 次检查全为待完成，627 次检查落在 CRTC 288 的 `complete_commit` 区间。系统自动选手机时钟时为 0/630。自动模式下，根据 `LastSignaledFrameTime` 打印的相对时间重建信号，629/630 个与内核 retire 区间结束时间相差不超过 0.5 ms。追踪的相对时间只保留两位小数，含日志调用误差，结果建立了时间对应关系。熄屏对照的 537 次检查均无待完成的手机呈现。现有 SurfaceFlinger 追踪可据此校验实验补丁是否实际延后了仍在等待的跟随屏。[SurfaceFlinger 与 DRM Perfetto 查询](fold7-surfaceflinger-pending-fence.sql)
 
+以同一个 VSync ID 对齐两个目标器，用 CV10 的 `beginFrame … vsyncIn` 重建预计呈现时刻。强制 CV10 时钟的两段追踪中，629 次手机栅栏待完成检查有 627 次配到下一个内建屏 retire 信号。627 个信号全部迟于同批 CV10 预计呈现时刻超过 0.5 ms，两段各自的平均差为 10.347 和 10.342 ms。其中 243 次已向后调整过 CV10 的预计时刻。原调度时刻在这些样本里更早。AOSP 的跟随屏背压可在预计跟随屏 VSync 先到时容忍一个待完成栅栏。新查询使用的是实测 retire，说明这个硬件信号没有赶上该批 CV10 时限，启用背压后的实际跳过次数还需在系统构建上测量。[同批次时限 Perfetto 查询](fold7-slower-follower-deadline.sql)
+
 长等待发生在提交本帧栅栏以前。公开的同平台 DRM 内核代码在等同 CRTC 或同一平面的待完成提交前取得共享 `connection_mutex`，然后才准备栅栏和派发新工作。这与手机等待上一帧、CV10 同时被拖住的时间顺序相符。量产内核的具体锁和提交标志仍缺直接读数。[同平台 DRM 源码](https://github.com/LineageOS/android_kernel_qcom_sm8750-modules/blob/5d27ace07b893b611cf3ce1c301b760f32d59892/qcom/opensource/display-drivers/msm/msm_atomic.c#L871)
 
 现有系统的 `debug.sf.follower_display_backpressure` 属性可临时写入，但写成 `true` 后，正在运行的 SurfaceFlinger 仍报告对应标志为 `false`。上游实现首次读入时缓存属性。从手机读取的分区 aconfig 名单也没有该标志，因此没有证据支持用运行中的 DeviceConfig 开启。实测已还原属性。[AOSP FlagManager](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/common/FlagManager.cpp#227)
@@ -262,6 +264,24 @@ An A/B/B/A comparison used the same replay APK for all four arms. B requested a 
 The delay shortened the measured read-to-draw interval by 0.37–0.42 ms. The lower p95 ranged from 1.53 to 13.29 ms across the pairs, and the median rose in the first pair. Fresh-source rate was nearly unchanged. Monado submitted 90.00 frames/s. CV10 presented 60.31–60.36 times/s and all 3620 sampled actual timestamps matched. The simulated yaw fit remained within 1.3 ms of the requested phase in all arms with 0.19–0.23° RMS error. This fit uses tracked poses and CV10 timestamp feedback. The fixed right camera did not resolve the workspace, leaving optical clarity, smear and motion-to-photon delay unverified.
 
 The normal build keeps its existing latch timing. The archived `pocket-late-read-experiment.patch`, `pocket-late-read-*` traces and replay APK support repeating the test. The APK SHA-256 is `75b972a3a41e14e017791f4702d1a2ded0d08060716ff64518655809f5ed5bb8`.
+
+#### Producer wake phase feedback
+
+The experimental direct bridge returned the time of the last Monado image read and the predicted frame interval to Pocket XR over a nonblocking pipe. Pocket XR used those samples to schedule the next GLES draw roughly 2 ms before the predicted read. Source pose prediction and EGL timestamps retained their original time bases. The experiment kept GLES 2×2 shading for the full-field passes, 1×1 shading for the 1280×1280 inset, zero-copy import and fused Compute composition. Each sample replayed 15 seconds of yaw in the same Bilibili workspace with the phone panel lit at 60 Hz.
+
+| Arm | Thermal status | Battery temperature | Phase-aligned draws | Producer pre-swap to CV10 present, p50 / p95 | Fresh source images/s |
+| --- | --- | ---: | ---: | ---: | ---: |
+| A1, feedback off | 1 → 2 | 34.6°C | — | 54.68 / 67.10 ms | 57.18 |
+| B1, feedback on | 2 → 2 | 35.3°C | 569/1348 | 51.73 / 58.08 ms | 59.60 |
+| B2, feedback on | 2 → 2 | 35.6°C | 1349/1349 | 44.90 / 56.03 ms | 59.76 |
+| A3, feedback off after cold restart | 2 → 2 | 35.8°C | — | 44.34 / 55.82 ms | 59.55 |
+| B3, new Pocket XR with previous Monado | 2 → 2 | 36.2°C | — | 54.61 / 66.44 ms | 59.09 |
+
+A2 timed out before the first source buffer arrived. A3 repeated that control after a cold restart. In B2, pose sampling was within 1–4 ms before the next Monado read for every draw. A3 reached the same window for 1334/1347 draws with normal scheduling and produced essentially the same present latency. B3 opened through the existing pose protocol and rendered the four-view atlas, verifying fallback when Monado lacks the timing transaction. Keep normal wake scheduling until a repeatable latency gain is measured.
+
+Monado submitted 90.00 frames/s in all completed samples. CV10 presented 60.31–60.36 times/s. All 4524 sampled SurfaceFlinger presentation timestamps matched Vulkan feedback. Even in A3 and B2, the p95 interval from GPU completion to presentation was 48.50 and 49.37 ms, respectively. The fixed right camera did not resolve the workspace, so these samples do not establish optical smear, clarity or motion-to-photon latency.
+
+Local fixtures in `ffr-quad` use the `pocket-latch-phase-*` prefix. They include both source patches, the source timing analysis and the replay logs. The experimental Monado replay APK SHA-256 is `6eb60aa9b8cf9c777c20bee5add599ea7bfa92b977cac505cf6eb6c7e96bc674`. The Pocket XR APK SHA-256 is `fcf84ac15180d3219490c10262df5f9aee43d3b524d5e2ac3c7c07361c7c5c76`.
 
 ## 直出帧的姿态记录
 
