@@ -556,6 +556,19 @@ Evidence is in `ffr-quad/fold7-slot-ffr-{comparison,pose}.txt`, `fold7-slot-ffr-
 
 八项系统补丁按「每屏周期、呈现追踪、慢屏栅栏门、validate-only、跟随屏追踪、延后准入、独立时隙探针、主动唤醒」顺序在基线上正反向应用通过。尾部两项都应用后，Windows x64 和 Fold7 上的 Android arm64 C++ 检查通过。检查覆盖命中下一拍、超出相位容差、误认后一拍和无效周期。两端七条边界决策输出一致，结果见 `ffr-quad/fold7-follower-wake-check-{host,device}.txt`。补丁同时在上游 `MessageQueueTest` 加入保持已有唤醒和拒绝陈旧批次的用例。完整 SurfaceFlinger 与其测试套件尚未构建或部署。量产 Fold7 此时仍为内屏 1080×2520 @ 60 Hz，CV10 使用原厂线。
 
+### 批次内调用顺序与上一轮手机提交
+
+[批次顺序查询](fold7-hwc-batch-order.sql) 将两路 HWC 调用归到同一次 SurfaceFlinger 合成，再配对 CV10 的 DRM 请求与重叠的手机 atomic 提交。配对要求重叠至少 1 ms，并且 CV10 在手机 atomic 结束后 0.5 ms 内进入自己的 atomic。这是基于追踪切片的时序配对，锁和唤醒关系另见上面的内核栈采样。
+
+| 量产机对照 | 两路均调用 HWC 的批次 | CV10 先调用 | 配对到手机等待 | 手机在本批合成前已启动 |
+| --- | ---: | ---: | ---: | ---: |
+| Pocket XR 直出四轮，内屏 ON/60、CV10 时钟 | 7214 | 7214 | 7084 | 7070 |
+| Hello XR，内屏 ON/60、CV10 时钟 | 208 | 208 | 199 | 190 |
+| Hello XR，内屏 ON/60、自动时钟 | 209 | 0 | 209 | 0 |
+| Hello XR，内屏 OFF、CV10 时钟 | 0 | 0 | 0 | 0 |
+
+Pocket XR 的 7070 次较早启动中，7066 次在上一次 SurfaceFlinger 合成结束前就已启动。其余 4 次处于采样边界，缺少可对照的上一批结束时间。单独把 CV10 排到手机前面无法消除已经在途的 phone atomic 等待。手机动态更新的实验应从产生等待的那次提交着手，核对上一帧 retire、在途 phone atomic、CV10 唤醒和同一物理屏的新呈现栅栏。若把等待移到 HAL，则还要验证 HAL 等待期间未持有跨屏锁，且 CV10 的提交线程可继续运行。查询输出保存在 `ffr-quad/fold7-hwc-batch-order.txt`。
+
 ### 手机画面未变时复用上一帧
 
 量产机的一段 Pocket XR 静置手机画面追踪录到 CV10 420 次、手机 419 次 HWC 验证或提交，频率均约 60.32 次/秒，手机调用平均耗时 12.51 ms。另一组 Hello XR 的两次手机截图 SHA-256 一致，仍记录到持续的手机 HWC 调用。截图不能证明两次采样之间每一帧的图层状态，固件也不会因为两个画面看起来一样就自动跳过手机提交。原始证据为 `pocket-policy-static-phone.perfetto-trace` 和 `hello-policy-static-phone-hashes.txt`。
