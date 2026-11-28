@@ -1558,7 +1558,7 @@ private:
 	}
 
 	bool
-	draw_scene(XrTime time, std::array<XrCompositionLayerProjectionView, 2> &projection_views)
+	draw_scene(XrTime time, std::array<XrCompositionLayerProjectionView, 4> &projection_views)
 	{
 		XrViewLocateInfo info{XR_TYPE_VIEW_LOCATE_INFO};
 		info.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
@@ -1798,7 +1798,7 @@ private:
 			update_anchor(frame.predictedDisplayTime, panel_distance);
 			if (anchor_valid && draw_scene(frame.predictedDisplayTime, projection_views)) {
 				projection.space = local_space;
-				projection.viewCount = static_cast<uint32_t>(projection_views.size());
+				projection.viewCount = 2;
 				projection.views = projection_views.data();
 				layers[0] = reinterpret_cast<const XrCompositionLayerBaseHeader *>(&projection);
 				end_info.layerCount = 1;
