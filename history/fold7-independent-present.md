@@ -517,6 +517,23 @@ The panel-off control used the same uniform source pose with zero offset. During
 
 The final build also displayed the workspace through the original cable with the real CV10 IMU. With the phone at 60 Hz, all 884 unique uniform-pose frames with a `CVP2` reference applied late projection. The fixed right-lens camera captured the visible workspace. The automated check reached the phone trackpad, but its UI hierarchy did not expose the recenter button in this run. The handoff after a new recenter remains to be checked with the final build.
 
+#### Direct four-view GLES FFR on and off
+
+The powered original cable, lit 60 Hz phone panel and automatic SurfaceFlinger clock were held across two test orders. The Pocket XR fixture opened one centered Bilibili window and replayed the same 34° peak-to-peak yaw. The direct atlas carried a 1600×1600 context and an independent 1280×1280 inset per eye. GLES FFR changed the context from 1×1 to 2×2 sampling and kept the inset at 1×1. Both groups used the zero-copy hardware-buffer import, fused Compute compositor and CV10 scanout feedback. The app feed could refresh between runs. Battery temperature at capture start ranged from 32.2°C to 34.8°C, and Android thermal status ranged from 0 to 2 across the four runs.
+
+| Order | GLES FFR | Monado submits/s | CV10 presents/s | Fresh Pocket source frames shown/s | Pocket pre-swap to present p95 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| AB | On | 90.00 | 60.36 | 60.02 | 46.84 ms |
+| AB | Off | 90.00 | 60.33 | 60.07 | 46.84 ms |
+| BA | Off | 90.00 | 60.40 | 55.99 | 54.98 ms |
+| BA | On | 90.00 | 60.31 | 60.04 | 46.71 ms |
+
+Across those windows all 3619 Android present fences matched Vulkan feedback by frame number. Observed present intervals reached 22.22 ms at p95. Of the 1776 inferred missing 90 Hz slots, 1735 overlapped the phone's HWC PresentOrValidate and 1758 already had a newer Monado GPU result by the estimated SurfaceFlinger wake.
+
+In the BA order, sampling Adreno's system-wide `gpu_busy_percentage` and `devfreq/cur_freq` at approximately 5 Hz gave 46% median and 50% p95 GPU busy with FFR off, and 38% median and 41% p95 with FFR on. Median frequency rose from 607 to 660 MHz. These are device-wide samples at different clocks and thermal states, so the percentages cannot isolate the producer's GPU time. They show available GPU time during the cadence limit. The fitted software yaw phase after late warp ranged from −2.1 to +2.7 ms. Optical blur and clarity still need an optical measurement. The external-display screenshots contained the workspace and the fixed right-lens images had a black center.
+
+Evidence is in `ffr-quad/fold7-slot-ffr-{comparison,pose}.txt`, `fold7-slot-ffr-ba-gpu-{summary,series}.txt` and `pocket-inset-interleaved-slot-ffr-*`. The Monado replay APK was `611cbd69fd732e437180991f85c139cb009b6cf8fe4b1f5a8d02b0ce99f08ff6` and the Pocket fixture was `3abd1df3c67e6b0459a745ad353670cda1b7b91944e6c8d0ee588351cf601c5c`. The pre-test APKs and desktop were restored.
+
 ## 独立手机时隙探针
 
 [AOSP 调度探针](aosp-android16-probe-independent-follower-slot.patch) 基于同一 `frameworks/native` 提交。设置 `debug.sf.cv10_slot_pacesetter_display` 和 `debug.sf.cv10_slot_follower_display` 为两块屏的物理 ID 后生效。每次 CV10 批次结束后，用手机自身 VSync 跟踪器挑一段可用时间，并通过原有 SurfaceFlinger 主线程 Looper 安排探针。初始预算留出 2.75 ms 给手机合成、0.5 ms 给下次 CV10 唤醒，在手机预计呈现前至少 7.8 ms 开始。最近已知的内屏 retire 至少完成 0.5 ms。规划时另外给 retire 的预测误差留 0.5 ms、给内屏截止时间留 0.25 ms。回调重读两个时钟、手机最后实际 retire 和待完成栅栏，遇到新批次、热插拔、模式不一致、超期或手机时钟相位变化时放弃。若 CV10 下一次唤醒还未排定，可以用 CV10 跟踪器确定何时记录回调。回调判定窗口可用仍要求实际排定的唤醒。探针只记录 `CV10 slot plan`、`CV10 slot check`、`CV10 slot canceled`，维持原有输出、合成和栅栏行为。
