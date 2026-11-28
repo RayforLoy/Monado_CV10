@@ -283,6 +283,28 @@ Monado submitted 90.00 frames/s in all completed samples. CV10 presented 60.31�
 
 Local fixtures in `ffr-quad` use the `pocket-latch-phase-*` prefix. They include both source patches, the source timing analysis and the replay logs. The experimental Monado replay APK SHA-256 is `6eb60aa9b8cf9c777c20bee5add599ea7bfa92b977cac505cf6eb6c7e96bc674`. The Pocket XR APK SHA-256 is `fcf84ac15180d3219490c10262df5f9aee43d3b524d5e2ac3c7c07361c7c5c76`.
 
+#### Android present fences by buffer number
+
+Enable `android.surfaceflinger.frame` and `gfx` in Perfetto to separate time before SurfaceFlinger latches a Monado buffer from time spent downstream of the latch. The frame data source records queue, acquire, latch, RenderEngine composition and present fence events by layer and frame number. The replay log supplies Monado GPU timestamps and Vulkan present IDs. In the default mode, all 905 Android fence timestamps in the 15-second yaw window matched Vulkan's actual timestamps by frame number to within 1 μs after the clock conversion. A separate BLAST trace check matched 481 of those buffers to an acquire call inside the corresponding `vkQueuePresentKHR` interval. [Android frame event schema](https://perfetto.dev/docs/reference/trace-packet-proto#graphicsframeevent)
+
+Both runs used the same Bilibili workspace, a zero-copy four-view atlas, 2×2 GLES shading on the context views and full-rate 1280×1280 inset views. The phone remained lit at 60 Hz. Battery temperatures were 34.5°C and 34.8°C at the start of the captures. Thermal status moved from 1 to 2 in each run.
+
+| Interval or rate | Default MAILBOX | Single-buffer shared demand |
+| --- | ---: | ---: |
+| Monado successful submits/s | 90.00 | 90.00 |
+| CV10 layer present fences/s | 60.36 | 60.31 |
+| Buffer queued and acquired to latch, p50 / p95 | 3.14 / 9.23 ms | 3.34 / 8.75 ms |
+| Latch to present fence, p50 / p95 | 19.91 / 26.14 ms | 20.93 / 28.84 ms |
+| RenderEngine composite to present fence, p50 / p95 | 18.30 / 25.01 ms | 19.57 / 25.24 ms |
+| Estimated missed 90 Hz slots during phone HWC `PresentOrValidate` | 421/444 | 403/445 |
+| Estimated missed slots during CV10 HWC `PresentOrValidate` | 10/444 | 29/445 |
+
+Candidate missed slots were reconstructed within gaps aligned to the 11.111 ms scanout period within 0.5 ms. Overlap shows that the phone HWC call often spans the absent CV10 update. It does not independently establish which deadline was missed within each batch. The `crtc_commit:288` retire-fence joins above provide the corresponding wait-chain evidence.
+
+The shared-demand run used one Android buffer instead of five in the default trace. Its Vulkan feedback reported zero actual timestamps. The CV10 layer still produced 905 presents by Android's frame-numbered fence events. Keep MAILBOX for calibrated reprojection. The default run had a 32.48 / 43.56 ms p50/p95 from Pocket producer pre-swap to present. Its software yaw fit after calibrated reprojection was −0.5 ms, with 0.09° RMS error. The fixed camera did not resolve the right-lens image. Actual optical latency and smear remain open.
+
+The local `pocket-buffer-present-g1-*` and `pocket-buffer-present-shared-*` fixtures contain both captures and matching logs. Trace SHA-256 values are `57518e9b6d9bd4943629d5c9002748b8c860559ab05b2f56e6986f885b6febbb` and `206c2443bb6c5c5f9d9f955ab7e290d47af828f365ee32ee860d9c2ef5f7f78d`. The [analyzer](fold7-pocket-present-fences.py) accepts the trace, the Monado log, the exact `--layer` name and one `--hwc-id` for each physical output. In these traces, HWC 1 is CV10 and HWC 3 is the active phone panel.
+
 ## 直出帧的姿态记录
 
 按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。
