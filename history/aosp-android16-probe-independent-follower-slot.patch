@@ -1,0 +1,228 @@
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.cpp b/services/surfaceflinger/Scheduler/Scheduler.cpp
+index 18e6fcc..f4ca3f5 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.cpp
++++ b/services/surfaceflinger/Scheduler/Scheduler.cpp
+@@ -34,6 +34,7 @@
+ #include <ui/StaticDisplayInfo.h>
+ #include <utils/Timers.h>
+
++#include <scheduler/FollowerSlot.h>
+ #include <scheduler/interface/ICompositor.h>
+
+ #include <cinttypes>
+@@ -415,6 +416,7 @@ void Scheduler::run() {
+
+ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+                               TimePoint expectedVsyncTime) {
++    ++mFollowerSlotEpoch;
+     const auto debugPresentDelay = mDebugPresentDelay.load();
+     mDebugPresentDelay.store(std::nullopt);
+
+@@ -512,6 +514,109 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+         LOG_ALWAYS_FATAL_IF(!resultOpt);
+         targeter->endFrame(*resultOpt);
+     }
++
++    probeFollowerSlot(pacesetterPtr->displayId,
++                      pacesetterPtr->targeterPtr->target().expectedPresentTime());
++}
++
++void Scheduler::probeFollowerSlot(PhysicalDisplayId pacesetterId, TimePoint pacesetterPresent) {
++    static const uint64_t cv10Id =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_slot_pacesetter_display", 0);
++    static const uint64_t phoneId =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_slot_follower_display", 0);
++    if (cv10Id == 0 || phoneId == 0 || cv10Id == phoneId || pacesetterId.value != cv10Id) return;
++
++    const auto pacesetter = mDisplays.get(pacesetterId);
++    const auto follower = mDisplays.get(PhysicalDisplayId::fromValue(phoneId));
++    if (!pacesetter || !follower) return;
++    const auto& cv10 = pacesetter->get();
++    const auto& phone = follower->get();
++    if (cv10.powerMode != hal::PowerMode::ON || phone.powerMode != hal::PowerMode::ON ||
++        cv10.isModeChangePending || phone.isModeChangePending ||
++        !cv10.selectorPtr->hasActiveMode() || !phone.selectorPtr->hasActiveMode()) {
++        return;
++    }
++
++    const auto cv10Mode = cv10.selectorPtr->getActiveMode().modePtr;
++    const auto phoneMode = phone.selectorPtr->getActiveMode().modePtr;
++    const auto cv10Rate = cv10Mode->getVsyncRate();
++    const auto phoneRate = phoneMode->getVsyncRate();
++    if (!cv10Rate.isValid() || !phoneRate.isValid() ||
++        phoneRate.getPeriod() <= cv10Rate.getPeriod()) {
++        return;
++    }
++
++    const auto nextCv10 = getScheduledFrameResult();
++    const auto nextWake = nextCv10 && nextCv10->vsyncTime > pacesetterPresent
++            ? std::optional<int64_t>{nextCv10->callbackTime.ns()}
++            : std::nullopt;
++    const auto now = mClock->now();
++    // SurfaceFlinger may not have received the next request at the end of this batch.
++    // Use the tracker to wake the probe in that case. Admission still requires a real
++    // scheduled wake when the probe runs.
++    const auto nextCv10Boundary = cv10.schedulePtr->vsyncDeadlineAfter(
++            pacesetterPresent + Duration::fromNs(1));
++    const int64_t predictedWake = nextCv10Boundary.ns() -
++            mVsyncModulator->getVsyncConfig().sfWorkDuration.count();
++    const auto target = phone.schedulePtr->vsyncDeadlineAfter(
++            now + Duration::fromNs(kFollowerPlanningLeadNs));
++    const auto slot = planFollowerSlot(now.ns(), target.ns(), phone.schedulePtr->period().ns(),
++                                      nextWake.value_or(predictedWake));
++    SFTRACE_FORMAT_INSTANT("CV10 slot plan target=%" PRId64 " nextWake=%" PRId64
++                           " predictedWake=%" PRId64 " wake=%" PRId64 " latest=%" PRId64,
++                           target.ns(), nextWake.value_or(0), predictedWake, slot ? slot->wakeNs : 0,
++                           slot ? slot->latestStartNs : 0);
++    if (!slot) return;
++
++    // This callback checks admission only. The phone output, its buffers and all fence
++    // bookkeeping still belong to the normal composition cycle.
++    static_cast<void>(scheduleDelayed(
++            [this, epoch = mFollowerSlotEpoch, cv10Display = pacesetterId,
++             phoneDisplay = phone.displayId, cv10Schedule = cv10.schedulePtr,
++             phoneSchedule = phone.schedulePtr, cv10Mode, phoneMode, pacesetterPresent,
++             slot = *slot]() FTL_FAKE_GUARD(mDisplayLock) FTL_FAKE_GUARD(kMainThreadContext) {
++                const auto pacesetter = mDisplays.get(cv10Display);
++                const auto follower = mDisplays.get(phoneDisplay);
++                if (epoch != mFollowerSlotEpoch || !(mPacesetterDisplayId == cv10Display) ||
++                    !pacesetter || !follower) {
++                    SFTRACE_FORMAT_INSTANT("CV10 slot canceled target=%" PRId64,
++                                           slot.targetPresentNs);
++                    return;
++                }
++                const auto& cv10 = pacesetter->get();
++                const auto& phone = follower->get();
++                if (cv10.schedulePtr != cv10Schedule || phone.schedulePtr != phoneSchedule ||
++                    cv10.powerMode != hal::PowerMode::ON || phone.powerMode != hal::PowerMode::ON ||
++                    cv10.isModeChangePending || phone.isModeChangePending ||
++                    !cv10.selectorPtr->hasActiveMode() || !phone.selectorPtr->hasActiveMode() ||
++                    cv10.selectorPtr->getActiveMode().modePtr.get() != cv10Mode.get() ||
++                    phone.selectorPtr->getActiveMode().modePtr.get() != phoneMode.get()) {
++                    SFTRACE_FORMAT_INSTANT("CV10 slot canceled target=%" PRId64,
++                                           slot.targetPresentNs);
++                    return;
++                }
++
++                const auto next = getScheduledFrameResult();
++                const auto nextWake = next && next->vsyncTime > pacesetterPresent
++                        ? std::optional<int64_t>{next->callbackTime.ns()}
++                        : std::nullopt;
++                const auto& targeter = *phone.targeterPtr;
++                const auto signal = targeter.target().presentFenceForPreviousFrame()->getSignalTime();
++                const auto retire = Fence::isValidTimestamp(signal) ? std::optional<int64_t>{signal}
++                                                                   : std::nullopt;
++                const auto now = mClock->now();
++                const auto pending = targeter.countPresentFencesPendingAt(now);
++                const auto updatedTarget = phone.schedulePtr->vsyncDeadlineAfter(
++                        TimePoint::fromNs(slot.targetPresentNs - phone.schedulePtr->period().ns() / 2));
++                const auto result = recheckFollowerSlot(slot, now.ns(), pending != 0, retire,
++                                                        nextWake, updatedTarget.ns());
++                SFTRACE_FORMAT_INSTANT("CV10 slot check target=%" PRId64 " result=%d "
++                                       " now=%" PRId64 " retire=%" PRId64 " pending=%zu"
++                                       " nextWake=%" PRId64 " updatedTarget=%" PRId64,
++                                       slot.targetPresentNs, static_cast<int>(result), now.ns(),
++                                       signal, pending, nextWake.value_or(0), updatedTarget.ns());
++            },
++            std::max<int64_t>(0, slot->wakeNs - mClock->now().ns())));
+ }
+
+ std::optional<Fps> Scheduler::getFrameRateOverride(uid_t uid) const {
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.h b/services/surfaceflinger/Scheduler/Scheduler.h
+index c9410f9..11270ba 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.h
++++ b/services/surfaceflinger/Scheduler/Scheduler.h
+@@ -400,6 +400,7 @@ private:
+     // impl::MessageQueue overrides:
+     void onFrameSignal(ICompositor&, VsyncId, TimePoint expectedVsyncTime) override
+             REQUIRES(kMainThreadContext, mDisplayLock) EXCLUDES(mVsyncConfigLock);
++    void probeFollowerSlot(PhysicalDisplayId, TimePoint) REQUIRES(kMainThreadContext, mDisplayLock);
+
+     // Used to skip event dispatch before EventThread creation during boot.
+     // TODO: b/241285191 - Reorder Scheduler initialization to avoid this.
+@@ -569,6 +570,7 @@ private:
+
+     // Injected delay prior to compositing, for simulating jank.
+     float mPacesetterFrameDurationFractionToSkip GUARDED_BY(kMainThreadContext) = 0.f;
++    uint64_t mFollowerSlotEpoch GUARDED_BY(kMainThreadContext) = 0;
+
+     ISchedulerCallback& mSchedulerCallback;
+
+diff --git a/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h b/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h
+new file mode 100644
+index 0000000..fca5533
+--- /dev/null
++++ b/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h
+@@ -0,0 +1,72 @@
++// SPDX-License-Identifier: Apache-2.0
++
++#pragma once
++
++#include <algorithm>
++#include <cstdint>
++#include <optional>
++
++namespace android::scheduler {
++
++// Initial budgets for a complete phone-only composition on the Fold7 main thread.
++// They are sampled from the stock phone-led control and need validation on a system build.
++constexpr int64_t kFollowerRetireGuardNs = 500'000;
++constexpr int64_t kFollowerRetirePredictionSlackNs = 500'000;
++constexpr int64_t kFollowerWorkNs = 2'750'000;
++constexpr int64_t kPacesetterWakeGuardNs = 500'000;
++constexpr int64_t kFollowerStartLeadNs = 7'800'000;
++constexpr int64_t kFollowerDeadlinePredictionSlackNs = 250'000;
++constexpr int64_t kFollowerPlanningLeadNs = kFollowerStartLeadNs + kFollowerDeadlinePredictionSlackNs;
++constexpr int64_t kFollowerMaxPhaseChangeNs = 1'000'000;
++
++struct FollowerSlot {
++    int64_t targetPresentNs;
++    int64_t wakeNs;
++    int64_t latestStartNs;
++};
++
++constexpr std::optional<FollowerSlot> planFollowerSlot(int64_t nowNs, int64_t targetPresentNs,
++                                                       int64_t phonePeriodNs,
++                                                       std::optional<int64_t> nextCv10WakeNs) {
++    if (!nextCv10WakeNs || phonePeriodNs <= 0) return std::nullopt;
++    const int64_t estimatedReady = targetPresentNs - phonePeriodNs + kFollowerRetireGuardNs +
++            kFollowerRetirePredictionSlackNs;
++    const int64_t earliest = std::max(nowNs, estimatedReady);
++    const int64_t latest = std::min(targetPresentNs - kFollowerPlanningLeadNs,
++                                    *nextCv10WakeNs - kPacesetterWakeGuardNs - kFollowerWorkNs);
++    if (earliest > latest) return std::nullopt;
++    return FollowerSlot{targetPresentNs, earliest, latest};
++}
++
++enum class FollowerSlotResult {
++    kReady,
++    kOutsideReservation,
++    kFenceUnavailable,
++    kRetireSettling,
++    kPacesetterWakeUnavailable,
++    kPacesetterWakeTooClose,
++    kFollowerVsyncMoved,
++};
++
++constexpr FollowerSlotResult recheckFollowerSlot(const FollowerSlot& slot, int64_t nowNs,
++                                                 bool fencePending, std::optional<int64_t> retireNs,
++                                                 std::optional<int64_t> nextCv10WakeNs,
++                                                 int64_t updatedTargetPresentNs) {
++    if (nowNs < slot.wakeNs || nowNs > slot.latestStartNs) {
++        return FollowerSlotResult::kOutsideReservation;
++    }
++    if (fencePending || !retireNs) return FollowerSlotResult::kFenceUnavailable;
++    if (nowNs - *retireNs < kFollowerRetireGuardNs) return FollowerSlotResult::kRetireSettling;
++    if (!nextCv10WakeNs) return FollowerSlotResult::kPacesetterWakeUnavailable;
++    if (*nextCv10WakeNs - nowNs < kPacesetterWakeGuardNs + kFollowerWorkNs) {
++        return FollowerSlotResult::kPacesetterWakeTooClose;
++    }
++    const int64_t phaseChange = updatedTargetPresentNs - slot.targetPresentNs;
++    if (phaseChange < -kFollowerMaxPhaseChangeNs || phaseChange > kFollowerMaxPhaseChangeNs ||
++        updatedTargetPresentNs - nowNs < kFollowerStartLeadNs) {
++        return FollowerSlotResult::kFollowerVsyncMoved;
++    }
++    return FollowerSlotResult::kReady;
++}
++
++} // namespace android::scheduler

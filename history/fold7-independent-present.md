@@ -517,6 +517,18 @@ The panel-off control used the same uniform source pose with zero offset. During
 
 The final build also displayed the workspace through the original cable with the real CV10 IMU. With the phone at 60 Hz, all 884 unique uniform-pose frames with a `CVP2` reference applied late projection. The fixed right-lens camera captured the visible workspace. The automated check reached the phone trackpad, but its UI hierarchy did not expose the recenter button in this run. The handoff after a new recenter remains to be checked with the final build.
 
+## 独立手机时隙探针
+
+[AOSP 调度探针](aosp-android16-probe-independent-follower-slot.patch) 基于同一 `frameworks/native` 提交。设置 `debug.sf.cv10_slot_pacesetter_display` 和 `debug.sf.cv10_slot_follower_display` 为两块屏的物理 ID 后生效。每次 CV10 批次结束后，用手机自身 VSync 跟踪器挑一段可用时间，并通过原有 SurfaceFlinger 主线程 Looper 安排探针。初始预算留出 2.75 ms 给手机合成、0.5 ms 给下次 CV10 唤醒，在手机预计呈现前至少 7.8 ms 开始。最近已知的内屏 retire 至少完成 0.5 ms。规划时另外给 retire 的预测误差留 0.5 ms、给内屏截止时间留 0.25 ms。回调重读两个时钟、手机最后实际 retire 和待完成栅栏，遇到新批次、热插拔、模式不一致、超期或手机时钟相位变化时放弃。若 CV10 下一次唤醒还未排定，可以用 CV10 跟踪器确定何时记录回调。回调判定窗口可用仍要求实际排定的唤醒。探针只记录 `CV10 slot plan`、`CV10 slot check`、`CV10 slot canceled`，维持原有输出、合成和栅栏行为。
+
+[回放](fold7-follower-slot-replay.py) 与系统探针共用 [C++ 预算函数及检查程序](fold7-follower-slot-check.cpp)。Windows x64 与 Android arm64 均通过编译和边界检查，Fold7 上执行的决策结果一致。系统补丁在固定 AOSP 基线上独立及与前六项补丁组合通过正反向应用，完整 SurfaceFlinger 尚未构建或部署到 Fold7。
+
+四段约 30 秒的 Pocket XR 直出追踪回放中，用实际 retire 重建 CV10 的 90 Hz 时隙，假设该时隙的计划唤醒可及时读取，手机 HWC 提交全部改由独立任务处理。内屏可用窗口在准时唤醒时为 60.26–60.31 次/秒，晚 0.5 ms 时为 60.26–60.33 次/秒，晚 1 ms 时降至 58.37–58.45 次/秒。四段晚 0.5 ms 的检查均给手机留足 7.8 ms，晚 1 ms 的 1600 档有一次低于预算。保留量产机现有手机 HWC 调用、用该调用开始至 retire 估计在途区间时，晚 0.5 ms 的可用窗口只有 36.46–49.52 次/秒。回放未执行新的显示提交，也无法验证两个输出改变相位之后的栅栏顺序。
+
+[唤醒事件查询](fold7-follower-schedule-availability.sql) 把 `scheduleFrame`、`vsyncCallback` 与每轮 SurfaceFlinger `composite` 结束对齐。在手机 OFF 的 90 Hz 对照中，536 个完整批次在本次唤醒和合成结束之间均未记录下一次 `scheduleFrame`。手机 ON/60 的 Pocket XR 强制 CV10 时钟与自动时钟两轮中，分别只有 11 和 13 个批次记录到下一次请求且距离回调尚有至少 3.25 ms。该查询没有读取 `getScheduledFrameResult()` 的返回值。这解释了为什么还需协调独立任务与 CV10 唤醒的预约时机。原型若成功进入实际提交路径，应在任何可触发手机 `presentOrValidate` 的操作前重新判断时限，并按各输出单独维护栅栏及缓冲释放。原有实验中的 `Output::present` 已经可能在返回 future 之前提交手机，因此延后 future 等待无法实现这个时序。
+
+本机证据位于 `ffr-quad/fold7-follower-slot-replay.txt`、`ffr-quad/fold7-follower-slot-device.txt`、`ffr-quad/fold7-follower-schedule-availability.txt`。这是调度实验，量产机 ON/60 的 CV10 实际呈现仍约 60.31 次/秒。熄内屏的 90 Hz 对照仍可复现，未作为亮屏目标的验收结果。
+
 ## 可选熄屏 90 Hz
 
 实验版在 Pocket 预览首帧到达后提供「熄灭手机屏幕以启用 CV10 90 Hz」。需要已有的 Shizuku 桥接授权和 CV10 时钟，以及用户在该次会话里确认。熄屏期间工作区继续运行，最多维持十分钟。关闭预览或它的进程退出时恢复 Android 对手机面板和合成时钟的控制。
