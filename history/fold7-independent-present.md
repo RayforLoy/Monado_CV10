@@ -615,6 +615,34 @@ python fold7-phone-contention.py --cv10-only "$traceDir/hello-composer-off-force
 
 在独立 Git 工作树上应用九项补丁，逐个反向应用后与固定基线逐字节核对，再重新应用并核对最终内容。完整系统合成器尚未构建或部署，对量产 Fold7 的呈现频率没有实测提升。
 
+#### Fold7 图层栈与静置手机对照
+
+Pocket XR 和 Hello XR 的五段亮屏追踪共 2,084 个有效显示快照。开着的 Fold7 封面屏用图层栈 `0`，90 Hz 的 CV10 用栈 `131`，亮着的虚拟屏也未占用手机栈。两块物理屏均由 SurfaceFlinger 的显示快照按物理 ID 确认。这些会话满足补丁的独享图层栈条件。桌面镜像等其他会话需要重新检查。
+
+[回放脚本](fold7-layer-stack-audit.py)用 Winscope 的 `vsync_id` 匹配 SurfaceFlinger 主线程的 `composite` 和其中的手机 `HwcPresentOrValidateDisplay`。可见图层签名包含图层 ID、缓冲帧号和是否持有缓冲。缺快照、重复调用或相同标记下存在多种图层状态时，断开连续比较。
+
+| 本机 Perfetto 文件名前缀 | 手机 HWC 调用有匹配快照 | 相邻签名相同 | 相同签名的手机 HWC 耗时 p50 / p95 |
+| --- | ---: | ---: | ---: |
+| `pocket-lit-layer-state` | 395 / 398 | 394 / 394 | 0.327 / 0.486 ms |
+| `hello-lit-layer-state-control` | 419 / 419 | 418 / 418 | 0.154 / 0.220 ms |
+| `hello-lit-layer-state-control-repeat` | 420 / 420 | 419 / 419 | 0.243 / 0.348 ms |
+| `hello-lit-layer-state` | 419 / 419 | 418 / 418 | 0.186 / 0.251 ms |
+| `hello-lit-layer-state-timestamped` | 420 / 420 | 419 / 419 | 0.162 / 0.233 ms |
+
+这些时长只覆盖追踪中内联的 `presentOrValidate` 调用。复用补丁还需在运行时检查几何、损坏区域、拓扑变化、HWC 刷新等条件，并验证跳过的手机提交是否减少后续 HWC 或 DRM 等待。首轮用静置的 Hello XR 测复用，再在 Pocket XR 对照中主动滚动手机界面，核查手机能继续显示变化以及 CV10 的实际呈现间隔。
+
+复采时先让样例出画并记录手机屏保持亮屏 60 Hz。在 Monado 仓库根目录运行以下命令。从 `--display-id` 读取当前物理 ID，并以 composer dump 核对当前手机的 HAL ID。示例使用本轮实测的封面屏和 CV10 ID，采集不切换强制时钟和显示电源。快照可能含应用窗口名，归档时保留汇总即可。[Android Winscope 采集说明](https://source.android.com/docs/core/graphics/winscope/capture/adb)
+
+```powershell
+adb -s $serial shell dumpsys SurfaceFlinger --display-id
+adb -s $serial shell dumpsys -t 3 android.hardware.graphics.composer3.IComposer/default
+Get-Content -Raw history/fold7-layer-stack-trace.pbtxt | adb -s $serial shell perfetto --txt -c - -o /data/misc/perfetto-traces/cv10-layer-stack.perfetto-trace
+adb -s $serial pull /data/misc/perfetto-traces/cv10-layer-stack.perfetto-trace
+adb -s $serial shell rm -f /data/misc/perfetto-traces/cv10-layer-stack.perfetto-trace
+python -m pip install perfetto==0.59.1
+python history/fold7-layer-stack-audit.py --phone-display 4630946872173396372 --cv10-display 4621527156978103573 --phone-hwc 3 cv10-layer-stack.perfetto-trace
+```
+
 ## 可选熄屏 90 Hz
 
 实验版在 Pocket 预览首帧到达后提供「熄灭手机屏幕以启用 CV10 90 Hz」。需要已有的 Shizuku 桥接授权和 CV10 时钟，以及用户在该次会话里确认。熄屏期间工作区继续运行，最多维持十分钟。关闭预览或它的进程退出时恢复 Android 对手机面板和合成时钟的控制。
