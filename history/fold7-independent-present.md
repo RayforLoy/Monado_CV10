@@ -81,11 +81,13 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 | 自动选手机 | 0/361 | 0.001 ms | 0.008 ms |
 | 强制 CV10 | 359/359 | 15.965 ms | 0.011 ms |
 
+同一批内核事件中，强制 CV10 时钟的 359 次重叠调用均匹配到 CRTC 288 的上一帧 `signal_retire_fence`。每次新调用都先进入 DRM，上一帧的 retire fence 平均再过 15.856 ms 才发出信号。信号平均比 CRTC 工作结束早 0.072 ms，最多早 0.448 ms。手机正常领跑时没有重叠，熄屏对照没有手机 DRM 调用。这些读数锁定了等待的那一帧，也量出了 retire fence 与 CRTC 工作结束之间的差距。量产系统的 SurfaceFlinger present fence 是否传回同一个信号仍待核对。[Perfetto 查询](fold7-drm-pending-commit.sql)
+
 长等待发生在提交本帧栅栏以前。公开的同平台 DRM 内核代码在等同 CRTC 或同一平面的待完成提交前取得共享 `connection_mutex`，然后才准备栅栏和派发新工作。这与手机等待上一帧、CV10 同时被拖住的时间顺序相符。量产内核的具体锁和提交标志仍缺直接读数。[同平台 DRM 源码](https://github.com/LineageOS/android_kernel_qcom_sm8750-modules/blob/5d27ace07b893b611cf3ce1c301b760f32d59892/qcom/opensource/display-drivers/msm/msm_atomic.c#L871)
 
 现有系统的 `debug.sf.follower_display_backpressure` 属性可临时写入，但写成 `true` 后，正在运行的 SurfaceFlinger 仍报告对应标志为 `false`。上游实现首次读入时缓存属性。从手机读取的分区 aconfig 名单也没有该标志，因此没有证据支持用运行中的 DeviceConfig 开启。实测已还原属性。[AOSP FlagManager](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/common/FlagManager.cpp#227)
 
-[跟随屏调度实验补丁](aosp-android16-defer-pending-slower-follower.patch) 基于同一 AOSP 提交，可独立应用。启动 SurfaceFlinger 前设置 `debug.sf.cv10_defer_pending_slower_followers=true`，使较慢的跟随屏在仍有未完成的呈现栅栏时跳过当前批次，下批检查就绪状态。原有背压策略继续按各自开关运行。补丁通过正反向应用检查。验收应分别对照上游背压开关、较慢跟随屏延后和逐屏周期提示。若跟随屏的 present fence 早于 CRTC 释放排队资源，延后策略仍可能错过真正的忙碌区间。需核对新追踪里的延后标记、两路 CRTC 及真实呈现。此补丁尚未在 Fold7 系统上运行。
+[跟随屏调度实验补丁](aosp-android16-defer-pending-slower-follower.patch) 基于同一 AOSP 提交，可独立应用。启动 SurfaceFlinger 前设置 `debug.sf.cv10_defer_pending_slower_followers=true`，使较慢的跟随屏在仍有未完成的呈现栅栏时跳过当前批次，下批检查就绪状态。原有背压策略继续按各自开关运行。实验标记同时记录较慢跟随屏的待完成栅栏数和最近的栅栏时间戳，可直接与内核 retire 事件对照。补丁通过独立反向和组合正向应用检查。验收应分别对照上游背压开关、较慢跟随屏延后和逐屏周期提示。若跟随屏的 present fence 早于 CRTC 释放排队资源，延后策略仍可能错过真正的忙碌区间。需核对新追踪里的延后标记、两路 CRTC 及真实呈现。此补丁尚未在 Fold7 系统上运行。
 
 ## Pocket 工作区性能对照
 
@@ -178,6 +180,29 @@ Both test orders used the same Pocket XR Bilibili workspace, independent center 
 All 3419 sampled unique CV10 presentation timestamps matched the Vulkan feedback exactly. The calibrated single-pass yaw phase fits were −2.1 ms and +0.2 ms, with 0.16° and 0.24° RMS errors. The Android external screenshots show the two workspace panels in both eye images. The fixed right-eye camera was dark in both Pocket XR and the original Hello XR control, leaving in-lens center clarity, motion-to-photon delay, and smear unmeasured. Monado sustained 90 submissions per second while the Android display path still limited presentation.
 
 The local evidence uses `fused-sharpness-ab-*`, `fused-sharpness-ba-*`, and `fused-sharpness-hello-control-*` under the same evidence directory. The replay Monado APK SHA-256 is `409428eaf782a45856631eb3ea6bca41555d91a95915bfb640eb7f22d54004e5`. The APK without synthetic IMU uses SHA-256 `62b3c37d4a19514b95faefd25fcd34ba282b953c7fd9559057d4d816bfd2f803`. Both retain the preview package name. The ordinary preview and Pocket XR builds were restored after sampling.
+
+### Direct-source stalls on Fold7
+
+The 90 Hz submission counter can stay steady while the program displaying the workspace has stopped sending images. In a working Bilibili cold start with the folded phone screen ON at 60 Hz, Monado submitted 90.00 frames/s, CV10 presented 60.31 times/s, and 60.09 of those presentations per second used a different Pocket XR buffer. The median time from the producer's pre-swap timestamp to Monado draw was 11.97 ms. Monado drew in a further 2.05 ms, after which 40.64 ms elapsed before the actual presentation timestamp. SurfaceFlinger matched all 854 Vulkan feedback timestamps in the motion sample.
+
+Other cold starts of the same saved workspace repeated one source timestamp for over 20 seconds. Both tested OpenXR application wake margins (0.5 and 2.0 ms) reproduced the stall. With the diagnostic launcher, 1871–2045 consecutive capture checks reused the same image with no pending producer fence. In the onset trace, the last `eglSwapBuffers` completed in 0.17 ms. Samsung Freecess then recorded `FZ` with reason `Bg-buff` for the Pocket XR process. `UFZ` appeared as the session exited and the source resumed. During the stall, all of the sampled 60 Hz presentations reused the same workspace image. A temporary per-app Android Doze exemption, Samsung's Unrestricted app battery setting, and an experimental connected-device foreground service all reproduced the freeze. The original battery settings and APK were restored.
+
+Opening Pocket XR's phone controls recovered the same stalled session. Freecess logged `UFZ` with reason `activity` and the existing Pocket XR process resumed rendering when TrackpadActivity came to the front. After recovery, Monado submitted 90.00 frames/s and CV10 presented 60.31 times/s with 60.11 new source images/s. All 905 timestamps matched and all images in the yaw sample used late projection. The fitted yaw phase led the replay by 2.1 ms with 0.225° RMS error. This control ran at thermal status 2 and 42.0°C skin temperature before sampling. Keeping the controls in front restores the workspace refresh while the physical displays retain their current modes.
+
+#### Application wake margin with the phone controls in front
+
+The same direct Bilibili workspace used a 1600² context and 1280² center per eye, the fused compositor and the same synthetic yaw. Each group used 15 seconds of matched display feedback. The shorter margin moved image selection closer to the Monado draw, but the reduction in source-to-display latency varied by run.
+
+| Wake margin | Android thermal status | Skin sensor at start | Capture end to draw p50 | New source images/s | Pre-swap to CV10 p50 / p95 |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 2.0 ms | 1 → 2 | 39.9°C | 2.78 ms | 56.78 | 54.83 / 66.57 ms |
+| 0.5 ms | 1 → 2 | 39.9°C | 1.28 ms | 59.24 | 44.54 / 66.69 ms |
+| 2.0 ms | 2 → 2 | 42.0°C | 2.81 ms | 60.31 | 54.46 / 55.58 ms |
+| 0.5 ms | 2 → 2 | 42.1°C | 1.29 ms | 56.98 | 54.61 / 66.40 ms |
+
+Monado submitted 90.00 frames/s and CV10 presented 60.31 times/s throughout. All 3620 sampled SurfaceFlinger timestamps matched Vulkan feedback. The warmer pair lost fresh source images and gained 10.82 ms at p95 with the shorter margin, so the release default remains 2.0 ms. The shorter margin remains an experimental diagnostic option. The capture timestamp is taken after acquisition and pose metadata handling. The fixtures use `pocket-margin-recovered-ab*` and `pocket-margin-recovered-ba{3,4}*`. A back-to-back startup timed out waiting for the display transport before the alternate group's first frame. Successful shorter-margin sessions were measured after separate cold starts.
+
+The traces are under `pocket-margin-*`, `pocket-pick-*`, `pocket-freecess-*`, `pocket-bg-unrestricted-*`, `pocket-direct-service-*`, and `pocket-controls-front-*` in the local evidence directory. `analyze-pocket-pipeline.py` joins source, draw, GPU and presentation timestamps. `analyze-pocket-pick-perfetto.py` finds the producer thread in the onset trace. The Monado diagnostic replay APK SHA-256 is `99d4fa267e8c0c1a113bbab17101d17be44eafa67d5cb0d0cbecd3f750ccfc2c`. The right-lens camera captured a dark image in this run, so the result describes the software rendering and presentation chain.
 
 ## 直出帧的姿态记录
 

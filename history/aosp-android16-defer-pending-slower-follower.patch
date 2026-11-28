@@ -1,5 +1,5 @@
 diff --git a/services/surfaceflinger/Scheduler/Scheduler.cpp b/services/surfaceflinger/Scheduler/Scheduler.cpp
-index 18e6fcc..8d3b6fd 100644
+index 18e6fcc..3c2a0ca 100644
 --- a/services/surfaceflinger/Scheduler/Scheduler.cpp
 +++ b/services/surfaceflinger/Scheduler/Scheduler.cpp
 @@ -436,6 +436,11 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
@@ -14,7 +14,7 @@ index 18e6fcc..8d3b6fd 100644
          if (!followerDisplayBackpressure) {
              expectedVsyncTime = pacesetterPtr->targeterPtr->target().expectedPresentTime();
          }
-@@ -443,12 +448,24 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+@@ -443,12 +448,32 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
          for (const auto& [id, display] : mDisplays) {
              if (id == pacesetterPtr->displayId) continue;
 
@@ -24,10 +24,18 @@ index 18e6fcc..8d3b6fd 100644
 +                        display.selectorPtr->getActiveMode().modePtr->getVsyncRate();
 +                // A busy, slower follower can hold up the pacesetter's hardware commit.
 +                if (followerVsyncRate.isValid() &&
-+                    followerVsyncRate.getPeriod() > pacesetterVsyncRate.getPeriod() &&
-+                    targeter.countPresentFencesPendingAt(TimePoint::now()) > 0) {
-+                    SFTRACE_FORMAT_INSTANT("Deferring slower follower display %lu", id.value);
-+                    continue;
++                    followerVsyncRate.getPeriod() > pacesetterVsyncRate.getPeriod()) {
++                    const size_t pendingFences =
++                            targeter.countPresentFencesPendingAt(TimePoint::now());
++                    const auto& priorFence = targeter.target().presentFenceForPreviousFrame();
++                    const int64_t signalTime = priorFence->getSignalTime();
++                    SFTRACE_FORMAT_INSTANT(
++                            "Slower follower %lu pending=%zu previous_signal_ns=%" PRId64, id.value,
++                            pendingFences, signalTime);
++                    if (pendingFences > 0) {
++                        SFTRACE_FORMAT_INSTANT("Deferring slower follower display %lu", id.value);
++                        continue;
++                    }
 +                }
 +            }
 +

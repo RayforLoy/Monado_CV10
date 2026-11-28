@@ -62,6 +62,14 @@ constexpr XrExtent2Df pocket_wide_size = {pocket_size.width * pocket_wide_scale,
 constexpr float panel_width_m = 1.62f;
 std::mutex session_mutex;
 
+int64_t
+monotonic_ns()
+{
+	timespec now{};
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return static_cast<int64_t>(now.tv_sec) * 1'000'000'000 + now.tv_nsec;
+}
+
 // Matches LauncherControllerMode in Cv10SpatialLauncherActivity.kt.
 enum class ControllerMode : jint
 {
@@ -287,6 +295,12 @@ private:
 class AndroidStream
 {
 public:
+	struct Frame
+	{
+		int64_t timestamp = 0;
+		bool pending_fence = false;
+	};
+
 	bool
 	initialize(JNIEnv *env, XrInstance instance, uint32_t width, uint32_t height, jobject &surface)
 	{
@@ -329,7 +343,7 @@ public:
 		}
 	}
 
-	int64_t
+	Frame
 	update(XrSession session)
 	{
 		uint32_t held = 0;
@@ -362,7 +376,7 @@ public:
 		}
 		promote_ready();
 		if (ready.image == nullptr) {
-			return timestamp;
+			return {timestamp, pending.image != nullptr};
 		}
 
 		AImageCropRect crop{};
@@ -403,7 +417,7 @@ public:
 		ready = {};
 		current = &*match;
 		timestamp = stamp;
-		return timestamp;
+		return {timestamp, pending.image != nullptr};
 	}
 
 	XrSwapchain
@@ -1487,9 +1501,19 @@ private:
 		XrCompositionLayerProjection projection{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
 		std::array<XrCompositionLayerProjectionView, 4> projection_views{};
 		jlong capture_timestamp = 0;
+		int64_t stream_begin_ns = 0;
+		int64_t stream_end_ns = 0;
+		bool stream_pending_fence = false;
 		if (frame.shouldRender && capture) {
-			capture_timestamp = using_android_stream ? capture.update_stream(android_stream.update(session))
-			                                        : capture.update(transform_uniform);
+			if (using_android_stream) {
+				stream_begin_ns = convert_time != nullptr ? monotonic_ns() : 0;
+				const auto stream_frame = android_stream.update(session);
+				stream_pending_fence = stream_frame.pending_fence;
+				capture_timestamp = capture.update_stream(stream_frame.timestamp);
+				stream_end_ns = convert_time != nullptr ? monotonic_ns() : 0;
+			} else {
+				capture_timestamp = capture.update(transform_uniform);
+			}
 		}
 		if (capture_timestamp != 0) {
 			if (capture_cv10_optics) {
@@ -1567,8 +1591,11 @@ private:
 			timespec time{};
 			if (XR_SUCCEEDED(convert_time(instance, end_info.displayTime, &time))) {
 				const auto layer_time = static_cast<long long>(time.tv_sec) * 1'000'000'000 + time.tv_nsec;
-				__android_log_print(ANDROID_LOG_INFO, tag, "CV10_SOURCE stamp=%lld layer=%lld",
-				                    static_cast<long long>(capture_timestamp), layer_time);
+				__android_log_print(ANDROID_LOG_INFO, tag,
+				                    "CV10_SOURCE stamp=%lld layer=%lld stream_begin=%" PRId64
+				                    " stream_end=%" PRId64 " pending_fence=%d",
+				                    static_cast<long long>(capture_timestamp), layer_time, stream_begin_ns,
+				                    stream_end_ns, stream_pending_fence);
 			}
 		}
 	}
