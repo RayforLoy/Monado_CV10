@@ -108,6 +108,14 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 较窄的保护窗下，第一段有一次手机提交时限错判，两段均未预测到占用 CV10 保护窗的提交。加宽保护窗会明显减少可用机会。独立排程原型需要在真正进入 HWC 前复查栅栏和 CV10 的剩余预算，并记录跳过原因。回放使用基线 p95 主线程预算、现有追踪的重建时钟和固定提前量。它没有包含独立提交对 Qualcomm Composer 等待链、调度抖动或新 retire 相位的反馈，不能用来报告设备已达到 60/90 Hz。现有 AOSP 实验仍需系统构建验证。
 
+### 独立提交应覆盖验证阶段
+
+用 [HWC 调用外层切片查询](fold7-hwc-present-ancestors.sql) 复查上述两段追踪。在第一段，359/359 个手机 `HwcPresentOrValidateDisplay 3` 都位于 SurfaceFlinger 主线程的 `Output::present → prepareFrame → chooseCompositionStrategy → getDeviceCompositionChanges` 内，平均耗时 14.138 ms。第二段有 268/268 个，平均 13.930 ms。这个调用发生在 `Output::present` 返回 future 之前。现有并行 present 从 `prepareFrame` 之后才开始，单独调整 `future.get()` 仍会保留实测的长等待。[AOSP Output](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/CompositionEngine/src/Output.cpp#470)
+
+[显示管线插桩补丁](aosp-android16-trace-present-pipeline.patch) 默认关闭。在实验系统构建启动 SurfaceFlinger 前设 `debug.sf.cv10_trace_present_pipeline=true`，采集 graphics trace。调度器记录已选中跟随屏的预计呈现与参考栅栏，输出对照原有背压跳过事件。CompositionEngine 按批次和显示 ID 标识 `Output::present` 及每个 future 的等待，SurfaceFlinger 用同一批次标识记录各 FrameTargeter 注册时的预计呈现与栅栏状态。注册事件可以显示栅栏仍处于 pending，实呈仍用内核 retire 或合格的实际呈现栅栏统计。补丁没有更改选择、提交或栅栏完成顺序，已按指定 AOSP 基线做正反向及三补丁联合应用检查，尚未编译或在系统上运行。
+
+对已测量的阻塞路径，逐屏异步原型需覆盖 `Output::present` 中的同步验证，或在该调用前按准备就绪和时限把手机输出顺延到自己的机会。跨显示共享缓冲区仍需等待所有实际消费者，不能直接跳过 `postComposition` 的释放栅栏处理。原型验收要同时跟踪按屏在途帧、热插拔或切换模式时的旧任务、全局事务 VSync ID、虚拟输出及两块物理屏的真实呈现节奏。[与 ChatGPT 6 极高的源码审阅](https://chatgpt.com/c/6b09b179-eac8-83ea-8cae-87222af8fa41)
+
 量产系统也启用了以时长配置合成相位的属性，但 ADB 将当前三个 8,333,333 ns 时长原样传给 SurfaceFlinger 调试事务 1047 时，返回 `Operation not permitted`，相位读回无变化。[AOSP SurfaceFlinger 调试事务](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/SurfaceFlinger.cpp#7609)
 
 ## Pocket 工作区性能对照

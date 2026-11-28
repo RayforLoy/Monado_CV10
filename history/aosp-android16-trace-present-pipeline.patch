@@ -1,0 +1,110 @@
+diff --git a/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h b/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
+index 27f791f..81b4cd7 100644
+--- a/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
++++ b/services/surfaceflinger/CompositionEngine/include/compositionengine/CompositionRefreshArgs.h
+@@ -51,4 +51,6 @@ struct CompositionRefreshArgs {
+     Outputs outputs;
+
++    bool traceCv10PresentPipeline = false;
++
+     // All the layers that are potentially visible in the outputs. The order of
+     // the layers is important, and should be in traversal order from back to
+diff --git a/services/surfaceflinger/CompositionEngine/src/CompositionEngine.cpp b/services/surfaceflinger/CompositionEngine/src/CompositionEngine.cpp
+index 1ee5ff6..50942d1 100644
+--- a/services/surfaceflinger/CompositionEngine/src/CompositionEngine.cpp
++++ b/services/surfaceflinger/CompositionEngine/src/CompositionEngine.cpp
+@@ -24,4 +24,7 @@
+ #include <ui/DisplayMap.h>
+
++#include <cinttypes>
++#include <optional>
++
+ #include <renderengine/RenderEngine.h>
+
+@@ -152,4 +155,10 @@ void CompositionEngine::present(CompositionRefreshArgs& args) {
+     ui::DisplayVector<ftl::Future<std::monostate>> presentFutures;
+     for (const auto& output : args.outputs) {
++        std::optional<ScopedTrace> dispatchTrace;
++        if (args.traceCv10PresentPipeline) {
++            const auto id = output->getDisplayId();
++            dispatchTrace.emplace("CV10 present dispatch display=%" PRIu64 " has_id=%d batch=%" PRId64,
++                                  id ? id->value : 0, id.has_value(), args.refreshStartTime);
++        }
+         presentFutures.push_back(output->present(args));
+     }
+@@ -157,8 +166,14 @@ void CompositionEngine::present(CompositionRefreshArgs& args) {
+     {
+         SFTRACE_NAME("Waiting on HWC");
+-        for (auto& future : presentFutures) {
++        for (size_t index = 0; index < presentFutures.size(); ++index) {
++            std::optional<ScopedTrace> waitTrace;
++            if (args.traceCv10PresentPipeline) {
++                const auto id = args.outputs[index]->getDisplayId();
++                waitTrace.emplace("CV10 present wait display=%" PRIu64 " has_id=%d batch=%" PRId64,
++                                  id ? id->value : 0, id.has_value(), args.refreshStartTime);
++            }
+             // TODO(b/185536303): Call ftl::Future::wait() once it exists, since
+             // we do not need the return value of get().
+-            future.get();
++            presentFutures[index].get();
+         }
+     }
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.cpp b/services/surfaceflinger/Scheduler/Scheduler.cpp
+index 18e6fcc..3bd36fc 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.cpp
++++ b/services/surfaceflinger/Scheduler/Scheduler.cpp
+@@ -468,4 +468,18 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+             }
+
++            if (SFTRACE_ENABLED()) {
++                static const bool traceCv10PresentPipeline =
++                        base::GetBoolProperty("debug.sf.cv10_trace_present_pipeline", false);
++                if (traceCv10PresentPipeline) {
++                    const auto& fence = targeter.target().presentFenceForPreviousFrame();
++                    SFTRACE_FORMAT_INSTANT(
++                            "CV10 present admit follower=%" PRIu64 " leader=%" PRIu64
++                            " vsync=%" PRId64 " target=%" PRId64 " prev_signal=%" PRId64
++                            " pending=%zu",
++                            id.value, pacesetterPtr->displayId.value, ftl::to_underlying(vsyncId),
++                            followerBeginFrameArgs.expectedVsyncTime.ns(), fence->getSignalTime(),
++                            targeter.countPresentFencesPendingAt(TimePoint::now()));
++                }
++            }
+             targeter.beginFrame(followerBeginFrameArgs, *display.schedulePtr);
+             targets.try_emplace(id, &targeter.target());
+diff --git a/services/surfaceflinger/SurfaceFlinger.cpp b/services/surfaceflinger/SurfaceFlinger.cpp
+index c448169..9330ef4 100644
+--- a/services/surfaceflinger/SurfaceFlinger.cpp
++++ b/services/surfaceflinger/SurfaceFlinger.cpp
+@@ -3116,4 +3116,9 @@ std::future<void> SurfaceFlinger::offloadGpuCompositedDisplays(
+ }
+
++static bool traceCv10PresentPipeline() {
++    static const bool enabled = base::GetBoolProperty("debug.sf.cv10_trace_present_pipeline", false);
++    return enabled && SFTRACE_ENABLED();
++}
++
+ CompositeResultsPerDisplay SurfaceFlinger::composite(
+         PhysicalDisplayId pacesetterId, const scheduler::FrameTargeters& frameTargeters) {
+@@ -3127,4 +3132,5 @@ CompositeResultsPerDisplay SurfaceFlinger::composite(
+
+     compositionengine::CompositionRefreshArgs refreshArgs;
++    refreshArgs.traceCv10PresentPipeline = traceCv10PresentPipeline();
+     // adpf load up hint
+     refreshArgs.powerCallback = this;
+@@ -3573,6 +3579,13 @@ void SurfaceFlinger::onCompositionPresented(PhysicalDisplayId pacesetterId,
+         }
+
+-        if (auto fenceTime = targeter->setPresentFence(std::move(presentFence));
+-            fenceTime->isValid()) {
++        auto fenceTime = targeter->setPresentFence(std::move(presentFence));
++        if (traceCv10PresentPipeline()) {
++            SFTRACE_FORMAT_INSTANT(
++                    "CV10 present fence register display=%" PRIu64 " batch=%" PRId64
++                    " vsync=%" PRId64 " target=%" PRId64 " signal=%" PRId64,
++                    id.value, presentStartTime, ftl::to_underlying(targeter->target().vsyncId()),
++                    targeter->target().expectedPresentTime().ns(), fenceTime->getSignalTime());
++        }
++        if (fenceTime->isValid()) {
+             presentFences.try_emplace(id, std::move(fenceTime));
+         }
