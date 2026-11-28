@@ -1,0 +1,29 @@
+diff --git a/services/surfaceflinger/DisplayHardware/HWComposer.cpp b/services/surfaceflinger/DisplayHardware/HWComposer.cpp
+index f732d25..7d58ff3 100644
+--- a/services/surfaceflinger/DisplayHardware/HWComposer.cpp
++++ b/services/surfaceflinger/DisplayHardware/HWComposer.cpp
+@@ -575,7 +575,13 @@ status_t HWComposer::getDeviceCompositionChanges(
+     }();
+
++    // Diagnose whether a particular output is committing from the validation call.
++    // Force only that output through the existing separate validate/present path.
++    static const uint64_t validateOnlyDisplayId =
++            base::GetUintProperty<uint64_t>("debug.sf.cv10_validate_only_display", 0);
++    const bool validateOnly = validateOnlyDisplayId != 0 && displayId.value == validateOnlyDisplayId;
++
+     displayData.validateWasSkipped = false;
+     SFTRACE_FORMAT("NextFrameInterval %d_Hz", frameInterval.getIntValue());
+-    if (canSkipValidate) {
++    if (canSkipValidate && !validateOnly) {
+         sp<Fence> outPresentFence = Fence::NO_FENCE;
+         uint32_t state = UINT32_MAX;
+@@ -596,4 +602,9 @@ status_t HWComposer::getDeviceCompositionChanges(
+         // Present failed but Validate ran.
+     } else {
++        if (validateOnly) {
++            SFTRACE_FORMAT_INSTANT(
++                    "CV10 separate validate display=%" PRIu64 " target=%" PRId64 " skipEligible=%d",
++                    displayId.value, expectedPresentTime, canSkipValidate);
++        }
+         error = hwcDisplay->validate(expectedPresentTime, frameInterval.getPeriodNsecs(), &numTypes,
+                                      &numRequests);

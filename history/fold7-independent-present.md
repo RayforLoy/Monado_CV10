@@ -114,6 +114,10 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 [显示管线插桩补丁](aosp-android16-trace-present-pipeline.patch) 默认关闭。在实验系统构建启动 SurfaceFlinger 前设 `debug.sf.cv10_trace_present_pipeline=true`，采集 graphics trace。调度器记录已选中跟随屏的预计呈现与参考栅栏，输出对照原有背压跳过事件。CompositionEngine 按批次和显示 ID 标识 `Output::present` 及每个 future 的等待，SurfaceFlinger 用同一批次标识记录各 FrameTargeter 注册时的预计呈现与栅栏状态。注册事件可以显示栅栏仍处于 pending，实呈仍用内核 retire 或合格的实际呈现栅栏统计。补丁没有更改选择、提交或栅栏完成顺序，已按指定 AOSP 基线做正反向及三补丁联合应用检查，尚未编译或在系统上运行。
 
+[主线程等待查询](fold7-hwc-present-stage-times.sql) 在两段强制外屏时钟追踪中均读到 `Waiting on HWC` 平均 0.002 ms，分别有 360 和 269 次。另一次强制 GPU 合成的追踪仍出现 419 次手机 `HwcPresentOrValidateDisplay 3`，平均 13.504 ms。AOSP 的 `getDeviceCompositionChanges` 允许 HWC 在验证阶段直接呈现，成功时随即记录已返回的 present 和 release fences。带有相同芯片平台标记的公开 Composer 源码会把显式 `validate` 和合并命令分别以 `validate_only=true` 和 `false` 传给 `CommitOrPrepare`。三星私有实现的具体路径仍需实测。[AOSP HWComposer](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/DisplayHardware/HWComposer.cpp#535) · [公开 Composer 实现](https://github.com/LineageOS/android_hardware_qcom_display/blob/28edbb21cf722c6ce5acdd7711af9cc692167a12/composer/AidlComposerClient.cpp#L1276)
+
+[逐屏拆分验证与呈现的补丁](aosp-android16-validate-only-display.patch) 默认关闭。实验系统启动 SurfaceFlinger 前，把 `debug.sf.cv10_validate_only_display` 设为内屏的 64 位物理显示 ID，以 `dumpsys SurfaceFlinger --display-id` 为准。当前采样里的 Composer 显示 ID `3` 是另一套编号。补丁让指定屏走 AOSP 已有的分开验证和呈现路径，沿用其栅栏、最早可呈现时间和释放流程。插桩中的 `skipEligible=1` 表示这帧原本会走合并路径。用同一批图层、模式和时钟做开关对照，记录内屏验证、内屏呈现及 CV10 实际 retire 间隔。等待若移到内屏实际提交，可把逐屏准入点放在提交前。若独立验证仍然同步等待，就需继续检查 HAL 验证链。此补丁已做四补丁联合正反向应用检查，尚未编译或部署。
+
 对已测量的阻塞路径，逐屏异步原型需覆盖 `Output::present` 中的同步验证，或在该调用前按准备就绪和时限把手机输出顺延到自己的机会。跨显示共享缓冲区仍需等待所有实际消费者，不能直接跳过 `postComposition` 的释放栅栏处理。原型验收要同时跟踪按屏在途帧、热插拔或切换模式时的旧任务、全局事务 VSync ID、虚拟输出及两块物理屏的真实呈现节奏。[与 ChatGPT 6 极高的源码审阅](https://chatgpt.com/c/6b09b179-eac8-83ea-8cae-87222af8fa41)
 
 量产系统也启用了以时长配置合成相位的属性，但 ADB 将当前三个 8,333,333 ns 时长原样传给 SurfaceFlinger 调试事务 1047 时，返回 `Operation not permitted`，相位读回无变化。[AOSP SurfaceFlinger 调试事务](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/SurfaceFlinger.cpp#7609)
@@ -415,6 +419,8 @@ The final build also displayed the workspace through the original cable with the
 - `hello-composer-{lit-auto,lit-forced,off-forced}.perfetto-trace`、`composer-waits-summary.txt` 和 `trace-fold7-composer.ps1`，记录 Qualcomm DRM 工作线程及 Composer Binder 等待的对照。
 
 - `hello-drm-lock-lit-{auto,forced}.perfetto-trace`、`hello-drm-lock-lit-{auto,forced}-dump.txt` 和 `trace-fold7-drm-lock.ps1`，记录两块屏的帧周期提示、HWC 调用和采样前后的物理模式。
+- `hello-client-lit-gpu.perfetto-trace` 和 `hello-hwc-present-stage-times.txt` 补充比较了强制 GPU 合成和两轮强制外屏时钟的主线程等待。
+- `hello-lit-optical-on60-*` 记录 35% 电量、内屏 60 Hz 时的短测。Hello XR 进入 FOCUSED，外显截图有双目蓝块。桌面和样例的右镜相机画面都接近全黑，亮度第 90 百分位均为 0。固定相机当时未取得可核对的光学画面，样例已退出并回到手机桌面。
 - `pocket-policy-static-phone-summary.txt` 和 `hello-policy-static-phone-hashes.txt`，记录工作区直出时静置的手机界面。
 - `pocket-lit-layer-state.perfetto-trace`、`lit-layer-present-mode-comparison.txt`、`hello-present-asap-comparison.txt`、`fold7-backpressure-stages.txt` 和对应 `*-monado.log`，记录快返回的 HWC 调用、图层与 Vulkan 调度对照。尽早呈现实验 APK SHA-256 为 `d377c303c99109361a5d5f3f6145253abca9ccc2714f322a25c0c973092a410d`。
 
