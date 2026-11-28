@@ -21,6 +21,23 @@
 
 用直接渲染的工作区再次采集时，手机一直亮屏 60 Hz，采样前后两张手机屏幕截图的 SHA-256 相同。七秒内仍有 419 次手机屏 HWC 调用，平均 12.51 ms，CV10 HWC 为 60.32 次/秒。
 
+### 绕过 Monado 的外屏缓冲对照
+
+临时测试应用在 CV10 的 `Presentation` 上通过 NDK `ASurfaceTransaction_setBuffer` 轮换四张预先生成的 3200×1600 不透明缓冲。测试线程按 90 Hz 交付 810 帧，缓冲带 `COMPOSER_OVERLAY` 用途，循环期间不重新渲染或写入缓冲。RGB 组按事务回调的非空呈现栅栏去重，在第 180 到 749 次提交间统计。视频组在同一个外屏 `SurfaceView` 上播放 3200×1600、90 fps 的 H.264 测试片，按该图层的 `PresentFenceSignaled` 统计。亮屏组手机的物理模式为 60 Hz，CV10 始终为 3200×1600、90 Hz。各组的起始电池温度为 32.6–32.9°C，Android 热状态为 0。[Android NDK SurfaceControl](https://developer.android.com/ndk/reference/group/native-activity) · [Android 硬件缓冲](https://developer.android.com/ndk/reference/group/a-hardware-buffer)
+
+| 外屏内容 | 手机面板 | 调度时钟 | CV10 实呈/秒 | CV10 HWC 调用/秒 | 手机 HWC 平均用时 |
+| --- | --- | --- | ---: | ---: | ---: |
+| RGBA8888 缓冲 | ON/60 | 系统自动 | 60.32 | 60.33 | 0.23 ms |
+| RGBA8888 缓冲 | ON/60 | CV10 | 58.63 | 60.33 | 13.78 ms |
+| RGBX8888 缓冲 | ON/60 | CV10 | 60.26 | 60.48 | 14.68 ms |
+| 解码 YUV 4:2:0 | ON/60 | 系统自动 | 60.31 | 60.33 | 0.27 ms |
+| 解码 YUV 4:2:0 | ON/60 | CV10 | 60.25 | 60.33 | 14.46 ms |
+| RGBX8888 缓冲 | OFF | CV10 | 88.42 | 88.32 | 无调用 |
+
+Composer 在这些外显样本中均将应用图层标为 `CLIENT`，DPU 使用 `GPU_TARGET`。硬解得到的外屏缓冲格式是 `Y_CBCR_420_VENUS_UBWC`，同批 dump 的手机壁纸使用相同格式且被分到 `DEVICE`。RGBX 熄屏对照仍由 GPU 合成，CV10 的呈现间隔 p50 和 p95 均为 11.111 ms。两组 RGBX 的差异复现了手机显示参与调度时的限帧，也确认换不透明像素格式或使用视频解码缓冲没有触发这台设备的外屏硬件直出。
+
+本机 `ffr-quad/fold7-dpu-probe/` 保存缓冲探针、分析脚本、Composer dump、模式读数及 `summary.txt`。RGBX 亮屏和熄屏追踪 SHA-256 分别为 `64beb8cf6bcddb47a25894d02ba3d4c9114a83a8a4bb4c2db655100856be123c`、`9da9e6dc3350fa897754b9fca53198e6f865682400a4d5b0388fa282f3c5554b`。测试结束后已卸载探针，恢复手机 ON/60 和系统自动时钟。这组读数来自呈现栅栏，尚无镜片实拍。
+
 ### 图层快照对采样的影响
 
 另一次直出采集在完全静置手机界面时仍复现约 60.3 次实呈/秒。图层追踪的 395 个有效快照中，手机前台始终为缓冲帧 73，CV10 有 395 个不同的帧。两路 `HwcPresentOrValidateDisplay` 平均分别为 0.33 ms（手机）和 0.35 ms（CV10）。CV10 合成调用中有 398 次 `drawLayersInternal for HUAWEIAV03`。Composer dump 显示外屏的全屏 `SurfaceView` 被分配为 `CLIENT`，DPU 扫描的是 SurfaceFlinger 的 `GPU_TARGET`。
