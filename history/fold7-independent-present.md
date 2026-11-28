@@ -291,7 +291,7 @@ Local fixtures in `ffr-quad` use the `pocket-latch-phase-*` prefix. They include
 
 Enable `android.surfaceflinger.frame` and `gfx` in Perfetto to separate time before SurfaceFlinger latches a Monado buffer from time spent downstream of the latch. The frame data source records queue, acquire, latch, RenderEngine composition and present fence events by layer and frame number. The replay log supplies Monado GPU timestamps and Vulkan present IDs. In the default mode, all 905 Android fence timestamps in the 15-second yaw window matched Vulkan's actual timestamps by frame number to within 1 μs after the clock conversion. A separate BLAST trace check matched 481 of those buffers to an acquire call inside the corresponding `vkQueuePresentKHR` interval. [Android frame event schema](https://perfetto.dev/docs/reference/trace-packet-proto#graphicsframeevent)
 
-Both runs used the same Bilibili workspace, a zero-copy four-view atlas, 2×2 GLES shading on the context views and full-rate 1280×1280 inset views. The phone remained lit at 60 Hz. Battery temperatures were 34.5°C and 34.8°C at the start of the captures. Thermal status moved from 1 to 2 in each run.
+Both runs used the same saved workspace. The frame traces identify GPSTest and Clock. Both runs enabled the zero-copy four-view atlas, 2×2 GLES shading on the context views and full-rate 1280×1280 inset views. The phone remained lit at 60 Hz. Battery temperatures were 34.5°C and 34.8°C at the start of the captures. Thermal status moved from 1 to 2 in each run.
 
 | Interval or rate | Default MAILBOX | Single-buffer shared demand |
 | --- | ---: | ---: |
@@ -308,6 +308,42 @@ Candidate missed slots were reconstructed within gaps aligned to the 11.111 ms s
 The shared-demand run used one Android buffer instead of five in the default trace. Its Vulkan feedback reported zero actual timestamps. The CV10 layer still produced 905 presents by Android's frame-numbered fence events. Keep MAILBOX for calibrated reprojection. The default run had a 32.48 / 43.56 ms p50/p95 from Pocket producer pre-swap to present. Its software yaw fit after calibrated reprojection was −0.5 ms, with 0.09° RMS error. The fixed camera did not resolve the right-lens image. Actual optical latency and smear remain open.
 
 The local `pocket-buffer-present-g1-*` and `pocket-buffer-present-shared-*` fixtures contain both captures and matching logs. Trace SHA-256 values are `57518e9b6d9bd4943629d5c9002748b8c860559ab05b2f56e6986f885b6febbb` and `206c2443bb6c5c5f9d9f955ab7e290d47af828f365ee32ee860d9c2ef5f7f78d`. The [analyzer](fold7-pocket-present-fences.py) accepts the trace, the Monado log, the exact `--layer` name and one `--hwc-id` for each physical output. In these traces, HWC 1 is CV10 and HWC 3 is the active phone panel.
+
+#### Full-field resolution with a fixed center
+
+The direct four-view test holds the center at 1280×1280 per eye and changes only the full-field views from 1600×1600 to 1280×1280. It keeps the same full and inset projection angles, GLES 2×2 full-field and 1×1 inset shading, zero-copy buffer import, the fused Compute pass, CV10's 3200×1600 output and the 34° peak-to-peak yaw replay. The atlas changes from 3200×2880 to 2560×2560, reducing its logical pixel count by 28.9%. Both arms use the same Pocket XR APK and the same 15-second motion sample. The Fold7 outer panel stays lit at 60 Hz.
+
+The first two pairs reopened the saved GPSTest and Clock workspace. The frame trace identifies both app windows. AB warmed from thermal status 0 to 2. The BA runs both stayed at status 2 with the primary SKIN reading at 42.0°C.
+
+| Run | Full-field pixels per eye | Thermal status | CV10 presents/s | Monado GPU p50 / p95 | Pocket pre-swap to present p50 / p95 |
+| --- | ---: | --- | ---: | ---: | ---: |
+| A1 | 1600×1600 | 0 → 1 | 60.36 | 1.66 / 2.40 ms | 33.46 / 44.65 ms |
+| B1 | 1280×1280 | 1 → 2 | 60.36 | 3.01 / 4.36 ms | 34.41 / 45.47 ms |
+| B2 | 1280×1280 | 2 → 2 | 60.31 | 2.36 / 3.30 ms | 32.74 / 44.26 ms |
+| A2 | 1600×1600 | 2 → 2 | 60.24 | 2.72 / 4.19 ms | 33.04 / 44.15 ms |
+
+Monado submitted 90.00 frames/s in all four runs. The first pair matched all 1810 Android present fences to Vulkan actual timestamps by frame number. The phone's HWC call overlapped 433/444 missing CV10 presentation slots in A1 and 430/444 in B1. The CV10 HWC call overlapped zero in both. Median latch-to-present was 20.72 and 20.83 ms respectively. The warm pair reduced compositor GPU time with the smaller atlas, while the measured pre-swap-to-present tail differed by 0.11 ms.
+
+The initial AB and BA artifacts use `pocket-buffer-present-ctx{1,2}-{1600,1280}-*` in the local `ffr-quad` directory. The same directory includes `build-pocket-context-1280.ps1`, `run-pocket-context-1280.ps1` and both source patches. The baseline Monado SHA-256 is `56c28ee5f51d5ceeca68801f57ff3b54064b3fc06a441df4310396c4d9b0a68b`, the 1280 prototype is `c94cb2cb5b50589db571336df3826d26efb31868ff92f179d437eee9004f75f6`, and the Pocket XR fixture is `82519b10e0308590f01a4bb37cf979eec49cf6c2341d85393076f966c2858d09`.
+
+A second local fixture used a single Bilibili panel in an in-memory layout. The first pair captured Bilibili's Android splash, so those timings only describe the splash workload. Launching the same Bilibili activity on the phone panel also timed out with only the splash layer. After a process restart, the phone launch logged `Displayed tv.danmaku.bili/.MainActivityV2` in 522 ms and SurfaceFlinger showed the activity's own buffer layer.
+
+The next BA and AB pairs started Bilibili in a fresh process for each run and used the same portrait panel geometry. The harness required both Android's `Displayed` event and the Bilibili activity's own SurfaceFlinger layer before sampling. Both eyes showed the home feed in the external-display capture. Recommendations and UI animation varied between runs. The active panel temperatures for the second pair were comparable, with thermal status 2 and a primary SKIN reading of 42.1°C throughout. Battery temperatures at sample start were 36.3°C and 36.5°C.
+
+| Run | Full-field pixels per eye | Thermal status | CV10 presents/s | CV10 fresh Pocket buffers/s | Monado GPU p95 | Pocket pre-swap to present p95 |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| BA | 1280×1280 | 1 → 2 | 60.36 | 57.15 | 4.99 ms | 46.21 ms |
+| BA | 1600×1600 | 2 → 2 | 60.31 | 56.71 | 6.59 ms | 46.70 ms |
+| AB | 1600×1600 | 2 → 2 | 60.31 | 59.71 | 6.51 ms | 46.78 ms |
+| AB | 1280×1280 | 2 → 2 | 60.31 | 55.04 | 6.58 ms | 45.77 ms |
+
+Monado submitted 89.86–90.00 frames/s. The GPU time reduction in the first pair did not repeat at matched thermal status. CV10 presentation rates and the pre-swap-to-present tails were close, and the compact buffer had fewer fresh source frames in the matched pair. Keep 1600×1600 for each full-field view, with the 1280×1280 center passes, and retain the compact buffer as a local fixture. The fixed right-eye camera did not resolve the window during these samples. Center clarity and motion smear still need optical verification.
+
+All 3620 CV10 Android present fences matched the Vulkan timestamps by frame number. The phone HWC call overlapped 407–430 out of 444–445 estimated missing 90 Hz slots per run. The CV10 HWC call overlapped 5–25. The results put the main cadence constraint downstream of Monado's draw and submit in both resolution variants.
+
+The local Bilibili artifacts use `pocket-buffer-present-bili{2,3}-{1600,1280}-*`. Ready logs and external screenshots confirm content, and `bilibili-main-panel-relaunch.txt` records the ordinary phone control. The portrait Pocket XR fixture SHA-256 is `3abd1df3c67e6b0459a745ad353670cda1b7b91944e6c8d0ee588351cf601c5c`.
+
+After sampling, installed SHA-256 values matched the prior Monado preview `672b281b556e8097d0e9faf6513a1c2e4a11ccf789aca90d8dd5c5dac583f601` and Pocket XR `818e885e76fcc5fb62041d1e2806ffe429579e916808678c1bc65136c061a260`. Fold7 returned to the launcher at 1080×2520 and 60 Hz with 33% battery. CV10 remained attached in its 3200×1600 90 Hz mode.
 
 ## 直出帧的姿态记录
 
