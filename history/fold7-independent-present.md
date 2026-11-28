@@ -583,6 +583,28 @@ Pocket XR 的 7070 次较早启动中，7066 次在上一次 SurfaceFlinger 合�
 
 完整 Composer 尚未安装。可替换 HAL 的实验系统中，用同一 ON/60 场景核对 `CV10 wait before DRM` 区间与 `CV10 retire guard` 结果。成功时应看到外屏的 `atomic_commit` 能进入内核，内屏随后才提交；也需要确认内屏持续有新帧时，两个显示的实呈节奏。如果 SurfaceFlinger 仍在同步等待手机 HWC，此处移出的等待仍会出现在上层，需要配合逐屏调度。
 
+### 缺失的 CV10 呈现时隙同时遇到两处等待
+
+[双层等待回放](fold7-phone-contention.py) 用 CV10 CRTC 的硬件 retire 时间戳重建 90 Hz 网格。手机 OFF 的 Hello XR 对照用于校准两个检查点，分别为距预期 retire 8.700 ms 的 SurfaceFlinger 唤醒和距 retire 7.434 ms 的 CV10 DRM 请求。亮屏追踪中，前者检查 SurfaceFlinger 主线程是否还在手机 `presentOrValidate` 内。后者检查手机的 atomic commit 是否在等前一笔 `complete_commit`，要求旧工作线程退出落在 `sde_kms_prepare_fence` 开始前 0.3 ms 内。第二项是跨屏 DRM 锁占用的保守时序估计。回放跳过追踪边界以及不能以 90 Hz 网格解释的间隔。
+
+| 对照 | CV10 硬件 retire/s | 缺失时隙 | 两处重合 | 只重合 SF | 只重合 DRM | 两处均未重合 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Hello XR，手机 OFF、CV10 时钟 | 90.00 | 0 | 0 | 0 | 0 | 0 |
+| Hello XR，手机 ON/60、自动时钟 | 60.28 | 175 | 0 | 0 | 0 | 175 |
+| Hello XR，手机 ON/60、CV10 时钟 | 60.39 | 176 | 167 | 0 | 9 | 0 |
+| Pocket XR 直出四轮，手机 ON/60、CV10 时钟 | 60.31–60.33 | 3545 | 2729 | 12 | 798 | 6 |
+
+Pocket XR 将两个检查点一起提前或推迟 1 ms 后，仍有 3526–3530 个缺失时隙命中 DRM 等待，命中主线程手机 HWC 的数量则为 2134–3176。自动时钟对照没有命中这一特定的旧帧重叠模式，须单独检查它的 60 Hz 调度。实验系统可先配对验证手机 HAL 在进入 DRM 前等待且 SurfaceFlinger 可在手机等待时继续派发 CV10，再比较两块屏的硬件 retire。这些计数来自量产机历史追踪，无法预测修改后的相位、实际呈现率或镜片画面。
+
+Python 3.10+ 安装 `perfetto` 后，从本目录运行。`$traceDir` 指向主项目的 `.research/monado-rc2-fold7/pocket-performance/ffr-quad`。
+
+```powershell
+$captures = @(Get-Item "$traceDir/hello-composer-lit-*.perfetto-trace") +
+            @(Get-Item "$traceDir/pocket-inset-interleaved-slot-ffr-*-default-calibrated-true-0-2.0.perfetto-trace")
+$capturePaths = @($captures.FullName)
+python fold7-phone-contention.py --cv10-only "$traceDir/hello-composer-off-forced.perfetto-trace" @capturePaths
+```
+
 ### 手机画面未变时复用上一帧
 
 量产机的一段 Pocket XR 静置手机画面追踪录到 CV10 420 次、手机 419 次 HWC 验证或提交，频率均约 60.32 次/秒，手机调用平均耗时 12.51 ms。另一组 Hello XR 的两次手机截图 SHA-256 一致，仍记录到持续的手机 HWC 调用。截图不能证明两次采样之间每一帧的图层状态，固件也不会因为两个画面看起来一样就自动跳过手机提交。原始证据为 `pocket-policy-static-phone.perfetto-trace` 和 `hello-policy-static-phone-hashes.txt`。
