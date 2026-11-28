@@ -1396,10 +1396,12 @@ struct render_compute_distortion_ubo_data
 	struct xrt_normalized_rect post_transforms[XRT_MAX_VIEWS];
 	struct xrt_matrix_4x4 transform_timewarp_scanout_begin[XRT_MAX_VIEWS];
 	struct xrt_matrix_4x4 transform_timewarp_scanout_end[XRT_MAX_VIEWS];
-	//! X enables CV10 enhancement. Y is the foveated inset blend width, or zero.
+	//! X enables CV10 enhancement. Y is the inset blend width. Z enables polynomial scanout warp.
 	float distortion_options[4];
 	struct xrt_normalized_rect inset_rects[XRT_MAX_VIEWS];
 	struct xrt_normalized_rect context_to_inset[XRT_MAX_VIEWS];
+	//! std140 vec4 lanes holding clip (x, y, w) coefficients for 1, u, v, uv and v*v.
+	float scanout_warp[XRT_MAX_VIEWS][5][4];
 };
 
 //! A foveated inset that shares the context's sampled image and render pose.

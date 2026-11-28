@@ -9,11 +9,13 @@
 
 #include "math/m_api.h"
 #include "math/m_matrix_4x4_f64.h"
+#include "util/u_debug.h"
 
 #include "vk/vk_mini_helpers.h"
 
 #include "render/render_interface.h"
 
+DEBUG_GET_ONCE_BOOL_OPTION(cv10_quad_warp_polynomial, "CV10_QUAD_WARP_POLYNOMIAL", false)
 
 /*
  *
@@ -279,6 +281,32 @@ update_compute_descriptor_set_target(struct vk_bundle *vk,
 }
 
 static void
+calc_scanout_warp_polynomial(const struct xrt_normalized_rect *pre,
+                             const struct xrt_matrix_4x4 *start,
+                             const struct xrt_matrix_4x4 *end,
+                             float coefficients[5][4])
+{
+	// Combine the UV-to-tangent mapping with each scanout matrix. Both transforms
+	// are affine before dividing by w. The GLSL weight for the end matrix is UV.y,
+	// so the resulting clip x, y and w each have terms 1, u, v, uv and v*v.
+	for (uint32_t component = 0; component < 3; ++component) {
+		const uint32_t row = component == 2 ? 3 : component;
+		const double ax = start->v[row];
+		const double ay = start->v[4 + row];
+		const double ac = (double)start->v[12 + row] - start->v[8 + row];
+		const double dx = (double)end->v[row] - ax;
+		const double dy = (double)end->v[4 + row] - ay;
+		const double dc = ((double)end->v[12 + row] - end->v[8 + row]) - ac;
+
+		coefficients[0][component] = (float)(ax * pre->x - ay * pre->y + ac);
+		coefficients[1][component] = (float)(ax * pre->w);
+		coefficients[2][component] = (float)(dx * pre->x - dy * pre->y + dc - ay * pre->h);
+		coefficients[3][component] = (float)(dx * pre->w);
+		coefficients[4][component] = (float)(-dy * pre->h);
+	}
+}
+
+static void
 dispatch_project_pipeline(struct render_compute *render,
                           VkSampler src_samplers[XRT_MAX_VIEWS],
                           VkImageView src_image_views[XRT_MAX_VIEWS],
@@ -300,14 +328,20 @@ dispatch_project_pipeline(struct render_compute *render,
 
 	struct render_compute_distortion_ubo_data *data =
 	    (struct render_compute_distortion_ubo_data *)r->compute.distortion.ubo.mapped;
+	const bool use_warp_polynomial = insets != NULL && debug_get_bool_option_cv10_quad_warp_polynomial();
 	data->distortion_options[0] = r->enable_enhanced_render_mode ? 1.0f : 0.0f;
 	data->distortion_options[1] = insets != NULL ? RENDER_LAYER_DEFAULT_INSET_BLEND_EDGE : 0.0f;
+	data->distortion_options[2] = use_warp_polynomial ? 1.0f : 0.0f;
 	for (uint32_t i = 0; i < render->r->view_count; ++i) {
 		data->views[i] = views[i];
 		data->post_transforms[i] = src_norm_rects[i];
 		if (insets != NULL) {
 			data->inset_rects[i] = insets[i].rect;
 			data->context_to_inset[i] = insets[i].context_to_inset;
+		}
+		if (use_warp_polynomial) {
+			calc_scanout_warp_polynomial(&data->pre_transforms[i], &data->transform_timewarp_scanout_begin[i],
+			                             &data->transform_timewarp_scanout_end[i], data->scanout_warp[i]);
 		}
 	}
 
