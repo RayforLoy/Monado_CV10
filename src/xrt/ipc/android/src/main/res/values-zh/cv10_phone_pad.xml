@@ -1,7 +1,8 @@
 <resources>
     <string name="cv10_pad_title">手机手柄</string>
     <string name="cv10_pad_hint">移动手机，瞄准头显里的目标。</string>
-    <string name="cv10_pad_select">确认</string>
+    <string name="cv10_pad_tap">轻点确认</string>
+    <string name="cv10_pad_accessibility">触摸板，轻点确认</string>
     <string name="cv10_pad_menu">菜单</string>
     <string name="cv10_pad_center">回正指向</string>
     <string name="cv10_pad_hide">隐藏手柄</string>

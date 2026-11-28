@@ -208,9 +208,19 @@ oxr_resolver_populate_profile(struct oxr_logger *log,
 		return;
 	}
 
+	// The CV10 phone implements the standard Daydream touchpad in addition to native simple inputs.
+	if (dev->name == XRT_DEVICE_CV10_PHONE) {
+		struct oxr_suggested_profile *pad = NULL;
+		if (oxr_suggested_profile_array_find_by_device_name(suggested_profiles, registry, XRT_DEVICE_DAYDREAM,
+		                                                    subaction_path, &pad)) {
+			fill_binding_profiles(slog, registry, pad, NULL, info);
+			return;
+		}
+	}
+
 	// The CF20 also implements the pre-existing simple-controller inputs. In particular,
 	// select combines trigger and trackpad click, which cannot be expressed by one rebind.
-	if (dev->name == XRT_DEVICE_HUAWEI_CONTROLLER) {
+	if (dev->name == XRT_DEVICE_HUAWEI_CONTROLLER || dev->name == XRT_DEVICE_CV10_PHONE) {
 		struct oxr_suggested_profile *simple = NULL;
 		if (oxr_suggested_profile_array_find_by_device_name(suggested_profiles, registry, XRT_DEVICE_SIMPLE_CONTROLLER,
 		                                                     subaction_path, &simple)) {

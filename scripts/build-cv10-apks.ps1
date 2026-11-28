@@ -5,7 +5,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$version = '0.1.4-rc.3'
+$version = '0.1.4-rc.4'
 if ($PreviewAbi -and !$UnifiedPreview) { throw 'PreviewAbi requires UnifiedPreview' }
 $builds = if ($UnifiedPreview) {
     $arguments = @('-Pcv10LauncherPreview=true')

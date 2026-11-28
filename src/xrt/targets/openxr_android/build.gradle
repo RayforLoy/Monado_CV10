@@ -193,8 +193,8 @@ android {
         minSdkVersion project.sharedMinSdk
         targetSdkVersion project.sharedTargetSdk
 
-        versionCode = 106
-        versionName = '0.1.4-rc.3'
+        versionCode = 107
+        versionName = '0.1.4-rc.4'
 
         println versionName
         println versionCode

@@ -544,7 +544,7 @@
 					"localized_name": "Select",
 					"components": ["click"],
 					"monado_bindings": {
-						"click": "XRT_INPUT_DAYDREAM_BAR_CLICK"
+						"click": "XRT_INPUT_SIMPLE_SELECT_CLICK"
 					}
 				},
 				"/input/trackpad": {
@@ -567,7 +567,7 @@
 					"localized_name": "Grip",
 					"components": ["pose"],
 					"monado_bindings": {
-						"pose": "XRT_INPUT_DAYDREAM_POSE"
+						"pose": "XRT_INPUT_SIMPLE_GRIP_POSE"
 					}
 				},
 				"/input/aim": {
@@ -575,7 +575,7 @@
 					"localized_name": "Aim",
 					"components": ["pose"],
 					"monado_bindings": {
-						"pose": "XRT_INPUT_DAYDREAM_POSE"
+						"pose": "XRT_INPUT_SIMPLE_AIM_POSE"
 					}
 				}
 			}

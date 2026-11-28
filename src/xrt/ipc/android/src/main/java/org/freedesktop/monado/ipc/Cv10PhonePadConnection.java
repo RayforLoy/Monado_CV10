@@ -31,6 +31,11 @@ final class Cv10PhonePadConnection extends ICv10PhonePad.Stub implements IBinder
     @Override public synchronized void buttons(int buttons) {
         if (allowed() && visible) host.buttons(this, buttons & 3);
     }
+    @Override public synchronized void touch(boolean active, float x, float y) {
+        if (allowed() && visible && Float.isFinite(x) && Float.isFinite(y)) {
+            host.touch(this, active, Math.max(-1f, Math.min(x, 1f)), Math.max(-1f, Math.min(y, 1f)));
+        }
+    }
     @Override public synchronized void recenter() {
         if (allowed() && visible) host.recenter(this);
     }

@@ -8,4 +8,5 @@ interface ICv10PhonePad {
     void buttons(int buttons);
     void recenter();
     void close();
+    void touch(boolean active, float x, float y);
 }

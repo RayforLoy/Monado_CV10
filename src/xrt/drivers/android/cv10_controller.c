@@ -2,6 +2,7 @@
 #include "cv10_controller.h"
 #include "cv10_cf20_pose_cache.h"
 #include "cv10_pose_models.h"
+#include "cv10_touchpad.h"
 #include "cv10_device.h"
 
 #include <stdbool.h>
@@ -21,7 +22,7 @@
 #define CV10_CONTROLLER_READER "org.freedesktop.monado.openxr_runtime.Cv10ControllerReader"
 #define CV10_REPORT_TIMEOUT_NS (250 * U_TIME_1MS_IN_NS)
 // 0..14: orientation, buttons, source, yaw, fixed position flag and XYZ, link/Home epochs.
-// Phone-only samples: 0..3 calibrated ray, 8..11 physical grip, 14 center epoch.
+// Phone samples: 0..3 calibrated ray, 8..11 physical grip, 14 center epoch, 15 touch, 16/17 XY.
 // 15..19: raw battery, button mask, trackpad X/Y, role mode; physical CF20 only.
 #define CV10_CF20_REPORT_FLOATS 20
 
@@ -32,8 +33,9 @@ enum cv10_controller_input
 	CV10_GRIP,
 	CV10_AIM,
 	CV10_MODEL,
-	CV10_HOME, CV10_BACK, CV10_VOLUME_UP, CV10_VOLUME_DOWN, CV10_TRIGGER, CV10_TRIGGER_VALUE,
 	CV10_PAD_CLICK, CV10_PAD_TOUCH, CV10_PAD_XY,
+	// Physical CF20 inputs only from here on.
+	CV10_HOME, CV10_BACK, CV10_VOLUME_UP, CV10_VOLUME_DOWN, CV10_TRIGGER, CV10_TRIGGER_VALUE,
 	CV10_INPUT_COUNT,
 };
 
@@ -58,7 +60,7 @@ struct cv10_controller
 	bool orientation_valid;
 	bool phone;
 	int battery_percent;
-	struct xrt_input cf20_inputs[CV10_INPUT_COUNT - CV10_HOME];
+	struct xrt_input samples[CV10_INPUT_COUNT];
 	int mode;
 	struct xrt_quat previous_orientation;
 	struct xrt_system_roles roles;
@@ -99,14 +101,12 @@ clear_pose_history_locked(struct cv10_controller *d)
 }
 
 static void
-set_button(struct cv10_controller *d, unsigned index, bool pressed, int64_t ns)
+update_pad(struct cv10_controller *d, bool pressed, bool touched, float x, float y, int64_t ns)
 {
-	struct xrt_input *input = &d->cf20_inputs[index - CV10_HOME];
-	if (!input->active || input->value.boolean != pressed) {
-		input->timestamp = ns;
-	}
-	input->value.boolean = pressed;
-	input->active = true;
+	cv10_update_touchpad(&d->samples[CV10_PAD_CLICK],
+	                     &d->samples[CV10_PAD_TOUCH],
+	                     &d->samples[CV10_PAD_XY],
+	                     pressed, touched, (struct xrt_vec2){x, y}, ns);
 }
 
 static void
@@ -114,26 +114,17 @@ update_cf20_inputs(struct cv10_controller *d, const float *values, int64_t ns)
 {
 	unsigned buttons = (unsigned)values[16];
 	bool trigger = (buttons & 0x01) != 0;
-	set_button(d, CV10_TRIGGER, trigger, ns);
-	set_button(d, CV10_PAD_CLICK, (buttons & 0x02) != 0, ns);
-	set_button(d, CV10_VOLUME_DOWN, (buttons & 0x04) != 0, ns);
-	set_button(d, CV10_VOLUME_UP, (buttons & 0x08) != 0, ns);
-	set_button(d, CV10_HOME, (buttons & 0x10) != 0, ns);
-	set_button(d, CV10_BACK, (buttons & 0x20) != 0, ns);
-	bool touched = values[17] != 0 || values[18] != 0;
-	set_button(d, CV10_PAD_TOUCH, touched, ns);
-	struct xrt_input *value = &d->cf20_inputs[CV10_TRIGGER_VALUE - CV10_HOME];
+	cv10_set_button(&d->samples[CV10_TRIGGER], trigger, ns);
+	cv10_set_button(&d->samples[CV10_VOLUME_DOWN], (buttons & 0x04) != 0, ns);
+	cv10_set_button(&d->samples[CV10_VOLUME_UP], (buttons & 0x08) != 0, ns);
+	cv10_set_button(&d->samples[CV10_HOME], (buttons & 0x10) != 0, ns);
+	cv10_set_button(&d->samples[CV10_BACK], (buttons & 0x20) != 0, ns);
+	struct xrt_input *value = &d->samples[CV10_TRIGGER_VALUE];
 	value->value.vec1.x = trigger ? 1.0f : 0.0f;
-	value->timestamp = d->cf20_inputs[CV10_TRIGGER - CV10_HOME].timestamp;
+	value->timestamp = d->samples[CV10_TRIGGER].timestamp;
 	value->active = true;
-	struct xrt_input *xy = &d->cf20_inputs[CV10_PAD_XY - CV10_HOME];
-	const struct xrt_vec2 position = touched ? (struct xrt_vec2){values[17] / 127.5f - 1, 1 - values[18] / 127.5f}
-	                                         : (struct xrt_vec2){0};
-	if (!xy->active || xy->value.vec2.x != position.x || xy->value.vec2.y != position.y) {
-		xy->timestamp = ns;
-	}
-	xy->value.vec2 = position;
-	xy->active = true;
+	const bool touched = values[17] != 0 || values[18] != 0;
+	update_pad(d, (buttons & 0x02) != 0, touched, values[17] / 127.5f - 1, 1 - values[18] / 127.5f, ns);
 	d->battery_percent = (int)values[15];
 	d->mode = (int)values[19];
 }
@@ -145,7 +136,7 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 	if (!report_is_fresh(timestamp)) {
 		if (d->report_ns > 0) {
 			clear_pose_history_locked(d);
-			memset(d->cf20_inputs, 0, sizeof(d->cf20_inputs));
+			memset(d->samples, 0, sizeof(d->samples));
 		}
 		d->report_ns = 0;
 		d->orientation_valid = false;
@@ -153,8 +144,12 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 		d->menu = false;
 	} else {
 		const bool phone = d->phone;
-		if (!d->kit && !phone) {
-			update_cf20_inputs(d, values, timestamp);
+		// Touch and button events can arrive between two orientation callbacks.
+		const int64_t input_ns = phone ? os_monotonic_get_ns() : timestamp;
+		if (phone) {
+			update_pad(d, values[5] != 0, values[15] != 0, values[16], values[17], input_ns);
+		} else if (!d->kit) {
+			update_cf20_inputs(d, values, input_ns);
 		}
 		const float yaw = (!d->kit && !phone) ? values[8] : 0.0f;
 		const bool fixed_position = !d->kit && !phone && values[9] != 0;
@@ -177,10 +172,10 @@ update_report(struct cv10_controller *d, int64_t timestamp, int64_t pose_ns, con
 		const bool select = values[5] != 0;
 		const bool menu = values[6] != 0;
 		if (d->report_ns == 0 || d->select != select) {
-			d->select_ns = timestamp;
+			d->select_ns = input_ns;
 		}
 		if (d->report_ns == 0 || d->menu != menu) {
-			d->menu_ns = timestamp;
+			d->menu_ns = input_ns;
 		}
 		d->select = select;
 		d->menu = menu;
@@ -290,7 +285,7 @@ controller_worker(void *ptr)
 			int64_t ns = (*env)->CallStaticLongMethod(env, phone, read, buffer);
 			if (clear_exception(env)) break;
 			if (!report_is_fresh(ns)) ns = 0;
-			if (ns != previous) {
+			if (ns != 0 || previous != 0) {
 				float values[CV10_CF20_REPORT_FLOATS];
 				(*env)->GetFloatArrayRegion(env, buffer, 0, CV10_CF20_REPORT_FLOATS, values);
 				if (clear_exception(env)) break;
@@ -400,9 +395,10 @@ controller_update_inputs(struct xrt_device *xdev)
 		xdev->inputs[CV10_MODEL].active = d->phone ? tracked : fresh;
 		xdev->inputs[CV10_MODEL].timestamp = d->pose_ns;
 	}
-	if (!d->kit && !d->phone) {
-		for (unsigned i = CV10_HOME; i < CV10_INPUT_COUNT; ++i) {
-			const struct xrt_input *value = &d->cf20_inputs[i - CV10_HOME];
+	if (!d->kit) {
+		const unsigned end = xdev->input_count;
+		for (unsigned i = CV10_PAD_CLICK; i < end; ++i) {
+			const struct xrt_input *value = &d->samples[i];
 			xdev->inputs[i].active = fresh && value->active;
 			xdev->inputs[i].timestamp = value->timestamp;
 			xdev->inputs[i].value = value->value;
@@ -501,7 +497,7 @@ static struct xrt_device *
 controller_create(struct xrt_tracking_origin *origin, struct xrt_device *head, bool right, bool phone)
 {
 	const bool cf20 = head != NULL && !phone;
-	unsigned input_count = cf20 ? CV10_INPUT_COUNT : CV10_MODEL + (phone ? 1 : 0);
+	unsigned input_count = cf20 ? CV10_INPUT_COUNT : phone ? CV10_HOME : CV10_MODEL;
 	struct cv10_controller *d =
 	    U_DEVICE_ALLOCATE(struct cv10_controller, origin ? 0 : U_DEVICE_ALLOC_TRACKING_NONE, input_count, 0);
 	if (d == NULL) {
@@ -512,7 +508,7 @@ controller_create(struct xrt_tracking_origin *origin, struct xrt_device *head, b
 	d->kit = head == NULL;
 	d->right = right;
 	struct xrt_device *xdev = &d->base;
-	xdev->name = cf20 ? XRT_DEVICE_HUAWEI_CONTROLLER : XRT_DEVICE_SIMPLE_CONTROLLER;
+	xdev->name = cf20 ? XRT_DEVICE_HUAWEI_CONTROLLER : phone ? XRT_DEVICE_CV10_PHONE : XRT_DEVICE_SIMPLE_CONTROLLER;
 	xdev->device_type = right ? XRT_DEVICE_TYPE_RIGHT_HAND_CONTROLLER : XRT_DEVICE_TYPE_LEFT_HAND_CONTROLLER;
 	xdev->supported.orientation_tracking = true;
 	xdev->tracking_origin = origin;
@@ -532,6 +528,9 @@ controller_create(struct xrt_tracking_origin *origin, struct xrt_device *head, b
 	xdev->inputs[CV10_AIM].name = XRT_INPUT_SIMPLE_AIM_POSE;
 	if (phone) {
 		xdev->inputs[CV10_MODEL].name = XRT_INPUT_CV10_PHONE_MODEL_POSE;
+		xdev->inputs[CV10_PAD_CLICK].name = XRT_INPUT_DAYDREAM_TOUCHPAD_CLICK;
+		xdev->inputs[CV10_PAD_TOUCH].name = XRT_INPUT_DAYDREAM_TOUCHPAD_TOUCH;
+		xdev->inputs[CV10_PAD_XY].name = XRT_INPUT_DAYDREAM_TOUCHPAD;
 	}
 	if (cf20) {
 		xdev->supported.battery_status = true;

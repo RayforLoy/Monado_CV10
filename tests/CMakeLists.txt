@@ -5,6 +5,7 @@
 
 set(tests
     tests_cv10_arm
+    tests_cv10_touchpad
     tests_cxx_wrappers
     tests_deque
     tests_generic_callbacks
@@ -78,6 +79,7 @@ endforeach()
 
 target_sources(tests_cv10_arm PRIVATE ../src/xrt/drivers/android/cv10_pose_models.c)
 target_include_directories(tests_cv10_arm PRIVATE ../src/xrt/drivers)
+target_include_directories(tests_cv10_touchpad PRIVATE ../src/xrt/drivers)
 target_link_libraries(tests_cv10_arm PRIVATE aux_math)
 target_link_libraries(tests_cxx_wrappers PRIVATE xrt-interfaces)
 target_link_libraries(tests_glue_device PRIVATE xrt-interfaces aux_glue)

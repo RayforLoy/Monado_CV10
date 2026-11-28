@@ -34,6 +34,8 @@ class Cv10PhoneControllerService @Inject constructor(@ApplicationContext private
     @Volatile private var held = 0
     @Volatile private var selectUntil = 0L
     @Volatile private var menuUntil = 0L
+    private data class Touch(val x: Float, val y: Float)
+    @Volatile private var contact: Touch? = null
 
     @Synchronized override fun activate(client: Any, portraitRotation: Int): Boolean {
         if (portraitRotation !in Surface.ROTATION_0..Surface.ROTATION_270 ||
@@ -44,6 +46,7 @@ class Cv10PhoneControllerService @Inject constructor(@ApplicationContext private
         rotation = portraitRotation
         heading = 0f
         held = 0; selectUntil = 0; menuUntil = 0
+        contact = null
         pose = null
         orientation.reset()
         current = this
@@ -57,15 +60,22 @@ class Cv10PhoneControllerService @Inject constructor(@ApplicationContext private
         sensors.unregisterListener(this)
         pose = null
         held = 0; selectUntil = 0; menuUntil = 0
+        contact = null
         orientation.reset()
     }
 
     @Synchronized override fun buttons(client: Any, buttons: Int) {
         if (owner !== client) return
         val rising = buttons and held.inv()
-        if (rising and 1 != 0) selectUntil = System.nanoTime() + 32_000_000L
+        // A tap on UP is a pulse. Keep it visible across ordinary 30, 60 and 90 Hz action polls.
+        if (rising and 1 != 0) selectUntil = System.nanoTime() + 64_000_000L
         if (rising and 2 != 0) menuUntil = System.nanoTime() + 32_000_000L
         held = buttons
+    }
+
+    @Synchronized override fun touch(client: Any, active: Boolean, x: Float, y: Float) {
+        if (owner !== client) return
+        contact = if (active) Touch(x, y) else null
     }
 
     @Synchronized override fun recenter(client: Any) {
@@ -114,6 +124,12 @@ class Cv10PhoneControllerService @Inject constructor(@ApplicationContext private
             if (values.size > 14) {
                 values[8] = pose.grip.x; values[9] = pose.grip.y; values[10] = pose.grip.z; values[11] = pose.grip.w
                 values[14] = pose.centerEpoch.toFloat()
+            }
+            if (values.size >= 18) {
+                val touch = pad.contact
+                values[15] = if (touch == null) 0f else 1f
+                values[16] = touch?.x ?: 0f
+                values[17] = touch?.y ?: 0f
             }
             return pose.time
         }

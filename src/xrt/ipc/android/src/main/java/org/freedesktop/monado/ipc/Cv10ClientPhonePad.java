@@ -3,7 +3,6 @@ package org.freedesktop.monado.ipc;
 
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -34,6 +33,8 @@ final class Cv10ClientPhonePad implements ViewTreeObserver.OnWindowFocusChangeLi
     private boolean session, hidden, closed, pending, live;
     private int generation, held, attempts;
     private PortraitPad panel;
+    private final Object moveLock = new Object();
+    private float[] pendingMove;
 
     Cv10ClientPhonePad(Activity owner, Context resources, ICv10PhonePad remote) {
         this.owner = owner; this.resources = resources; this.remote = remote;
@@ -101,6 +102,7 @@ final class Cv10ClientPhonePad implements ViewTreeObserver.OnWindowFocusChangeLi
                 if (!(decor() instanceof ViewGroup)) { send(remote::hide); return; }
                 live = true;
                 panel = new PortraitPad();
+                Cv10PhonePadBrightness.bind(panel, owner.getWindow());
                 ((ViewGroup) decor()).addView(panel, new ViewGroup.LayoutParams(-1,-1));
                 Log.i(TAG, "Portrait controller attached to " + owner.getComponentName().flattenToShortString());
             });
@@ -126,10 +128,35 @@ final class Cv10ClientPhonePad implements ViewTreeObserver.OnWindowFocusChangeLi
         held = next;
         send(() -> remote.buttons(next));
     }
+    private void setTouch(boolean active, float x, float y, boolean transition) {
+        // Keep edges in the same FIFO as select. A slow binder never accumulates stale moves.
+        if (transition) {
+            synchronized (moveLock) { pendingMove = null; }
+            send(() -> remote.touch(active, x, y));
+            return;
+        }
+        final float[] point;
+        synchronized (moveLock) {
+            if (pendingMove != null) {
+                pendingMove[0] = x;
+                pendingMove[1] = y;
+                return;
+            }
+            pendingMove = point = new float[]{x, y};
+        }
+        send(() -> {
+            synchronized (moveLock) {
+                if (pendingMove != point) return;
+                pendingMove = null;
+            }
+            remote.touch(true, point[0], point[1]);
+        });
+    }
     private Button action(int title, int bit) {
         Button b = new Button(owner);
         b.setText(label(title));
         b.setAllCaps(false);
+        Cv10PhonePadSkin.style(b);
         if (bit != 0) {
             b.setOnTouchListener((v, event) -> {
                 switch (event.getActionMasked()) {
@@ -154,7 +181,7 @@ final class Cv10ClientPhonePad implements ViewTreeObserver.OnWindowFocusChangeLi
         final LinearLayout face;
         PortraitPad() {
             super(owner);
-            setBackgroundColor(Color.rgb(19, 23, 28));
+            setBackgroundColor(Cv10PhonePadSkin.BACKGROUND);
             setClickable(true);
             setElevation(dp(24));
             if (Build.VERSION.SDK_INT >= 35) setRequestedFrameRate(View.REQUESTED_FRAME_RATE_CATEGORY_HIGH);
@@ -164,14 +191,19 @@ final class Cv10ClientPhonePad implements ViewTreeObserver.OnWindowFocusChangeLi
             face.setPadding(dp(24),dp(32),dp(24),dp(32));
             TextView title = new TextView(owner);
             title.setText(label(R.string.cv10_pad_title));
-            title.setTextColor(Color.WHITE); title.setGravity(Gravity.CENTER); title.setTextSize(27);
+            title.setTextColor(Cv10PhonePadSkin.TEXT); title.setGravity(Gravity.CENTER); title.setTextSize(27);
             face.addView(title,-1,-2);
             TextView hint = new TextView(owner);
             hint.setText(label(R.string.cv10_pad_hint));
-            hint.setTextColor(Color.LTGRAY); hint.setGravity(Gravity.CENTER); hint.setTextSize(15);
+            hint.setTextColor(Cv10PhonePadSkin.HINT); hint.setGravity(Gravity.CENTER); hint.setTextSize(15);
             face.addView(hint,-1,-2);
-            Button select = action(R.string.cv10_pad_select,1);
-            select.setTextSize(26);
+            Cv10PhoneTouchpad select = new Cv10PhoneTouchpad(owner, label(R.string.cv10_pad_tap),
+                    label(R.string.cv10_pad_accessibility), new Cv10PhoneTouchpad.Input() {
+                        @Override public void touch(boolean active, float x, float y, boolean edge) {
+                            setTouch(active, x, y, edge);
+                        }
+                        @Override public void select(boolean pressed) { setButton(1, pressed); }
+                    });
             LinearLayout.LayoutParams selectLayout = new LinearLayout.LayoutParams(-1,0,1);
             selectLayout.setMargins(0,dp(20),0,dp(12));
             face.addView(select,selectLayout);

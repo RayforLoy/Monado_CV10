@@ -43,6 +43,9 @@ enum daydream_input_index
 	DAYDREAM_VOLUP_CLICK,
 	DAYDREAM_VOLDN_CLICK,
 	DAYDREAM_TOUCHPAD,
+	DAYDREAM_SELECT,
+	DAYDREAM_GRIP,
+	DAYDREAM_AIM,
 	DAYDREAM_INPUT_COUNT,
 };
 
@@ -282,6 +285,7 @@ daydream_device_update_inputs(struct xrt_device *xdev)
 	// clang-format off
 	daydream_update_input_click(daydream, DAYDREAM_TOUCHPAD_CLICK, now, DAYDREAM_TOUCHPAD_BUTTON_MASK);
 	daydream_update_input_click(daydream, DAYDREAM_BAR_CLICK, now, DAYDREAM_BAR_BUTTON_MASK);
+	daydream_update_input_click(daydream, DAYDREAM_SELECT, now, DAYDREAM_BAR_BUTTON_MASK);
 	daydream_update_input_click(daydream, DAYDREAM_CIRCLE_CLICK, now, DAYDREAM_CIRCLE_BUTTON_MASK);
 	daydream_update_input_click(daydream, DAYDREAM_VOLUP_CLICK, now, DAYDREAM_VOLUP_BUTTON_MASK);
 	daydream_update_input_click(daydream, DAYDREAM_VOLDN_CLICK, now, DAYDREAM_VOLDN_BUTTON_MASK);
@@ -338,6 +342,9 @@ daydream_device_create(struct os_ble_device *ble)
 	dd->base.update_inputs = daydream_device_update_inputs;
 	dd->base.get_tracked_pose = daydream_device_get_tracked_pose;
 	dd->base.inputs[DAYDREAM_POSE].name = XRT_INPUT_DAYDREAM_POSE;
+	dd->base.inputs[DAYDREAM_SELECT].name = XRT_INPUT_SIMPLE_SELECT_CLICK;
+	dd->base.inputs[DAYDREAM_GRIP].name = XRT_INPUT_SIMPLE_GRIP_POSE;
+	dd->base.inputs[DAYDREAM_AIM].name = XRT_INPUT_SIMPLE_AIM_POSE;
 	dd->base.inputs[DAYDREAM_TOUCHPAD_CLICK].name = XRT_INPUT_DAYDREAM_TOUCHPAD_CLICK;
 	dd->base.inputs[DAYDREAM_BAR_CLICK].name = XRT_INPUT_DAYDREAM_BAR_CLICK;
 	dd->base.inputs[DAYDREAM_CIRCLE_CLICK].name = XRT_INPUT_DAYDREAM_CIRCLE_CLICK;

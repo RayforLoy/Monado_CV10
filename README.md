@@ -4,7 +4,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 
 ## 安装
 
-**v0.1.4-rc.3** 在第三方 OpenXR 会话中自动显示手机竖屏手柄。CF20 和手机可以分别占用左右手，也可以在启动器交换。CF20 支持华为按键、触控板、手柄电量和旋转角速度，头显可向应用发送佩戴事件。Fold7 版 APK 为 arm64-v8a，沿用 `org.cv10.monado.out_of_process.launcher_preview` 和此前的签名，可覆盖 rc.2。[下载与 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.3) · [Fold7 实测与应用接入](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-company-handoff/docs/fold7-dual-controller.md)
+**v0.1.4-rc.4** 在第三方 OpenXR 会话中自动显示竖屏手机手柄。中央点阵触摸板可滑动，轻点后抬手确认，滑动和长时间按住都只传递触点。手柄显示时手机窗口亮度为 10%，隐藏后恢复应用自己的亮度。CF20 和手机可以分别占用左右手，也可以在启动器交换。CF20 支持华为按键、触控板、手柄电量和旋转角速度，头显可向应用发送佩戴事件。Fold7 版 APK 为 arm64-v8a，沿用 `org.cv10.monado.out_of_process.launcher_preview` 和此前的签名，可覆盖 rc.3。[下载与 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.4) · [Fold7 实测与应用接入](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-company-handoff/docs/fold7-dual-controller.md)
 
 **整合预发布 v0.1.4-rc.1** 把 OpenXR 运行时、离线 2D/3D 启动器、Pocket XR 外显、CF20 手柄和实验性 6DoF 套件放进同一个 ARM 安装包。它在手机和 Broker 中显示为 **Monado CV10 Preview**，包名为 `org.cv10.monado.out_of_process.launcher_preview`。此包可与稳定版并存，覆盖旧预览版时须匹配签名。[整合预发布和 SHA-256](https://github.com/RayforLoy/Monado_CV10/releases/tag/v0.1.4-rc.1) · [Fold7 整合包实测](history/fold7-unified-runtime.md)
 
@@ -50,7 +50,7 @@ HUAWEI VR Glass CV10 的 Android OpenXR 运行时。包名为 `org.cv10.monado.o
 - **CF20 控制时**，已选用的 CF20 连上后自动接管指针，按确认键选择，返回键关闭 3D 菜单，横滑手柄触控板翻页。短按手柄主页键回菜单首页，长按约一秒使菜单和指针回正。断开后等待原手柄重连，也可轻触手机上的提示恢复手机控制。[原厂手机与 CF20 的切换](https://github.com/RayforLoy/HUAWEI_CV10_EVO/blob/codex/cv10-phase1/controller/oem-controller-switching.md)
 - **3D 菜单光标**采用原厂的世界空间规则。白色空心环落在命中的控件上，射线在约 80% 的命中距离处收尖。指向空处时，光环移到默认远端并缩为四分之一。菜单、环和射线逐眼绘制，共用深度缓冲。
 - **第三方应用中的手机手柄**　在 Monado 的应用启动器中打开「手机操控 OpenXR 应用」，可启用竖屏手柄并选择角色。默认双手模式下，单用手机时手机为右手，连接 CF20 后 CF20 为右手、手机为左手。「仅手机」固定手机为右手，「左右互换」在双手使用时将 CF20 分到左手。应用需绑定相应的 OpenXR 手部路径才能使用该手。
-- 从桌面或启动器打开第三方 OpenXR 应用，当前会话开始后，手机显示竖屏控制面板。移动手机瞄准，按下或按住「确认」操作应用，「菜单」发送菜单按键，「回正指向」将手机瞄准对齐头显。点「隐藏手柄」可恢复该应用的手机界面，下一次 OpenXR 会话会再次按设置显示。离开应用、结束会话或打开系统 USB 授权窗口时，面板释放手机输入。手机面板使用当前应用的窗口。
+- 从桌面或启动器打开第三方 OpenXR 应用，当前会话开始后，手机显示竖屏控制面板。移动手机瞄准，手指在触摸板上滑动传递触点，轻点后松手发送一次确认，「菜单」发送菜单按键，「回正指向」将手机瞄准对齐头显。点「隐藏手柄」可恢复该应用的手机界面，下一次 OpenXR 会话会再次按设置显示。离开应用、结束会话或打开系统 USB 授权窗口时，面板释放手机输入。手机面板使用当前应用的窗口。
 - 3D 菜单是本项目实现的 OpenXR 客户端。华为 VR 桌面 `com.huawei.vrlauncherx` 11.1.0.337 的开源公告覆盖 APK 列出的第三方依赖。尚未找到华为桌面应用的公开源码或允许 fork 的授权。[样本与许可证核对](history/fold7-offline-launcher.md#华为-vr-桌面的源码与许可)
 
 连接 CV10 时，内置 3D 菜单使用预览包自带的 Monado CV10，以适配镜片的双目方向。未连接 CV10 时，菜单先使用 Broker 选中的运行时，系统 Loader 报告不可用时再用内置运行时重试。打开第三方 OpenXR 应用仍由各应用查询系统 Broker。若菜单也无法打开，可在启动提示中打开 Broker 确认选择后返回，或选择 **重试**。提示未弹出时，点按手机上的错误提示文字可打开启动选项。[Fold7 运行时回退实测](history/fold7-offline-launcher.md#3d-菜单的运行时回退)
@@ -204,6 +204,8 @@ Windows 使用 JDK 17、Python 3、Android SDK Platform 35、Build Tools 34.0.0�
 自动模式下，手机单用时提供右手。收到 CF20 输入后，CF20 占右手，手机占左手。交换模式将 CF20 放到左手，手机维持右手。仅手机模式关闭 CF20 的输入和系统 Home 手势。两路设备独立运行，报告过期 250 ms 后会释放对应角色。运行中连接、断开或交换均通过 OpenXR 的交互配置变化通知客户端。6DoF 套件使用其原有左右手设备。
 
 支持 `XR_HUAWEI_controller_interaction` 的应用可绑定 Home、返回、音量、二值扳机、触控板按压与触摸、触控板 XY 以及握持和瞄准姿态。CF20 的简单手柄绑定继续将扳机或触控板确认合并为 `select/click`。CF20 固件的已核实协议只提供输入，此实现未声明可用的振动输出。手柄姿态的角速度由连续有效四元数转换到基准空间，以 rad/s 返回。首次采样、回正及跨越超过 100 ms 的间隔后，需要新的有效样本对。原始陀螺仪的轴向和刻度可使用 `Cv10Cf20Gyro` 的 DEBUG 日志对照。该日志按报告到达时间配对四元数和原厂 SDK 三轴刻度。
+
+手机触控板支持 OpenXR 核心 Google Daydream 交互配置 `/interaction_profiles/google/daydream_controller`。在手机所在手的 `/input/trackpad` 上读取 XY（右、上为正），`/touch` 表示接触，`/click` 表示轻点确认。`/input/select/click` 也接收轻点确认。只提供 Khronos simple 配置的应用继续使用原有 select、menu、grip 和 aim。手机和 CF20 各自报告实际输入，手机不提供 CF20 电量。
 
 ### 第三方应用读取 CF20 和手机手柄模型
 
