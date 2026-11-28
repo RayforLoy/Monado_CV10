@@ -15,6 +15,7 @@ SECOND = 1_000_000_000
 MS = 1_000_000
 RECORD = re.compile(r"\bCV10_(POCKET_STAMP|ACQUIRE|SOURCE|DRAW|FEEDBACK) (.*)")
 VALUE = re.compile(r"(\w+)=(-?\d+)(?: |$)")
+SF_ROW = re.compile(r"\s*(\d+)\s+(\d+)\s+(\d+)\s*")
 
 
 def read_log(path):
@@ -49,6 +50,76 @@ def read_queue_times(path, tid):
 def statistics(name, values):
     if len(values) > 1:
         print(f"  {name} p50/p95: {median(values) / MS:.3f}/{quantiles(values, n=20)[18] / MS:.3f} ms")
+
+
+def read_actuals(path, start):
+    active = False
+    actuals = set()
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        if line in ("CV10", "POCKET") or line.startswith("SAMPLE "):
+            active = line == "CV10"
+        elif active and (match := SF_ROW.fullmatch(line)):
+            actual = int(match[2])
+            if start + 12 * SECOND <= actual < start + 27 * SECOND:
+                actuals.add(actual)
+    return actuals
+
+
+def report_repeats(actuals, rows, swaps, swap_time, ready):
+    if not actuals:
+        raise ValueError("No SurfaceFlinger actual presents in the yaw interval")
+    presented = {
+        value["actual"]: rows["DRAW"].get(frame_id)
+        for frame_id, value in rows["FEEDBACK"].items()
+        if value["actual"] in actuals
+    }
+    joined = 0
+    counts = Counter()
+    previous = None
+    gaps = []
+    for actual in sorted(actuals):
+        draw = presented.get(actual)
+        source = rows["SOURCE"].get(draw["layer"]) if draw else None
+        producer = rows["POCKET_STAMP"].get(source["stamp"]) if source else None
+        if producer is None:
+            previous = None
+            continue
+        joined += 1
+        key = source["stamp"], source["layer"]
+        if previous is not None and key[0] == previous[0]:
+            counts["repeated"] += 1
+            reused_layer = key[1] == previous[1]
+            pending = not reused_layer and bool(source.get("pending_fence"))
+            counts["same XR layer"] += reused_layer
+            counts["new XR layer with pending fence at read"] += pending
+            first = bisect_right(swap_time, producer["swap"])
+            last = bisect_right(swap_time, draw["at"])
+            if last <= first:
+                counts["no newer pre-swap by draw"] += 1
+            else:
+                newer = [stamp for _, stamp in swaps[first:last]]
+                bounded = [ready[stamp] for stamp in newer if stamp in ready]
+                counts["newer pre-swap by draw"] += 1
+                counts["all newer candidates bounded"] += len(bounded) == len(newer)
+                for name, cutoff in (("read end", source["stream_end"]),
+                                     ("0.5 ms before draw", draw["at"] - MS // 2),
+                                     ("draw", draw["at"])):
+                    counts[f"newer definitely ready by {name}"] += any(high <= cutoff for _, high in bounded)
+                if pending and bounded:
+                    # The log does not identify which newer buffer was pending at the end of the read.
+                    # The earliest bounded ready time therefore measures opportunity, not guaranteed gain.
+                    delay = min(high for _, high in bounded) - source["stream_end"]
+                    gaps.append(delay)
+                    counts["pending and newer ready within 0.5 ms"] += 0 < delay <= MS // 2
+                    counts["pending and newer ready within 0.75 ms"] += 0 < delay <= 3 * MS // 4
+        previous = key
+    print(f"  Presented yaw frames matched to Vulkan and Pocket: {joined}/{len(actuals)}")
+    for key in ("repeated", "same XR layer", "new XR layer with pending fence at read", "no newer pre-swap by draw",
+                "newer pre-swap by draw", "all newer candidates bounded", "newer definitely ready by read end",
+                "newer definitely ready by 0.5 ms before draw", "newer definitely ready by draw",
+                "pending and newer ready within 0.5 ms", "pending and newer ready within 0.75 ms"):
+        print(f"    {key}: {counts[key]}")
+    statistics("new atlas readiness upper bound in repeated frames with a pending fence", gaps)
 
 
 def report(args):
@@ -104,9 +175,13 @@ def report(args):
             print(f"    newer ready at {name}{offset / MS:+g}ms: {definite}–{possible}/{len(bounded)}")
         statistics("read to draw", [draw["at"] - source["stream_end"] for draw, source, _ in samples])
 
+    if args.surfaceflinger is not None:
+        report_repeats(read_actuals(args.surfaceflinger, start), rows, swaps, swap_time, ready)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("log", type=Path, help="combined Android logcat")
     parser.add_argument("trace", type=Path, help="Perfetto gfx trace")
+    parser.add_argument("--surfaceflinger", type=Path, help="raw CV10 layer presentation samples")
     report(parser.parse_args())

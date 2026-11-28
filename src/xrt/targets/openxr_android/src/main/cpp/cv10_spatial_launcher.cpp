@@ -301,6 +301,7 @@ public:
 	{
 		int64_t timestamp = 0;
 		bool pending_fence = false;
+		int64_t fence_wait_ns = 0;
 	};
 
 	bool
@@ -322,6 +323,8 @@ public:
 		char fence_setting[PROP_VALUE_MAX]{};
 		trace_fences = __system_property_get("debug.cv10.pocket_fence_trace", fence_setting) > 0 &&
 		               std::strcmp(fence_setting, "1") == 0;
+		wait_for_pending_fence = __system_property_get("debug.cv10.pocket_fence_wait", fence_setting) > 0 &&
+		                         std::strcmp(fence_setting, "1") == 0;
 		const uint64_t usage = AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_GPU_COLOR_OUTPUT;
 		ANativeWindow *window = nullptr;
 		if (AImageReader_newWithUsage(this->width, this->height, AIMAGE_FORMAT_RGBA_8888, usage,
@@ -351,6 +354,9 @@ public:
 	Frame
 	update(XrSession session)
 	{
+		constexpr int64_t wait_budget_ns = 500'000;
+		const int64_t wait_deadline_ns = wait_for_pending_fence ? monotonic_ns() + wait_budget_ns : 0;
+		int64_t fence_wait_ns = 0;
 		uint32_t held = 0;
 		for (auto &slot : slots) {
 			if (slot.image != nullptr && &slot != current && poll_swapchain(slot.swapchain) == XR_SUCCESS) {
@@ -383,8 +389,16 @@ public:
 			promote_ready();
 		}
 		promote_ready();
+		if (wait_for_pending_fence && current != nullptr && ready.image == nullptr && pending.fence >= 0) {
+			// Only spend the remaining read budget when reusing the last image is the alternative.
+			const int64_t wait_start_ns = monotonic_ns();
+			if (wait_start_ns < wait_deadline_ns) {
+				promote_ready(wait_deadline_ns - wait_start_ns);
+				fence_wait_ns = monotonic_ns() - wait_start_ns;
+			}
+		}
 		if (ready.image == nullptr) {
-			return {timestamp, pending.image != nullptr};
+			return {timestamp, pending.image != nullptr, fence_wait_ns};
 		}
 
 		AImageCropRect crop{};
@@ -425,7 +439,7 @@ public:
 		ready = {};
 		current = &*match;
 		timestamp = stamp;
-		return {timestamp, pending.image != nullptr};
+		return {timestamp, pending.image != nullptr, fence_wait_ns};
 	}
 
 	XrSwapchain
@@ -480,14 +494,15 @@ private:
 	}
 
 	void
-	promote_ready()
+	promote_ready(int64_t timeout_ns = 0)
 	{
 		if (pending.image == nullptr) {
 			return;
 		}
 		if (pending.fence >= 0) {
 			pollfd fd{pending.fence, POLLIN, 0};
-			const int result = poll(&fd, 1, 0);
+			const timespec timeout{0, static_cast<long>(timeout_ns)};
+			const int result = timeout_ns == 0 ? poll(&fd, 1, 0) : ppoll(&fd, 1, &timeout, nullptr);
 			if (result == 0 || (result < 0 && errno == EINTR)) {
 				return;
 			}
@@ -528,6 +543,7 @@ private:
 	int32_t width = 0;
 	int32_t height = 0;
 	bool trace_fences = false;
+	bool wait_for_pending_fence = false;
 };
 
 class DisplayCapture
@@ -1547,11 +1563,13 @@ private:
 		int64_t stream_begin_ns = 0;
 		int64_t stream_end_ns = 0;
 		bool stream_pending_fence = false;
+		int64_t stream_fence_wait_ns = 0;
 		if (frame.shouldRender && capture) {
 			if (using_android_stream) {
 				stream_begin_ns = convert_time != nullptr ? monotonic_ns() : 0;
 				const auto stream_frame = android_stream.update(session);
 				stream_pending_fence = stream_frame.pending_fence;
+				stream_fence_wait_ns = stream_frame.fence_wait_ns;
 				capture_timestamp = capture.update_stream(stream_frame.timestamp);
 				stream_end_ns = convert_time != nullptr ? monotonic_ns() : 0;
 			} else {
@@ -1636,9 +1654,9 @@ private:
 				const auto layer_time = static_cast<long long>(time.tv_sec) * 1'000'000'000 + time.tv_nsec;
 				__android_log_print(ANDROID_LOG_INFO, tag,
 				                    "CV10_SOURCE stamp=%lld layer=%lld stream_begin=%" PRId64
-				                    " stream_end=%" PRId64 " pending_fence=%d",
+				                    " stream_end=%" PRId64 " pending_fence=%d fence_wait=%" PRId64,
 				                    static_cast<long long>(capture_timestamp), layer_time, stream_begin_ns,
-				                    stream_end_ns, stream_pending_fence);
+				                    stream_end_ns, stream_pending_fence, stream_fence_wait_ns);
 			}
 		}
 	}
