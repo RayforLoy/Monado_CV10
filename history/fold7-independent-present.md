@@ -402,6 +402,31 @@ The local Bilibili artifacts use `pocket-buffer-present-bili{2,3}-{1600,1280}-*`
 
 After sampling, installed SHA-256 values matched the prior Monado preview `672b281b556e8097d0e9faf6513a1c2e4a11ccf789aca90d8dd5c5dac583f601` and Pocket XR `818e885e76fcc5fb62041d1e2806ffe429579e916808678c1bc65136c061a260`. Fold7 returned to the launcher at 1080×2520 and 60 Hz with 33% battery. CV10 remained attached in its 3200×1600 90 Hz mode.
 
+#### Four-view center enhancement and frame readiness
+
+With enhanced rendering enabled, the fused Compute shader can use the inset texture directly for the four enhancement neighbours when every chromatic tap is inside the fully weighted inset. Bounds are computed after reprojection for red, green and blue. Taps that reach the blend ramp or have invalid center coordinates use the existing per-tap blend. This keeps the physical output at 3200×1600, the independent center at 1280×1280 per eye and the full-field source at 1600×1600 per eye.
+
+The Fold7 comparison used the same centered Bilibili workspace, the same Pocket XR build, a 34° peak-to-peak yaw replay and the lit phone panel at 60 Hz. Separate full-session AB / BA / AB runs reported changes in Monado's GPU p95 of −1.28, −1.10 and +1.46 ms. The last pair stayed at thermal status 2 and its battery temperatures were 35.1°C and 35.6°C. The feed can refresh between launches, and the results justify a same-session comparison.
+
+The same-session fixture switches the two routes in an ABBA sequence on adjacent compositor frames. It pairs only adjacent frame IDs and reports GPU timestamps. The first two captures use one pipeline with a uniform to select the route. The next captures use independently specialized Vulkan pipelines. The comparison measures the draw cost, including frames that did not reach a scanout.
+
+| Comparison | Thermal status | Original GPU p95 | Candidate GPU p95 | Median paired GPU time saved | Candidate faster |
+| --- | --- | ---: | ---: | ---: | ---: |
+| One pipeline, first run | 1 → 2 | 4.80 ms | 4.50 ms | 0.329 ms | 587/674 |
+| One pipeline, second run | 2 → 2 | 4.97 ms | 4.70 ms | 0.334 ms | 572/674 |
+| Specialized pipelines, first run | 2 → 2 | 3.93 ms | 3.78 ms | 0.170 ms | 601/675 |
+| Specialized pipelines, second run | 2 → 2 | 3.50 ms | 3.38 ms | 0.156 ms | 603/674 |
+
+The specialized captures began at 36.0°C and 35.9°C battery temperature. The optimization was faster in 1204 of the 1349 specialized frame pairs. The separate full-session results are still inconclusive about a reduction in end-to-end latency.
+
+The GPU differential fixture evaluates both neighbour sums from the same source buffer and reprojected coordinates. Across three 3200×1600 external captures it reported 2,272,194 accepted outputs with exact float equality and zero differences. One capture included 559,903 accepted pixels whose reference samples contained visible content. A separate ARM64 boundary check evaluated one million finite synthetic cases on Fold7, including signed transforms and coordinates near the blend ramp. These tests establish sampling equivalence where the fast path applies. The right-lens camera did not resolve the workspace during the comparison, so optical center clarity and smear remain unverified.
+
+The [frame fence analyzer](fold7-pocket-present-fences.py) also reports whether milestones for a newer buffer precede each missing 90 Hz slot and its estimated SurfaceFlinger wake. The four interleaved captures have 1777 missing slots. A newer Monado frame had been submitted and completed GPU work before the nominal wake for all 1777 slots. Android had observed the queue and acquire events for 1776 of them and already latched a newer buffer in 1649. The phone HWC call overlapped 1708 of those slots, compared with 29 for CV10 HWC. These are event relationships around reconstructed slots, using the traced 8.333 ms SurfaceFlinger work duration. They cannot show that every newer buffer remained available at the actual wake. All 3618 present fences matched the Vulkan timestamps by frame number. CV10 still presented 60.31–60.36 times/s with 89.93–90.00 Monado submits/s.
+
+The final shader has no benchmark route selector. Its replay build completed the same Bilibili yaw sequence at 90.00 Monado submits/s and 60.31 CV10 presents/s. All 905 timestamps matched by frame number. Monado's GPU p50/p95 was 2.85/4.72 ms and Pocket pre-swap to present was 33.30/44.43 ms. The physical phone panel stayed at 60 Hz and thermal status changed from 1 to 2. The replay APK SHA-256 is `611cbd69fd732e437180991f85c139cb009b6cf8fe4b1f5a8d02b0ce99f08ff6`. The final trace SHA-256 is `eb66c4bce03ac8c04b49e4fb8d124fe559f0fd86fbae4cb0aed9934b49297b4c`. The installed Monado and Pocket XR APKs were restored after capture.
+
+The local `ffr-quad` directory contains `pocket-inset-taps-pair{1,2,3}-*`, `pocket-inset-interleaved-*`, `pocket-inset-audit-*`, `inset-taps-gpu-differential.txt`, and the matching build, run and analysis scripts. The single-pipeline fixture SHA-256 is `8dedc0213d113d50b56a81c93c6c0719df700d6de359d09591b5f92283ce5992`, the specialized fixture is `5b59435892b8929cd72b8eeef6a0f6905d34329aa3762daa0e63af3b0e325b43`, and the differential fixture is `e6d77b741d4c3f9a607f18aea80153feec4803038e6b9b990a0b45e843705c17`. The Pocket XR fixture is the same Bilibili portrait build recorded above.
+
 ## 直出帧的姿态记录
 
 按与 ChatGPT 6 极高复核的方案，Pocket XR 通过每次会话独有的非阻塞管道发送 EGL 时间戳、姿态预测时间、回正序号和实际使用的中央、上边、下边姿态。Monado 仅在 `SurfaceTexture` 锁存的图像具有完全相同的时间戳时配对。应用或通道不可用时继续出画。本轮实现只验证配对，仍沿用现有渲染补偿。

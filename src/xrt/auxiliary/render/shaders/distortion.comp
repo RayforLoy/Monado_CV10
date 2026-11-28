@@ -146,6 +146,47 @@ vec3 sample_foveated_rgb(sampler2D atlas, vec2 r_uv, vec2 g_uv, vec2 b_uv, uint 
 	            sample_foveated(atlas, b_uv, iz, half_texel).b);
 }
 
+bool all_enhancement_taps_in_inset(vec2 r_uv, vec2 g_uv, vec2 b_uv, vec4 transform)
+{
+	if (!inside_view(r_uv) || !inside_view(g_uv) || !inside_view(b_uv)) {
+		return false;
+	}
+
+	// The extrema enclose all four offsets of all three chromatic samples.
+	vec2 margin = vec2(CV10_ENHANCED_SAMPLE_STEP);
+	vec2 first = fma(min(min(r_uv, g_uv), b_uv) - margin, transform.zw, transform.xy);
+	vec2 last = fma(max(max(r_uv, g_uv), b_uv) + margin, transform.zw, transform.xy);
+	vec2 distance = min(min(first, last), 1.0 - max(first, last));
+	return all(greaterThanEqual(distance, vec2(ubo.distortion_options.y)));
+}
+
+vec3 sample_inset_rgb(sampler2D atlas, vec2 r_uv, vec2 g_uv, vec2 b_uv, uint iz, vec2 half_texel)
+{
+	vec4 transform = ubo.context_to_inset[iz];
+	vec4 rect = ubo.inset_rect[iz];
+	return vec3(sample_atlas(atlas, fma(r_uv, transform.zw, transform.xy), rect, half_texel).r,
+	            sample_atlas(atlas, fma(g_uv, transform.zw, transform.xy), rect, half_texel).g,
+	            sample_atlas(atlas, fma(b_uv, transform.zw, transform.xy), rect, half_texel).b);
+}
+
+vec3 sample_enhancement_neighbours(sampler2D atlas, vec2 r_uv, vec2 g_uv, vec2 b_uv, uint iz, vec2 half_texel)
+{
+	const vec2 dx = vec2(CV10_ENHANCED_SAMPLE_STEP, 0.0);
+	const vec2 dy = vec2(0.0, CV10_ENHANCED_SAMPLE_STEP);
+	if (all_enhancement_taps_in_inset(r_uv, g_uv, b_uv, ubo.context_to_inset[iz])) {
+		return sample_inset_rgb(atlas, r_uv - dx, g_uv - dx, b_uv - dx, iz, half_texel)
+		       + sample_inset_rgb(atlas, r_uv + dx, g_uv + dx, b_uv + dx, iz, half_texel)
+		       + sample_inset_rgb(atlas, r_uv - dy, g_uv - dy, b_uv - dy, iz, half_texel)
+		       + sample_inset_rgb(atlas, r_uv + dy, g_uv + dy, b_uv + dy, iz, half_texel);
+	}
+
+	// Near the inset edge, each tap still needs its own context blend.
+	return sample_foveated_rgb(atlas, r_uv - dx, g_uv - dx, b_uv - dx, iz, half_texel)
+	       + sample_foveated_rgb(atlas, r_uv + dx, g_uv + dx, b_uv + dx, iz, half_texel)
+	       + sample_foveated_rgb(atlas, r_uv - dy, g_uv - dy, b_uv - dy, iz, half_texel)
+	       + sample_foveated_rgb(atlas, r_uv + dy, g_uv + dy, b_uv + dy, iz, half_texel);
+}
+
 void main()
 {
 	uint ix = gl_GlobalInvocationID.x;
@@ -175,12 +216,7 @@ void main()
 		b_uv = transform_uv_timewarp(b_uv, iz);
 		colour = sample_foveated_rgb(source[iz], r_uv, g_uv, b_uv, iz, half_texel);
 		if (ubo.distortion_options.x > 0.0 && radius < CV10_ENHANCED_RADIUS) {
-			const vec2 dx = vec2(CV10_ENHANCED_SAMPLE_STEP, 0.0);
-			const vec2 dy = vec2(0.0, CV10_ENHANCED_SAMPLE_STEP);
-			vec3 neighbours = sample_foveated_rgb(source[iz], r_uv - dx, g_uv - dx, b_uv - dx, iz, half_texel)
-			                + sample_foveated_rgb(source[iz], r_uv + dx, g_uv + dx, b_uv + dx, iz, half_texel)
-			                + sample_foveated_rgb(source[iz], r_uv - dy, g_uv - dy, b_uv - dy, iz, half_texel)
-			                + sample_foveated_rgb(source[iz], r_uv + dy, g_uv + dy, b_uv + dy, iz, half_texel);
+			vec3 neighbours = sample_enhancement_neighbours(source[iz], r_uv, g_uv, b_uv, iz, half_texel);
 			colour = cv10_enhance_colour(colour, neighbours, radius);
 		}
 	} else {

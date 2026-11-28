@@ -30,25 +30,51 @@ def report_interval(label, times):
     print(f"{label}: {median(times) / MILLISECOND:.2f} / {tail / MILLISECOND:.2f} ms ({len(times)} frames)")
 
 
-def report_hwc(actual_times, outputs):
+def missing_scanouts(presented):
     # The fixture uses the 90 Hz CV10 mode. Reconstruct candidate scanouts
     # inside each gap, leaving out gaps that do not fit this refresh grid.
     period = round(SECOND / 90)
     slots = []
-    actual_times = sorted(set(actual_times))
-    for earlier, later in zip(actual_times, actual_times[1:]):
+    actual_times = sorted((events[PRESENT], frame) for frame, events in presented.items())
+    for (earlier, frame), (later, _) in zip(actual_times, actual_times[1:]):
         steps = round((later - earlier) / period)
         if abs(later - earlier - steps * period) <= 500_000:
-            slots.extend(earlier + step * period for step in range(1, steps))
-    print(f"Missing 90 Hz scanout slots estimated from fence gaps: {len(slots)}.")
+            slots.extend((earlier + step * period, frame) for step in range(1, steps))
+    return slots
+
+
+def report_hwc(slots, outputs):
     for output, calls in outputs.items():
         starts = [begin for begin, _ in calls]
         overlap = 0
-        for slot in slots:
+        for slot, _ in slots:
             candidate = bisect_right(starts, slot) - 1
             overlap += candidate >= 0 and slot < calls[candidate][1]
         if calls:
             print(f"HWC {output}: {overlap}/{len(slots)} missing slots overlap PresentOrValidate.")
+
+
+def report_readiness(label, slots, milestones, lead):
+    if not milestones or not slots:
+        return
+    times = []
+    latest_frames = []
+    latest = 0
+    for time, frame in sorted(milestones):
+        latest = max(latest, frame)
+        times.append(time)
+        latest_frames.append(latest)
+
+    def count(advance):
+        ready = 0
+        for slot, last_presented in slots:
+            index = bisect_right(times, slot - advance) - 1
+            ready += index >= 0 and latest_frames[index] > last_presented
+        return ready
+
+    print(f"{label}: {count(0)}/{len(slots)} by missing scanout"
+          + (f", {count(lead)}/{len(slots)} by nominal wake ({lead / MILLISECOND:.3f} ms earlier)."
+             if lead is not None else "."))
 
 
 def analyze(trace_path, log_path, layer, hwc_ids):
@@ -74,6 +100,11 @@ def analyze(trace_path, log_path, layer, hwc_ids):
         if not offsets or max(offsets) - min(offsets) > MILLISECOND:
             raise ValueError("Clock snapshots do not establish one stable monotonic offset")
         offset = round(median(offsets))
+        work_budgets = [round(row.value) for row in processor.query("""
+            SELECT DISTINCT c.value FROM counter c JOIN counter_track t ON c.track_id = t.id
+            WHERE t.name = 'VsyncWorkDuration-sf' AND c.value > 0
+        """)]
+        wake_lead = work_budgets[0] if len(work_budgets) == 1 else None
         for row in processor.query("""
             SELECT slice.ts, slice.name, EXTRACT_ARG(slice.arg_set_id, 'frame_number') AS frame,
                    EXTRACT_ARG(slice.arg_set_id, 'layer_name') AS layer
@@ -135,8 +166,26 @@ def analyze(trace_path, log_path, layer, hwc_ids):
     print(f"Intervals report p50 / p95. Trace clock minus monotonic clock: {offset} ns.")
     for label, times in intervals.items():
         report_interval(label, times)
+    slots = missing_scanouts(presented)
+    print(f"Missing 90 Hz scanout slots estimated from fence gaps: {len(slots)}.")
     if hwc_ids:
-        report_hwc(actual_times, outputs)
+        report_hwc(slots, outputs)
+
+    # The dropped frame IDs may have partial Android events. Count only observed
+    # milestones, and use the Vulkan frame numbers only after every actual join
+    # has established that they share the same sequence as the Android buffers.
+    if feedback_matches == len(presented):
+        submitted_and_rendered = [
+            (max(present["end"], records["GPU"][frame]["end"]), frame)
+            for frame, present in records["PRESENT"].items()
+            if present["result"] == 0 and frame in records["GPU"]
+        ]
+        report_readiness("Newer Monado submit and GPU completion", slots, submitted_and_rendered, wake_lead)
+    acquired = [(max(events["Queue"], events["AcquireFenceSignaled"]), frame)
+                for frame, events in frames.items() if "Queue" in events and "AcquireFenceSignaled" in events]
+    latched = [(events["Latch"], frame) for frame, events in frames.items() if "Latch" in events]
+    report_readiness("Newer Android buffer queued and acquired", slots, acquired, wake_lead)
+    report_readiness("Newer Android buffer latched", slots, latched, wake_lead)
 
 
 if __name__ == "__main__":
