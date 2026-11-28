@@ -2,7 +2,7 @@
 """Replay the phone's observed retire windows against a reconstructed CV10 dispatch grid."""
 
 import argparse
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path
@@ -62,9 +62,53 @@ def intervals_to_next(starts, ends, max_interval):
 
 
 @dataclass(frozen=True)
+class DispatchBudget:
+    before_hwc: int
+    after_hwc: int
+
+
+def read_sf_budget(path, hwc):
+    with TraceProcessor(trace=str(path)) as processor:
+        rows = list(processor.query(f"""
+            WITH main_slices AS (
+                SELECT s.ts, s.dur, s.name, s.depth, s.track_id
+                FROM slice s JOIN thread_track t ON t.id = s.track_id
+                JOIN thread USING (utid) JOIN process USING (upid)
+                WHERE thread.tid = process.pid AND thread.name = 'surfaceflinger' AND s.dur > 0
+            ),
+            begins AS (
+                SELECT track_id, SUBSTR(name, 12, INSTR(name, ' vsyncIn') - 12) AS token,
+                       MIN(ts) AS ts
+                FROM main_slices WHERE depth = 0 AND name GLOB 'beginFrame * vsyncIn*'
+                GROUP BY track_id, token
+            ),
+            composites AS (
+                SELECT ts, dur, track_id, SUBSTR(name, 11) AS token
+                FROM main_slices WHERE depth = 0 AND name GLOB 'composite *'
+            ),
+            calls AS (
+                SELECT ts, track_id FROM main_slices WHERE name = 'HwcPresentOrValidateDisplay {hwc}'
+            )
+            SELECT calls.ts - begins.ts AS before_hwc,
+                   composites.ts + composites.dur - calls.ts AS after_hwc
+            FROM calls JOIN composites ON calls.track_id = composites.track_id
+                 AND calls.ts BETWEEN composites.ts AND composites.ts + composites.dur
+            JOIN begins ON begins.track_id = composites.track_id AND begins.token = composites.token
+                AND begins.ts <= composites.ts
+        """))
+    if len(rows) < 20:
+        raise ValueError(f"{path} has too few paired SurfaceFlinger frames for display {hwc}: {len(rows)}")
+    return DispatchBudget(
+        before_hwc=round(quantiles([row.before_hwc for row in rows], n=20)[18]),
+        after_hwc=round(quantiles([row.after_hwc for row in rows], n=20)[18]),
+    ), len(rows)
+
+
+@dataclass(frozen=True)
 class Reference:
     cv10_lead: int
     phone_lead: int
+    phone_period: int
     check_to_hwc: int
     cv10_call_duration: int
     phone_call_duration: int
@@ -78,6 +122,7 @@ def load_reference(auto_path, cv10_only_path):
     return Reference(
         cv10_lead=round(median(intervals_to_next(cv10_calls, cv10_only.cv10_retires, CV10_PERIOD))),
         phone_lead=round(median(intervals_to_next(phone_calls, auto.phone_retires, 20 * MS))),
+        phone_period=round(median(later - earlier for earlier, later in zip(auto.phone_retires, auto.phone_retires[1:]))),
         check_to_hwc=round(median(intervals_to_next(cv10_only.sf_checks, cv10_calls, CV10_PERIOD))),
         cv10_call_duration=round(quantiles([duration for _, duration in cv10_only.cv10_hwc], n=20)[18]),
         phone_call_duration=round(quantiles([duration for _, duration in auto.phone_hwc], n=20)[18]),
@@ -99,19 +144,39 @@ def first_joint_dispatch(ready, latest, grid, check_lead):
     return index < len(grid) and grid[index] <= latest
 
 
-def independent_dispatch(ready, latest, ideal, grid, reference, guard):
+def independent_dispatch(ready, latest, ideal, grid, cv10, phone, guard):
     index = max(0, bisect_left(grid, ready) - 1)
     candidates = []
     while index + 1 < len(grid) and grid[index] <= latest:
-        earliest = max(ready, grid[index] + reference.cv10_call_duration + guard)
-        deadline = min(latest, grid[index + 1] - guard - reference.phone_call_duration)
+        earliest = max(ready, grid[index] + cv10.after_hwc + guard + phone.before_hwc)
+        deadline = min(latest, grid[index + 1] - cv10.before_hwc - guard - phone.after_hwc)
         if earliest <= deadline:
             candidates.append(min(max(ideal, earliest), deadline))
         index += 1
     return min(candidates, key=lambda time: abs(time - ideal), default=None)
 
 
-def report(path, reference, guard):
+def causal_dispatch(ready, latest, ideal, previous_retires, reference, cv10, phone, guard, margin):
+    # Project recent samples to the cycle of the latest observed retire and take the median phase.
+    latest_retire = previous_retires[-1]
+    phases = [retire + round((latest_retire - retire) / CV10_PERIOD) * CV10_PERIOD
+              for retire in previous_retires]
+    anchor = round(median(phases)) - reference.cv10_lead
+    first = (ready - anchor) // CV10_PERIOD
+    last = (latest - anchor) // CV10_PERIOD + 1
+    predicted_grid = [anchor + step * CV10_PERIOD for step in range(first, last + 1)]
+    return independent_dispatch(ready + phone.before_hwc, latest - margin, ideal,
+                                predicted_grid, cv10, phone, guard + margin)
+
+
+def overlaps_cv10(chosen, grid, cv10, phone, guard):
+    index = bisect_left(grid, chosen)
+    return (index == 0 or index == len(grid) or
+            chosen - phone.before_hwc < grid[index - 1] + cv10.after_hwc + guard or
+            grid[index] - cv10.before_hwc < chosen + phone.after_hwc + guard)
+
+
+def report(path, reference, guard, sf_budgets, prediction_margin):
     capture = read_capture(path)
     grid = list(cv10_dispatch_grid(capture.cv10_retires, reference.cv10_lead))
     if len(grid) < 2:
@@ -123,22 +188,49 @@ def report(path, reference, guard):
 
     span = (windows[-1][1] - windows[0][0]) / (1_000 * MS)
     print(f"{path.stem}: {len(windows)} windows over {span:.3f} s")
-    print("Phone fence lead | Frame-start check | HWC-start check | Independent phone dispatch | p95 phase movement")
+    print("Phone fence lead | Frame-start check | HWC-start check | Independent HWC | Independent main thread | "
+          "Causal main thread (late/overlap)")
+    hwc_budgets = (DispatchBudget(0, reference.cv10_call_duration), DispatchBudget(0, reference.phone_call_duration))
+    budget_options = (hwc_budgets, sf_budgets)
     for lead_ms in (1, 3, 5, 7, 9):
         early, late = 0, 0
-        shifts = []
+        shifts = [[] for _ in budget_options]
+        causal_phases = []
+        deadline_miss, overlaps = 0, 0
         for previous, target in windows:
             ready = previous + PHONE_RETIRE_GUARD
             latest = target - lead_ms * MS - reference.phone_call_duration
             ideal = target - reference.phone_lead
             early += first_joint_dispatch(ready, latest, grid, reference.check_to_hwc)
             late += first_joint_dispatch(ready, latest, grid, 0)
-            chosen = independent_dispatch(ready, latest, ideal, grid, reference, guard)
-            if chosen is not None:
-                shifts.append(abs(chosen - ideal))
-        shift95 = quantiles(shifts, n=20)[18] if len(shifts) > 1 else (shifts[0] if shifts else 0)
-        print(f"{lead_ms} ms | {early} ({early / span:.2f}/s) | {late} ({late / span:.2f}/s) | "
-              f"{len(shifts)} ({len(shifts) / span:.2f}/s) | {shift95 / MS:.2f} ms")
+            for phases, (cv10, phone) in zip(shifts, budget_options):
+                chosen = independent_dispatch(ready, latest, ideal, grid, cv10, phone, guard)
+                if chosen is not None:
+                    phases.append(abs(chosen - ideal))
+            index = bisect_right(capture.cv10_retires, ready)
+            if index == 0:
+                continue
+            predicted_target = previous + reference.phone_period
+            chosen = causal_dispatch(ready, predicted_target - lead_ms * MS - reference.phone_call_duration,
+                                     predicted_target - reference.phone_lead,
+                                     capture.cv10_retires[max(0, index - 5):index],
+                                     reference, *sf_budgets, guard, prediction_margin)
+            if chosen is None:
+                continue
+            late_dispatch = chosen > latest
+            overlap = overlaps_cv10(chosen, grid, *sf_budgets, guard)
+            deadline_miss += late_dispatch
+            overlaps += overlap
+            if not late_dispatch and not overlap:
+                causal_phases.append(abs(chosen - ideal))
+        dispatch = " | ".join(format_dispatch(phases, span) for phases in shifts)
+        print(f"{lead_ms} ms | {early} ({early / span:.2f}/s) | {late} ({late / span:.2f}/s) | {dispatch} | "
+              f"{format_dispatch(causal_phases, span)} ({deadline_miss}/{overlaps})")
+
+
+def format_dispatch(phases, span):
+    shift95 = quantiles(phases, n=20)[18] if len(phases) > 1 else (phases[0] if phases else 0)
+    return f"{len(phases)} ({len(phases) / span:.2f}/s, p95 shift {shift95 / MS:.2f} ms)"
 
 
 if __name__ == "__main__":
@@ -147,13 +239,25 @@ if __name__ == "__main__":
     parser.add_argument("--auto", type=Path, required=True, help="Primary 60 Hz phone reference")
     parser.add_argument("--cv10-only", type=Path, required=True, help="90 Hz CV10 reference with phone panel off")
     parser.add_argument("--guard-ms", type=float, default=0.5, help="Reserve on either side of CV10 HWC work")
+    parser.add_argument("--prediction-margin-ms", type=float, default=0.25,
+                        help="Extra reserve on predicted deadlines in the causal model")
     args = parser.parse_args()
-    if not isfinite(args.guard_ms) or args.guard_ms < 0:
-        parser.error("--guard-ms must be a finite non-negative number")
+    for option in ("guard_ms", "prediction_margin_ms"):
+        value = getattr(args, option)
+        if not isfinite(value) or value < 0:
+            parser.error(f"--{option.replace('_', '-')} must be a finite non-negative number")
     reference = load_reference(args.auto, args.cv10_only)
     print(f"CV10 reference lead {reference.cv10_lead / MS:.3f} ms, "
           f"phone lead {reference.phone_lead / MS:.3f} ms, frame check is {reference.check_to_hwc / MS:.3f} ms before HWC.")
     print(f"Reference p95 HWC duration: CV10 {reference.cv10_call_duration / MS:.3f} ms, "
           f"phone {reference.phone_call_duration / MS:.3f} ms. CV10 reserve is {args.guard_ms:.2f} ms.")
+    cv10_sf, cv10_count = read_sf_budget(args.cv10_only, 1)
+    phone_sf, phone_count = read_sf_budget(args.auto, 3)
+    print("Main-thread p95 from beginFrame to HWC start and from HWC start to composite end: "
+          f"CV10 {cv10_sf.before_hwc / MS:.3f} + {cv10_sf.after_hwc / MS:.3f} ms ({cv10_count} pairs), "
+          f"phone baseline {phone_sf.before_hwc / MS:.3f} + {phone_sf.after_hwc / MS:.3f} ms ({phone_count} pairs).")
+    print(f"Causal prediction uses a phone period of {reference.phone_period / MS:.3f} ms "
+          f"and {args.prediction_margin_ms:.2f} ms extra deadline reserve.")
     for capture in args.capture:
-        report(capture, reference, round(args.guard_ms * MS))
+        report(capture, reference, round(args.guard_ms * MS), (cv10_sf, phone_sf),
+               round(args.prediction_margin_ms * MS))
