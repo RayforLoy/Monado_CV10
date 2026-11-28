@@ -137,6 +137,21 @@ Android 16 QPR2 的 SurfaceFlinger 在 `CompositionRefreshArgs` 中共用主屏�
 
 从 Fold7 的 F9660ZCUDBZJ9 构建只读取得 `/vendor/lib64/libdrm.so`。SHA-256 为 `311a8f5fff41f49d7ae186a94aaf053f465d946b4e716deb1c4ac29fa1d21743`，Build ID 为 `5e3f95c5eb67ff212df8d1288c77a9f7`。ARM64 的 `drmModeAtomicCommit` 在 `0x13b48` 保存调用参数 `w2`，在 `0x13d48` 读回并在 `0x13e54` 写入 ioctl 结构的 flags。随后 `0x13e68` 把请求 `0xc03864bc` 传给 `drmIoctl`。因此需在上游 HAL 调用或内核入口观察该字段的实际值。量产系统拒绝 ADB 读取 Composer 服务、`libsdedrm.so`、`libsdmcore.so` 和 `msm_drm.ko` 的内容，仍无法确认实际调用选择了哪些 flags。[三星构建记录](https://doc.samsungmobile.com/SM-F9660/034393250731/eng.html)
 
+### CV10 进入内核提交前的跨屏等待
+
+原厂线和原版 Hello XR 不变，手机物理模式始终为 60 Hz。连续采样系统自动时钟、强制 CV10 时钟、恢复自动时钟三种状态。将 CV10 的 `DRMAtomicReq::Commit` 开始、其内层 `atomic_commit` 开始、线程休眠区间和唤醒者配对。表中的计数来自 CV10 的内核 retire 事件。[Perfetto 查询](fold7-drm-cross-display-admission.sql)
+
+| 第二次采样 | CV10 调用开始至 `atomic_commit` 平均 | 期间平均休眠 | 内层 `atomic_commit` 平均 | CV10 retire 次数/秒 |
+| --- | ---: | ---: | ---: | ---: |
+| 初始自动 | 0.029 ms | 0.000 ms | 0.011 ms | 60.38 |
+| 强制 CV10 | 14.894 ms | 14.781 ms | 0.375 ms | 60.38 |
+| 刚恢复自动 | 7.422 ms | 7.324 ms | 0.020 ms | 60.39 |
+| 恢复自动约 9 秒后 | 7.414 ms | 7.315 ms | 0.020 ms | 60.39 |
+
+在新旧四次强制外屏时钟采样中，等待至少 1 ms 的调用分别为 201/209、199/208、255/267 和 349/359。这些调用全部与手机的 `atomic_commit` 重叠，CV10 在手机调用结束后 0.5 ms 内进入自己的 `atomic_commit`。每次都由手机提交线程在该时段唤醒 CV10 工作线程。恢复自动时钟的三段采样包括约 9 秒后的追踪，每段的全部 209 次调用都有相同关系。四段初始自动时钟对照均没有达到 1 ms 的前置等待，CV10 retire 仍约 60 次/秒。既有手机熄屏组的 537 次 CV10 调用没有手机提交等待，CV10 retire 为 90.0 次/秒。
+
+同平台公开的 MSM 驱动在等待旧 CRTC 和 plane 腾出之前先取 DRM 的 `connection_mutex`，且 `nonblock` 分支也走该等待。这个顺序可以解释为何手机线程在自己的 `atomic_commit` 内等待时，外屏线程在进入其 `atomic_commit` 追踪区间前已睡眠。此次未采到 `lock/contention` 事件，量产 Fold7 的具体锁和 ioctl flags 仍待证实。后续实验应测两路从 Composer 调用开始到内核接收的时间，并判断提前延后手机提交是否让 CV10 避开这段跨屏等待。[同平台公开内核源码](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/d50b305f7da9e14715a25120a4ac7b1a4b8b97c3/vendor/qcom/opensource/display-drivers/msm/msm_atomic.c#L874) · [Perfetto 线程唤醒定义](https://perfetto.dev/docs/data-sources/cpu-scheduling)
+
 对已测量的阻塞路径，逐屏异步原型需覆盖 `Output::present` 中的同步验证，或在该调用前按准备就绪和时限把手机输出顺延到自己的机会。跨显示共享缓冲区仍需等待所有实际消费者，不能直接跳过 `postComposition` 的释放栅栏处理。原型验收要同时跟踪按屏在途帧、热插拔或切换模式时的旧任务、全局事务 VSync ID、虚拟输出及两块物理屏的真实呈现节奏。[与 ChatGPT 6 极高的源码审阅](https://chatgpt.com/c/6b09b179-eac8-83ea-8cae-87222af8fa41)
 
 量产系统也启用了以时长配置合成相位的属性，但 ADB 将当前三个 8,333,333 ns 时长原样传给 SurfaceFlinger 调试事务 1047 时，返回 `Operation not permitted`，相位读回无变化。[AOSP SurfaceFlinger 调试事务](https://android.googlesource.com/platform/frameworks/native/+/fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103/services/surfaceflinger/SurfaceFlinger.cpp#7609)
@@ -442,6 +457,7 @@ The final build also displayed the workspace through the original cable with the
 - `fold7-follower-workload-guard-{050,075}.txt` 保存长样本回放。 `fold7-vendor-present/CHCDBZJ9/` 保存只读采集的 `libdrm.so` 和相关反汇编。
 - `hello-lit-optical-on60-*` 记录 35% 电量、内屏 60 Hz 时的短测。Hello XR 进入 FOCUSED，外显截图有双目蓝块。桌面和样例的右镜相机画面都接近全黑，亮度第 90 百分位均为 0。固定相机当时未取得可核对的光学画面，样例已退出并回到手机桌面。
 - `hello-wired-dex-settled-*` 是有线 DeX 的活动模式和可选模式，`hello-after-wired-dex-*` 是恢复镜像后的外显实呈、右镜实拍和 OpenXR 会话记录。
+- `hello-connection-lock-*`、`hello-connection-recovery-*` 保存新增的跨屏提交采样。第二轮强制 CV10 和恢复系统自动时钟后约 9 秒的 trace SHA-256 分别为 `d6807793e024a10dbc0f8f7001d58f8e774eb2772b7978d9366120f42349bf99` 和 `c582ce5e3f4de3d08d9264cdd89156358c6b550e4480215b522902d6251af819`。
 - `pocket-policy-static-phone-summary.txt` 和 `hello-policy-static-phone-hashes.txt`，记录工作区直出时静置的手机界面。
 - `pocket-lit-layer-state.perfetto-trace`、`lit-layer-present-mode-comparison.txt`、`hello-present-asap-comparison.txt`、`fold7-backpressure-stages.txt` 和对应 `*-monado.log`，记录快返回的 HWC 调用、图层与 Vulkan 调度对照。尽早呈现实验 APK SHA-256 为 `d377c303c99109361a5d5f3f6145253abca9ccc2714f322a25c0c973092a410d`。
 
