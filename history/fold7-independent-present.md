@@ -546,6 +546,16 @@ Evidence is in `ffr-quad/fold7-slot-ffr-{comparison,pose}.txt`, `fold7-slot-ffr-
 
 本机证据位于 `ffr-quad/fold7-follower-slot-replay.txt`、`ffr-quad/fold7-follower-slot-device.txt`、`ffr-quad/fold7-follower-schedule-availability.txt`。这是调度实验，量产机 ON/60 的 CV10 实际呈现仍约 60.31 次/秒。熄内屏的 90 Hz 对照仍可复现，未作为亮屏目标的验收结果。
 
+### 主合成队列的主动唤醒实验
+
+[主动唤醒补丁](aosp-android16-request-next-cv10-wake.patch) 接在[独立时隙探针](aosp-android16-probe-independent-follower-slot.patch)之后，基线仍为 `platform/frameworks/native@fcbde2bcff56ca1d7bec9cabf8bdca5e288bf103`。在系统实验构建启动 SurfaceFlinger 前，除探针的两块物理屏 ID 外，可设置 `debug.sf.cv10_slot_wake_requests` 为 1–900，默认 0。上限按 SurfaceFlinger 进程计数，包括队列争用等失败请求。
+
+当 Fold7 内屏和 CV10 都亮着、CV10 领跑且预测留得出内屏的提交窗口时，探针检查主合成队列。如果队列还空着，就通过 CV10 当前 VSync 注册补发一次普通帧请求。已经排好的唤醒和已入主线程队列的帧保持原样。若新的 VSync 已经到达，旧批次不能再替它发请求。每次实验请求记录 `CV10 slot wake request=N target=T wake=W vsync=V`，未取得调度结果时 W 和 V 为 0。
+
+探针仍在同一个 Looper 重查。它只接受紧邻上一批的 CV10 VSync，允许预测相位有四分之一周期偏差。如果调度器已经跳到更晚的一拍、旧栅栏仍忙或唤醒太近，则该时隙无效。系统构建实测时对齐 `CV10 slot wake`、`VSYNC-sf`、`CV10 slot check` 和外显的 HWC 调用及实际呈现时间戳，分别核对请求、唤醒和扫描输出。该补丁会改变实验模式下的帧唤醒安排，手机图层提交及栅栏仍由现有合成流程处理。
+
+八项系统补丁按「每屏周期、呈现追踪、慢屏栅栏门、validate-only、跟随屏追踪、延后准入、独立时隙探针、主动唤醒」顺序在基线上正反向应用通过。尾部两项都应用后，Windows x64 和 Fold7 上的 Android arm64 C++ 检查通过。检查覆盖命中下一拍、超出相位容差、误认后一拍和无效周期。两端七条边界决策输出一致，结果见 `ffr-quad/fold7-follower-wake-check-{host,device}.txt`。补丁同时在上游 `MessageQueueTest` 加入保持已有唤醒和拒绝陈旧批次的用例。完整 SurfaceFlinger 与其测试套件尚未构建或部署。量产 Fold7 此时仍为内屏 1080×2520 @ 60 Hz，CV10 使用原厂线。
+
 ## 可选熄屏 90 Hz
 
 实验版在 Pocket 预览首帧到达后提供「熄灭手机屏幕以启用 CV10 90 Hz」。需要已有的 Shizuku 桥接授权和 CV10 时钟，以及用户在该次会话里确认。熄屏期间工作区继续运行，最多维持十分钟。关闭预览或它的进程退出时恢复 Android 对手机面板和合成时钟的控制。

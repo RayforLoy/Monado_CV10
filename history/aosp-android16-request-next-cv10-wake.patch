@@ -1,0 +1,242 @@
+diff --git a/services/surfaceflinger/Scheduler/MessageQueue.cpp b/services/surfaceflinger/Scheduler/MessageQueue.cpp
+index fb39e88..476d730 100644
+--- a/services/surfaceflinger/Scheduler/MessageQueue.cpp
++++ b/services/surfaceflinger/Scheduler/MessageQueue.cpp
+@@ -199,6 +199,19 @@ void MessageQueue::scheduleFrame(Duration workDurationSlack) {
+                                            .lastVsync = mVsync.lastCallbackTime.ns()});
+ }
+
++std::optional<scheduler::ScheduleResult> MessageQueue::requestFrameIfIdle(TimePoint handledVsync) {
++    std::lock_guard lock(mVsync.mutex);
++    if (!mVsync.registration || mVsync.lastCallbackTime != handledVsync ||
++        mVsync.scheduledFrameTimeOpt || mHandler->isFramePending()) {
++        return std::nullopt;
++    }
++    mVsync.scheduledFrameTimeOpt =
++            mVsync.registration->schedule({.workDuration = mVsync.workDuration.get().count(),
++                                           .readyDuration = 0,
++                                           .lastVsync = handledVsync.ns()});
++    return mVsync.scheduledFrameTimeOpt;
++}
++
+ std::optional<scheduler::ScheduleResult> MessageQueue::getScheduledFrameResult() const {
+     if (mHandler->isFramePending()) {
+         return scheduler::ScheduleResult{TimePoint::now(), mHandler->getExpectedVsyncTime()};
+diff --git a/services/surfaceflinger/Scheduler/MessageQueue.h b/services/surfaceflinger/Scheduler/MessageQueue.h
+index 7c18d31..49f42e8 100644
+--- a/services/surfaceflinger/Scheduler/MessageQueue.h
++++ b/services/surfaceflinger/Scheduler/MessageQueue.h
+@@ -111,6 +111,11 @@ protected:
+
+     void onNewVsyncSchedule(std::shared_ptr<scheduler::VSyncDispatch>) EXCLUDES(mVsync.mutex);
+
++    // Places a one-shot request on the current dispatch only when the normal queue is idle.
++    // This request can be replaced by normal timing or schedule changes.
++    std::optional<scheduler::ScheduleResult> requestFrameIfIdle(TimePoint handledVsync)
++            EXCLUDES(mVsync.mutex);
++
+ private:
+     virtual void onFrameSignal(ICompositor&, VsyncId, TimePoint expectedVsyncTime) = 0;
+
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.cpp b/services/surfaceflinger/Scheduler/Scheduler.cpp
+index f4ca3f5..00efa14 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.cpp
++++ b/services/surfaceflinger/Scheduler/Scheduler.cpp
+@@ -417,6 +417,7 @@ void Scheduler::run() {
+ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+                               TimePoint expectedVsyncTime) {
+     ++mFollowerSlotEpoch;
++    const auto signaledVsync = expectedVsyncTime;
+     const auto debugPresentDelay = mDebugPresentDelay.load();
+     mDebugPresentDelay.store(std::nullopt);
+
+@@ -429,6 +430,7 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+              .debugPresentTimeDelay = debugPresentDelay};
+
+     ftl::NonNull<const Display*> pacesetterPtr = pacesetterPtrLocked();
++    const auto signaledDisplay = pacesetterPtr->displayId;
+     pacesetterPtr->targeterPtr->beginFrame(beginFrameArgs, *pacesetterPtr->schedulePtr);
+
+     ui::PhysicalDisplayVector<PhysicalDisplayId> presentableDisplays = {pacesetterPtr->displayId};
+@@ -515,11 +517,14 @@ void Scheduler::onFrameSignal(ICompositor& compositor, VsyncId vsyncId,
+         targeter->endFrame(*resultOpt);
+     }
+
+-    probeFollowerSlot(pacesetterPtr->displayId,
+-                      pacesetterPtr->targeterPtr->target().expectedPresentTime());
++    if (pacesetterPtr->displayId == signaledDisplay) {
++        probeFollowerSlot(signaledDisplay, signaledVsync,
++                          pacesetterPtr->targeterPtr->target().expectedPresentTime());
++    }
+ }
+
+-void Scheduler::probeFollowerSlot(PhysicalDisplayId pacesetterId, TimePoint pacesetterPresent) {
++void Scheduler::probeFollowerSlot(PhysicalDisplayId pacesetterId, TimePoint signaledVsync,
++                                  TimePoint pacesetterPresent) {
+     static const uint64_t cv10Id =
+             base::GetUintProperty<uint64_t>("debug.sf.cv10_slot_pacesetter_display", 0);
+     static const uint64_t phoneId =
+@@ -546,26 +551,42 @@ void Scheduler::probeFollowerSlot(PhysicalDisplayId pacesetterId, TimePoint pace
+         return;
+     }
+
+-    const auto nextCv10 = getScheduledFrameResult();
+-    const auto nextWake = nextCv10 && nextCv10->vsyncTime > pacesetterPresent
+-            ? std::optional<int64_t>{nextCv10->callbackTime.ns()}
+-            : std::nullopt;
+-    const auto now = mClock->now();
+-    // SurfaceFlinger may not have received the next request at the end of this batch.
+-    // Use the tracker to wake the probe in that case. Admission still requires a real
+-    // scheduled wake when the probe runs.
++    const auto cv10Period = cv10.schedulePtr->period();
+     const auto nextCv10Boundary = cv10.schedulePtr->vsyncDeadlineAfter(
+             pacesetterPresent + Duration::fromNs(1));
+-    const int64_t predictedWake = nextCv10Boundary.ns() -
+-            mVsyncModulator->getVsyncConfig().sfWorkDuration.count();
++    const auto now = mClock->now();
+     const auto target = phone.schedulePtr->vsyncDeadlineAfter(
+             now + Duration::fromNs(kFollowerPlanningLeadNs));
+-    const auto slot = planFollowerSlot(now.ns(), target.ns(), phone.schedulePtr->period().ns(),
+-                                      nextWake.value_or(predictedWake));
++    const auto phonePeriod = phone.schedulePtr->period();
++    // An unarmed dispatch can be forecast for planning. Admission still requires a live wake.
++    const int64_t predictedWake = nextCv10Boundary.ns() -
++            mVsyncModulator->getVsyncConfig().sfWorkDuration.count();
++    auto nextCv10 = getScheduledFrameResult();
++    static const unsigned maxWakeRequests = base::GetUintProperty<unsigned>(
++            "debug.sf.cv10_slot_wake_requests", 0u, 900u);
++    if (!nextCv10 && mFollowerWakeRequests < maxWakeRequests &&
++        planFollowerSlot(now.ns(), target.ns(), phonePeriod.ns(), predictedWake)) {
++        ++mFollowerWakeRequests;
++        const auto request = requestFrameIfIdle(signaledVsync);
++        nextCv10 = request ? request : getScheduledFrameResult();
++        SFTRACE_FORMAT_INSTANT("CV10 slot wake request=%u target=%" PRId64 " wake=%" PRId64
++                               " vsync=%" PRId64,
++                               mFollowerWakeRequests, nextCv10Boundary.ns(),
++                               request ? request->callbackTime.ns() : 0,
++                               request ? request->vsyncTime.ns() : 0);
++    }
++    std::optional<int64_t> nextWake;
++    if (!nextCv10) {
++        nextWake = predictedWake;
++    } else if (isNextPacesetterVsync(pacesetterPresent.ns(), nextCv10Boundary.ns(),
++                                    nextCv10->vsyncTime.ns(), cv10Period.ns())) {
++        nextWake = nextCv10->callbackTime.ns();
++    }
++    const auto slot = planFollowerSlot(now.ns(), target.ns(), phonePeriod.ns(), nextWake);
+     SFTRACE_FORMAT_INSTANT("CV10 slot plan target=%" PRId64 " nextWake=%" PRId64
+                            " predictedWake=%" PRId64 " wake=%" PRId64 " latest=%" PRId64,
+-                           target.ns(), nextWake.value_or(0), predictedWake, slot ? slot->wakeNs : 0,
+-                           slot ? slot->latestStartNs : 0);
++                           target.ns(), nextCv10 ? nextCv10->callbackTime.ns() : 0, predictedWake,
++                           slot ? slot->wakeNs : 0, slot ? slot->latestStartNs : 0);
+     if (!slot) return;
+
+     // This callback checks admission only. The phone output, its buffers and all fence
+@@ -597,9 +618,14 @@ void Scheduler::probeFollowerSlot(PhysicalDisplayId pacesetterId, TimePoint pace
+                 }
+
+                 const auto next = getScheduledFrameResult();
+-                const auto nextWake = next && next->vsyncTime > pacesetterPresent
+-                        ? std::optional<int64_t>{next->callbackTime.ns()}
+-                        : std::nullopt;
++                const auto expectedVsync = cv10.schedulePtr->vsyncDeadlineAfter(
++                        pacesetterPresent + Duration::fromNs(1));
++                std::optional<int64_t> nextWake;
++                if (next && isNextPacesetterVsync(pacesetterPresent.ns(), expectedVsync.ns(),
++                                                next->vsyncTime.ns(),
++                                                cv10.schedulePtr->period().ns())) {
++                    nextWake = next->callbackTime.ns();
++                }
+                 const auto& targeter = *phone.targeterPtr;
+                 const auto signal = targeter.target().presentFenceForPreviousFrame()->getSignalTime();
+                 const auto retire = Fence::isValidTimestamp(signal) ? std::optional<int64_t>{signal}
+diff --git a/services/surfaceflinger/Scheduler/Scheduler.h b/services/surfaceflinger/Scheduler/Scheduler.h
+index 11270ba..5d95b1f 100644
+--- a/services/surfaceflinger/Scheduler/Scheduler.h
++++ b/services/surfaceflinger/Scheduler/Scheduler.h
+@@ -400,7 +400,8 @@ private:
+     // impl::MessageQueue overrides:
+     void onFrameSignal(ICompositor&, VsyncId, TimePoint expectedVsyncTime) override
+             REQUIRES(kMainThreadContext, mDisplayLock) EXCLUDES(mVsyncConfigLock);
+-    void probeFollowerSlot(PhysicalDisplayId, TimePoint) REQUIRES(kMainThreadContext, mDisplayLock);
++    void probeFollowerSlot(PhysicalDisplayId, TimePoint signaledVsync, TimePoint pacesetterPresent)
++            REQUIRES(kMainThreadContext, mDisplayLock);
+
+     // Used to skip event dispatch before EventThread creation during boot.
+     // TODO: b/241285191 - Reorder Scheduler initialization to avoid this.
+@@ -571,6 +572,7 @@ private:
+     // Injected delay prior to compositing, for simulating jank.
+     float mPacesetterFrameDurationFractionToSkip GUARDED_BY(kMainThreadContext) = 0.f;
+     uint64_t mFollowerSlotEpoch GUARDED_BY(kMainThreadContext) = 0;
++    unsigned mFollowerWakeRequests GUARDED_BY(kMainThreadContext) = 0;
+
+     ISchedulerCallback& mSchedulerCallback;
+
+diff --git a/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h b/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h
+index fca5533..f422efe 100644
+--- a/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h
++++ b/services/surfaceflinger/Scheduler/include/scheduler/FollowerSlot.h
+@@ -19,6 +19,15 @@ constexpr int64_t kFollowerDeadlinePredictionSlackNs = 250'000;
+ constexpr int64_t kFollowerPlanningLeadNs = kFollowerStartLeadNs + kFollowerDeadlinePredictionSlackNs;
+ constexpr int64_t kFollowerMaxPhaseChangeNs = 1'000'000;
+
++// Reject a queued wake for a later display interval if the immediate interval was missed.
++constexpr bool isNextPacesetterVsync(int64_t previousVsyncNs, int64_t predictedVsyncNs,
++                                    int64_t scheduledVsyncNs, int64_t periodNs) {
++    if (periodNs <= 0 || scheduledVsyncNs <= previousVsyncNs) return false;
++    const int64_t tolerance = periodNs / 4;
++    const int64_t phaseDelta = scheduledVsyncNs - predictedVsyncNs;
++    return phaseDelta >= -tolerance && phaseDelta <= tolerance;
++}
++
+ struct FollowerSlot {
+     int64_t targetPresentNs;
+     int64_t wakeNs;
+diff --git a/services/surfaceflinger/tests/unittests/MessageQueueTest.cpp b/services/surfaceflinger/tests/unittests/MessageQueueTest.cpp
+index 5710e63..0da31ec 100644
+--- a/services/surfaceflinger/tests/unittests/MessageQueueTest.cpp
++++ b/services/surfaceflinger/tests/unittests/MessageQueueTest.cpp
+@@ -63,6 +63,7 @@ class TestableMessageQueue : public impl::MessageQueue {
+ public:
+     TestableMessageQueue() : TestableMessageQueue(sp<MockHandler>::make(*this)) {}
+
++    using impl::MessageQueue::requestFrameIfIdle;
+     using impl::MessageQueue::vsyncCallback;
+
+     const sp<MockHandler> mHandler;
+@@ -193,6 +194,34 @@ TEST_F(MessageQueueTest, commitWithDurationChange) {
+     EXPECT_NO_FATAL_FAILURE(mEventQueue.scheduleFrame());
+ }
+
++TEST_F(MessageQueueTest, requestFrameIfIdleLeavesExistingWakeIntact) {
++    const auto timing = scheduler::VSyncDispatch::ScheduleTiming{.workDuration = kDuration.ns(),
++                                                                 .readyDuration = 0,
++                                                                 .lastVsync = 0};
++    const scheduler::ScheduleResult scheduled{TimePoint::fromNs(1000), TimePoint::fromNs(2000)};
++    EXPECT_CALL(*mEventQueue.mHandler, isFramePending()).WillRepeatedly(Return(false));
++    EXPECT_CALL(*mVSyncDispatch, schedule(mCallbackToken, timing)).WillOnce(Return(scheduled));
++
++    const auto request = mEventQueue.requestFrameIfIdle(TimePoint::fromNs(0));
++    ASSERT_TRUE(request);
++    EXPECT_EQ(request->callbackTime, scheduled.callbackTime);
++    EXPECT_EQ(request->vsyncTime, scheduled.vsyncTime);
++    EXPECT_FALSE(mEventQueue.requestFrameIfIdle(TimePoint::fromNs(0)));
++
++    const auto queued = mEventQueue.getScheduledFrameResult();
++    ASSERT_TRUE(queued);
++    EXPECT_EQ(queued->callbackTime, scheduled.callbackTime);
++    EXPECT_EQ(queued->vsyncTime, scheduled.vsyncTime);
++}
++
++TEST_F(MessageQueueTest, requestFrameIfIdleRejectsPendingOrStaleSignal) {
++    EXPECT_CALL(*mVSyncDispatch, schedule(_, _)).Times(0);
++
++    EXPECT_CALL(*mEventQueue.mHandler, isFramePending()).WillOnce(Return(true));
++    EXPECT_FALSE(mEventQueue.requestFrameIfIdle(TimePoint::fromNs(0)));
++    EXPECT_FALSE(mEventQueue.requestFrameIfIdle(TimePoint::fromNs(1)));
++}
++
+ TEST_F(MessageQueueTest, scheduleResultWhenFrameIsPending) {
+     const auto timePoint = TimePoint::now();
+     EXPECT_CALL(*mEventQueue.mHandler, isFramePending()).WillOnce(Return(true));

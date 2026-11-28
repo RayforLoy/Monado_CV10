@@ -16,6 +16,21 @@ static_assert(!planFollowerSlot(23'000'000, kTarget, kPeriod, kWake));
 static_assert(kSlot && kSlot->wakeNs == 21'000'000 && kSlot->latestStartNs == 22'750'000);
 static_assert(planFollowerSlot(kSlot->latestStartNs, kTarget, kPeriod, kWake));
 
+constexpr int64_t kCv10Period = 11'111'111;
+constexpr int64_t kPreviousVsync = 100'000'000;
+constexpr int64_t kNextVsync = kPreviousVsync + kCv10Period;
+static_assert(isNextPacesetterVsync(kPreviousVsync, kNextVsync, kNextVsync, kCv10Period));
+static_assert(isNextPacesetterVsync(kPreviousVsync, kNextVsync, kNextVsync + kCv10Period / 4,
+                                    kCv10Period));
+static_assert(!isNextPacesetterVsync(kPreviousVsync, kNextVsync, kNextVsync + kCv10Period / 4 + 1,
+                                     kCv10Period));
+static_assert(!isNextPacesetterVsync(kPreviousVsync, kNextVsync, kNextVsync - kCv10Period / 4 - 1,
+                                     kCv10Period));
+static_assert(!isNextPacesetterVsync(kPreviousVsync, kNextVsync, kNextVsync + kCv10Period,
+                                     kCv10Period));
+static_assert(!isNextPacesetterVsync(kPreviousVsync, kNextVsync, kPreviousVsync, kCv10Period));
+static_assert(!isNextPacesetterVsync(kPreviousVsync, kNextVsync, kNextVsync, 0));
+
 using Result = FollowerSlotResult;
 constexpr auto kStart = kSlot->wakeNs;
 constexpr auto kRetire = 20'500'000;
